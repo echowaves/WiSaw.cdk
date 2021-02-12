@@ -1,0 +1,51 @@
+type Photo {
+  id: ID!
+  uuid: String!
+  location: Location!
+  likes: Int!
+  commentsCount: Int!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+  active: Boolean!
+  imgUrl: String!
+  thumbUrl: String!
+}
+
+input CreatePhotoInput {
+  id: ID!
+  uuid: String!
+  location: Location!
+  likes: Int!
+  commentsCount: Int!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+  active: Boolean!
+}
+
+input UpdatePhotoInput {
+  id: ID!
+  likes: Int!
+  commentsCount: Int!
+  updatedAt: AWSDateTime!
+  active: Boolean!
+}
+
+type Query {
+  listPhotoss: [Photo]
+  getPhotoById(photoId: ID!): Photo
+}
+
+type Mutation {
+  createPhoto(photo: CreatePhotoInput!): Photo
+  deletePhoto(photoId: ID!): ID
+  updatePost(photo: UpdatePhotoInput!): Photo
+}
+
+type Subscription {
+  onCreatePhoto: Photo
+    @aws_subscribe(mutations: ["createPhoto"])
+  onUpdatePost: Photo
+    @aws_subscribe(mutations: ["updatePhoto"])
+  onDeletePost: Photo
+    @aws_subscribe(mutations: ["deletePhoto"])
+}
