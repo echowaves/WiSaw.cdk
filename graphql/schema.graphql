@@ -44,8 +44,8 @@ type Mutation {
 type Subscription {
   onCreatePhoto: Photo
     @aws_subscribe(mutations: ["createPhoto"])
-  onUpdatePost: Photo
+  onUpdatePhoto: Photo
     @aws_subscribe(mutations: ["updatePhoto"])
-  onDeletePost: Photo
+  onDeletePhoto: Photo
     @aws_subscribe(mutations: ["deletePhoto"])
 }
