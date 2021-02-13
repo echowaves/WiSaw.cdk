@@ -1,7 +1,7 @@
-type Photo {
+type Photo @model @searchable {
   id: ID!
   uuid: String!
-  location: Location!
+  location: String!
   likes: Int!
   commentsCount: Int!
   createdAt: AWSDateTime!
@@ -19,7 +19,7 @@ type Location {
 input CreatePhotoInput {
   id: ID!
   uuid: String!
-  location: Location!
+  location: String!
   likes: Int!
   commentsCount: Int!
   createdAt: AWSDateTime!
