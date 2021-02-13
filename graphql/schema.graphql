@@ -1,7 +1,7 @@
-type Photo @model @searchable {
+type Photo {
   id: ID!
   uuid: String!
-  location: String!
+  location: AWSJSON!
   likes: Int!
   commentsCount: Int!
   createdAt: AWSDateTime!
@@ -11,15 +11,10 @@ type Photo @model @searchable {
   thumbUrl: String!
 }
 
-type Location {
-  lat: Float!
-  lon: Float!
-}
-
 input CreatePhotoInput {
   id: ID!
   uuid: String!
-  location: String!
+  location: AWSJSON!
   likes: Int!
   commentsCount: Int!
   createdAt: AWSDateTime!
