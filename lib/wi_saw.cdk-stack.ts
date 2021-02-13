@@ -18,7 +18,7 @@ export class WiSawCdkStack extends cdk.Stack {
        defaultAuthorization: {
          authorizationType: appsync.AuthorizationType.API_KEY,
          apiKeyConfig: {
-           expires: cdk.Expiration.after(cdk.Duration.days(36500))
+           expires: cdk.Expiration.after(cdk.Duration.days(365))
          }
        },
      },

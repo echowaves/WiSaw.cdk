@@ -1,7 +1,7 @@
 type Photo {
   id: ID!
   uuid: String!
-  location: Location!
+  location: String!
   likes: Int!
   commentsCount: Int!
   createdAt: AWSDateTime!
@@ -14,7 +14,7 @@ type Photo {
 input CreatePhotoInput {
   id: ID!
   uuid: String!
-  location: Location!
+  location: String!
   likes: Int!
   commentsCount: Int!
   createdAt: AWSDateTime!
@@ -31,14 +31,14 @@ input UpdatePhotoInput {
 }
 
 type Query {
-  listPhotoss: [Photo]
+  listPhotos: [Photo]
   getPhotoById(photoId: ID!): Photo
 }
 
 type Mutation {
   createPhoto(photo: CreatePhotoInput!): Photo
   deletePhoto(photoId: ID!): ID
-  updatePost(photo: UpdatePhotoInput!): Photo
+  updatePhoto(photo: UpdatePhotoInput!): Photo
 }
 
 type Subscription {
