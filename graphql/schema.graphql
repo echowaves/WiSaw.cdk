@@ -1,7 +1,7 @@
 type Photo {
   id: ID!
   uuid: String!
-  location: String!
+  location: Location!
   likes: Int!
   commentsCount: Int!
   createdAt: AWSDateTime!
@@ -11,10 +11,15 @@ type Photo {
   thumbUrl: String!
 }
 
+type Location {
+  lat: Float!
+  lon: Float!
+}
+
 input CreatePhotoInput {
   id: ID!
   uuid: String!
-  location: String!
+  location: Location!
   likes: Int!
   commentsCount: Int!
   createdAt: AWSDateTime!
