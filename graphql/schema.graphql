@@ -37,8 +37,8 @@ type Query {
 
 type Mutation {
   createPhoto(photo: CreatePhotoInput!): Photo
-  deletePhoto(photoId: ID!): ID
   updatePhoto(photo: UpdatePhotoInput!): Photo
+  deletePhoto(photoId: ID!): Photo
 }
 
 type Subscription {
