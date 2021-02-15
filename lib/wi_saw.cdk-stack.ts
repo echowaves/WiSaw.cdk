@@ -37,6 +37,7 @@ export class WiSawCdkStack extends cdk.Stack {
     //       vpc,
     //     })
 
+    const port = 5432
     const username = 'wisaw'
     const password = Secret.fromSecretCompleteArn(
       this,
@@ -60,15 +61,17 @@ export class WiSawCdkStack extends cdk.Stack {
       },
       storageType: rds.StorageType.GP2,
       deletionProtection: false,
+      instanceIdentifier: 'wisaw-cdk',
       databaseName: username,
-      port: 5432,
+      port,
       credentials: {
         username,
         password,
       },
     })
 
-
+    database.connections.allowFromAnyIpv4(ec2.Port.tcp(port))
+    database.connections.allowDefaultPortInternally()
 
 
     // Create the AppSync API
