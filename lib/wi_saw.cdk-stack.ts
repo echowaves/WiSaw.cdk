@@ -14,29 +14,7 @@ export class WiSawCdkStack extends cdk.Stack {
     // Create the VPC needed for the Aurora Serverless DB cluster
     const vpc = new ec2.Vpc(this, 'WiSawAppVPC')
 
-    // const cluster = new rds.ServerlessCluster(this, 'AuroraWiSawCluster', {
-    //   engine: rds.DatabaseClusterEngine.AURORA_POSTGRESQL,
-    //   parameterGroup: rds.ParameterGroup.fromParameterGroupName(this, 'ParameterGroup', 'default.aurora-postgresql10'),
-    //   defaultDatabaseName: 'WiSawDB',
-    //   vpc,
-    //   // scaling: { autoPause: cdk.Duration.seconds(0) } // Optional. If not set, then instance will pause after 5 minutes
-    // });
-
-    // const database = new rds.DatabaseInstance(this, 'PostgreSQL', {
-    //       engine: rds.DatabaseInstanceEngine.POSTGRES,
-    //       masterUsername: 'Admin',
-    //       masterUserPassword: new SecretValue('Jaddajadda'),
-    //       instanceClass: ec2.InstanceType.of(
-    //         ec2.InstanceClass.T3,
-    //         ec2.InstanceSize.MICRO
-    //       ),
-    //       // removalPolicy: cdk.RemovalPolicy.DESTROY,
-    //       databaseName: 'WiSawDB',
-    //       multiAz: false,
-    //       vpcPlacement: { subnetType: ec2.SubnetType.PUBLIC, onePerAz: true },
-    //       vpc,
-    //     })
-
+    // create RDS database
     const port = 5432
     const username = 'wisaw'
     const password = Secret.fromSecretCompleteArn(
@@ -45,7 +23,6 @@ export class WiSawCdkStack extends cdk.Stack {
       // Pass your password secret ARN
       "arn:aws:secretsmanager:us-east-1:963958500685:secret:prod/service/db/password-vFMQWh"
     ).secretValue
-
 
     const database = new rds.DatabaseInstance(this, "Postgres", {
       engine: rds.DatabaseInstanceEngine.postgres({
