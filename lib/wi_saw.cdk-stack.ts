@@ -40,7 +40,7 @@ export class WiSawCdkStack extends cdk.Stack {
       allocatedStorage: 20,
       maxAllocatedStorage: 40,
       // monitoringInterval: 60,
-      deletionProtection: true, // should be conditional for prod
+      deletionProtection: false, // should be conditional for prod
       instanceIdentifier: 'wisaw-cdk',
       databaseName: username,
       port,
