@@ -3,6 +3,7 @@ import * as ec2 from '@aws-cdk/aws-ec2';
 import * as lambda from '@aws-cdk/aws-lambda';
 import * as rds from '@aws-cdk/aws-rds';
 import * as appsync from '@aws-cdk/aws-appsync';
+import { ISecret, Secret } from "@aws-cdk/aws-secretsmanager";
 
 export class WiSawCdkStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -12,19 +13,62 @@ export class WiSawCdkStack extends cdk.Stack {
 
     // Create the VPC needed for the Aurora Serverless DB cluster
     const vpc = new ec2.Vpc(this, 'WiSawAppVPC')
-    // Create the Serverless Aurora DB cluster; set the engine to Postgres
-    // const cluster = new rds.DatabaseInstance(this, 'WiSawDataBase', {
-    //   engine: rds.DatabaseInstanceEngine.POSTGRES,
-    //   parameterGroup: rds.ParameterGroup.fromParameterGroupName(this, 'ParameterGroup', 'default.postgresql10'),
+
+    // const cluster = new rds.ServerlessCluster(this, 'AuroraWiSawCluster', {
+    //   engine: rds.DatabaseClusterEngine.AURORA_POSTGRESQL,
+    //   parameterGroup: rds.ParameterGroup.fromParameterGroupName(this, 'ParameterGroup', 'default.aurora-postgresql10'),
+    //   defaultDatabaseName: 'WiSawDB',
     //   vpc,
-    // })
-    const cluster = new rds.ServerlessCluster(this, 'AuroraWiSawCluster', {
-      engine: rds.DatabaseClusterEngine.AURORA_POSTGRESQL,
-      parameterGroup: rds.ParameterGroup.fromParameterGroupName(this, 'ParameterGroup', 'default.aurora-postgresql10'),
-      defaultDatabaseName: 'WiSawDB',
+    //   // scaling: { autoPause: cdk.Duration.seconds(0) } // Optional. If not set, then instance will pause after 5 minutes
+    // });
+
+    // const database = new rds.DatabaseInstance(this, 'PostgreSQL', {
+    //       engine: rds.DatabaseInstanceEngine.POSTGRES,
+    //       masterUsername: 'Admin',
+    //       masterUserPassword: new SecretValue('Jaddajadda'),
+    //       instanceClass: ec2.InstanceType.of(
+    //         ec2.InstanceClass.T3,
+    //         ec2.InstanceSize.MICRO
+    //       ),
+    //       // removalPolicy: cdk.RemovalPolicy.DESTROY,
+    //       databaseName: 'WiSawDB',
+    //       multiAz: false,
+    //       vpcPlacement: { subnetType: ec2.SubnetType.PUBLIC, onePerAz: true },
+    //       vpc,
+    //     })
+
+    const username = 'wisaw'
+    const password = Secret.fromSecretCompleteArn(
+      this,
+      "BackendPersistencePassword",
+      // Pass your password secret ARN
+      "arn:aws:secretsmanager:us-east-1:963958500685:secret:prod/service/db/password-vFMQWh"
+    ).secretValue
+
+
+    const database = new rds.DatabaseInstance(this, "Postgres", {
+      engine: rds.DatabaseInstanceEngine.postgres({
+        version: rds.PostgresEngineVersion.VER_12_4,
+      }),
+      instanceType: ec2.InstanceType.of(
+        ec2.InstanceClass.T3,
+        ec2.InstanceSize.MICRO
+      ),
       vpc,
-      // scaling: { autoPause: cdk.Duration.seconds(0) } // Optional. If not set, then instance will pause after 5 minutes
-    });
+      vpcPlacement: {
+        subnetType: ec2.SubnetType.PUBLIC,
+      },
+      storageType: rds.StorageType.GP2,
+      deletionProtection: false,
+      databaseName: username,
+      port: 5432,
+      credentials: {
+        username,
+        password,
+      },
+    })
+
+
 
 
     // Create the AppSync API
