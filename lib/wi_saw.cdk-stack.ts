@@ -39,8 +39,8 @@ export class WiSawCdkStack extends cdk.Stack {
       storageType: rds.StorageType.GP2,
       allocatedStorage: 20,
       maxAllocatedStorage: 40,
-      monitoringInterval: 60,
-      deletionProtection: true,
+      // monitoringInterval: 60,
+      deletionProtection: true, // should be conditional for prod
       instanceIdentifier: 'wisaw-cdk',
       databaseName: username,
       port,
