@@ -12,7 +12,7 @@ export class WiSawCdkStack extends cdk.Stack {
     // The code that defines your stack goes here
 
     // Create the VPC needed for the Aurora Serverless DB cluster
-    const vpc = new ec2.Vpc(this, 'WiSawAppVPC')
+    const vpc = new ec2.Vpc(this, 'WiSaw-VPC-cdk')
 
     // create RDS database
     const port = 5432
@@ -24,7 +24,7 @@ export class WiSawCdkStack extends cdk.Stack {
       "arn:aws:secretsmanager:us-east-1:963958500685:secret:prod/service/db/password-vFMQWh"
     ).secretValue
 
-    const database = new rds.DatabaseInstance(this, "Postgres", {
+    const database = new rds.DatabaseInstance(this, 'WiSaw-Postgres-cdk', {
       engine: rds.DatabaseInstanceEngine.postgres({
         version: rds.PostgresEngineVersion.VER_12_4,
       }),
@@ -41,7 +41,7 @@ export class WiSawCdkStack extends cdk.Stack {
       maxAllocatedStorage: 40,
       // monitoringInterval: 60,
       deletionProtection: false, // should be conditional for prod
-      instanceIdentifier: 'wisaw-cdk',
+      instanceIdentifier: 'wisaw-db-cdk',
       databaseName: username,
       port,
       credentials: {
@@ -55,7 +55,7 @@ export class WiSawCdkStack extends cdk.Stack {
 
 
     // Create the AppSync API
-    const api = new appsync.GraphqlApi(this, 'Api', {
+    const api = new appsync.GraphqlApi(this, 'WiSaw-Api-cdk', {
       name: 'cdk-wisaw-appsync-api',
       schema: appsync.Schema.fromAsset('graphql/schema.graphql'),
       authorizationConfig: {
