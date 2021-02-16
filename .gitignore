@@ -18,3 +18,5 @@ cdk.out
 
 # do not ignore migrations
 !migrations/*.js
+
+!config/*
