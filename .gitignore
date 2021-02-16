@@ -12,6 +12,9 @@ cdk.out
 # dotenv environment variables file
 .env
 
-.env.prod.js
-.env.test.js
-.env.dev.js
+.env.prod
+.env.test
+.env.dev
+
+# do not ignore migrations
+!migrations/*.js
