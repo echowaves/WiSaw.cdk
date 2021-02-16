@@ -40,7 +40,7 @@ export class WiSawCdkStack extends cdk.Stack {
 
     const database = new rds.DatabaseInstance(this, `${deployEnv()}-WiSaw-Postgres-cdk`, {
       engine: rds.DatabaseInstanceEngine.postgres({
-        version: rds.PostgresEngineVersion.VER_12_4,
+        version: rds.PostgresEngineVersion.VER_12_5,
       }),
       instanceType: ec2.InstanceType.of(
         ec2.InstanceClass.T3,
