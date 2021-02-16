@@ -8,7 +8,11 @@
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
-    "cdk": "cdk"
+    "cdk": "cdk",
+    "test:deploy": "DEPLOY_ENV=test npm run build && DEPLOY_ENV=test npx cdk deploy",
+    "test:destroy": "DEPLOY_ENV=test cdk destroy test-WiSawCdkStack",
+    "prod:deploy": "DEPLOY_ENV=prod npm run build && DEPLOY_ENV=prod npx cdk deploy",
+    "prod:destroy": "DEPLOY_ENV=prod cdk destroy prod-WiSawCdkStack"
   },
   "devDependencies": {
     "@aws-cdk/assert": "1.89.0",

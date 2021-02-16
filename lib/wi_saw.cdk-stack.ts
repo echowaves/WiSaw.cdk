@@ -5,14 +5,28 @@ import * as rds from '@aws-cdk/aws-rds';
 import * as appsync from '@aws-cdk/aws-appsync';
 import { ISecret, Secret } from "@aws-cdk/aws-secretsmanager";
 
+export function deployEnv() {
+  return process.env.DEPLOY_ENV || "test";
+}
+
+
+function envSpecific(logicalName: string | Function) {
+  const suffix =
+    typeof logicalName === "function"
+    ? logicalName.name
+    : logicalName;
+
+  return `${deployEnv()}-${suffix}`;
+}
+
 export class WiSawCdkStack extends cdk.Stack {
-  constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
+  constructor(scope: cdk.Construct,  id: string, props?: cdk.StackProps) {
     super(scope, id, props)
 
     // The code that defines your stack goes here
 
     // Create the VPC needed for the Aurora Serverless DB cluster
-    const vpc = new ec2.Vpc(this, 'WiSaw-VPC-cdk')
+    const vpc = new ec2.Vpc(this, `${deployEnv()}-WiSaw-VPC-cdk`)
 
     // create RDS database
     const port = 5432
@@ -24,7 +38,7 @@ export class WiSawCdkStack extends cdk.Stack {
       "arn:aws:secretsmanager:us-east-1:963958500685:secret:prod/service/db/password-vFMQWh"
     ).secretValue
 
-    const database = new rds.DatabaseInstance(this, 'WiSaw-Postgres-cdk', {
+    const database = new rds.DatabaseInstance(this, `${deployEnv()}-WiSaw-Postgres-cdk`, {
       engine: rds.DatabaseInstanceEngine.postgres({
         version: rds.PostgresEngineVersion.VER_12_4,
       }),
@@ -41,7 +55,7 @@ export class WiSawCdkStack extends cdk.Stack {
       maxAllocatedStorage: 40,
       // monitoringInterval: 60,
       deletionProtection: false, // should be conditional for prod
-      instanceIdentifier: 'wisaw-db-cdk',
+      instanceIdentifier: `${deployEnv()}-wisaw-db-cdk`,
       databaseName: username,
       port,
       credentials: {
@@ -55,8 +69,8 @@ export class WiSawCdkStack extends cdk.Stack {
 
 
     // Create the AppSync API
-    const api = new appsync.GraphqlApi(this, 'WiSaw-Api-cdk', {
-      name: 'cdk-wisaw-appsync-api',
+    const api = new appsync.GraphqlApi(this, `${deployEnv()}-WiSaw-appsyncApi-cdk`, {
+      name: `${deployEnv()}-cdk-wisaw-appsync-api`,
       schema: appsync.Schema.fromAsset('graphql/schema.graphql'),
       authorizationConfig: {
        defaultAuthorization: {

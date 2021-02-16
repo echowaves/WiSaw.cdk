@@ -13,3 +13,7 @@ https://dev.to/aws-builders/the-guide-to-implement-geo-search-in-your-react-nati
 
 Deploy scalable NodeJS application with Postgres database using AWS CDK
 https://dev.to/skona27/deploy-scalable-nodejs-application-with-postgres-database-using-aws-cdk-22l4
+
+
+Deploy aws-cdk app to different environments
+https://dev.to/miensol/deploy-aws-cdk-app-to-different-environments-297d
