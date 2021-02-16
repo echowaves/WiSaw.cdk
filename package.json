@@ -29,9 +29,9 @@
     "@aws-cdk/aws-lambda": "^1.89.0",
     "@aws-cdk/aws-rds": "^1.89.0",
     "@aws-cdk/core": "1.89.0",
+    "dotenv": "8.2.0",
     "sequelize": "6.5.0",
     "sequelize-cli": "6.2.0",
-    "dotenv": "8.2.0",
     "source-map-support": "^0.5.16"
   }
 }
