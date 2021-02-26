@@ -9,6 +9,7 @@
     "watch": "tsc -w",
     "test": "jest",
     "cdk": "cdk",
+    "bootstrap": "cdk bootstrap",
     "test:deploy": "DEPLOY_ENV=test npm run build && DEPLOY_ENV=test npx cdk deploy",
     "test:destroy": "DEPLOY_ENV=test cdk destroy test-WiSawCdkStack",
     "prod:deploy": "DEPLOY_ENV=prod npm run build && DEPLOY_ENV=prod npx cdk deploy",
