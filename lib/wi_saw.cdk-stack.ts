@@ -31,6 +31,7 @@ export class WiSawCdkStack extends cdk.Stack {
     // create RDS database
     const port = 5432
     const dbname = 'wisaw'
+    const username = 'awsroot'
     const password = Secret.fromSecretCompleteArn(
       this,
       "BackendPersistencePassword",
@@ -59,7 +60,7 @@ export class WiSawCdkStack extends cdk.Stack {
       databaseName: dbname,
       port,
       credentials: {
-        username: dbname,
+        username,
         password,
       },
     })
