@@ -90,12 +90,15 @@ export class WiSawCdkStack extends cdk.Stack {
       handler: 'index.handler',
       memorySize: 1024,
       environment: {
-        // DATABASE_ARN: database.arn,
-        SECRET_ARN: database.secret?.secretArn || '',
         DB_NAME: dbname,
-        AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
+        DB_USER: username,
+        DB_PASSWORD: password,
+        DB_PORT: '5432',
+        DB_HOST: database.id,
       },
     });
+    console.log(`db_id = ${database.id}`)
+
     // Grant access to the database from the Lambda function
     database.grantConnect(wisawFn);
     // Set the new Lambda function as a data source for the AppSync API

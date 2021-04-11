@@ -10,9 +10,9 @@
     "test": "jest",
     "cdk": "cdk",
     "bootstrap": "cdk bootstrap",
-    "test:deploy": "DEPLOY_ENV=test npm run build && DEPLOY_ENV=test npx cdk deploy",
+    "test:deploy": "DEPLOY_ENV=test yarn build && DEPLOY_ENV=test npx cdk deploy",
     "test:destroy": "DEPLOY_ENV=test cdk destroy test-WiSawCdkStack",
-    "prod:deploy": "DEPLOY_ENV=prod npm run build && DEPLOY_ENV=prod npx cdk deploy",
+    "prod:deploy": "DEPLOY_ENV=prod yarn build && DEPLOY_ENV=prod npx cdk deploy",
     "migrate": "./node_modules/.bin/sequelize db:migrate --env",
     "migrate-undo": "./node_modules/.bin/sequelize db:migrate:undo --env"
   },
