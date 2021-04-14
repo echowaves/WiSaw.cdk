@@ -32,12 +32,13 @@ export class WiSawCdkStack extends cdk.Stack {
     const port = 5432
     const dbname = 'wisaw'
     const username = 'awsroot'
-    const password = Secret.fromSecretCompleteArn(
-      this,
-      "BackendPersistencePassword",
-      // Pass your password secret ARN
-      "arn:aws:secretsmanager:us-east-1:963958500685:secret:prod/service/db/password-vFMQWh"
-    ).secretValue
+    const password =
+      Secret.fromSecretCompleteArn(
+        this,
+        "BackendPersistencePassword",
+        // Pass your password secret ARN
+        "arn:aws:secretsmanager:us-east-1:963958500685:secret:prod/service/db/password-vFMQWh"
+      ).secretValue
 
     const database = new rds.DatabaseInstance(this, `${deployEnv()}-WiSaw-Postgres-cdk`, {
       engine: rds.DatabaseInstanceEngine.postgres({
@@ -92,12 +93,12 @@ export class WiSawCdkStack extends cdk.Stack {
       environment: {
         DB_NAME: dbname,
         DB_USER: username,
-        DB_PASSWORD: password,
+        DB_PASSWORD: `${password}`,
         DB_PORT: '5432',
-        DB_HOST: database.id,
+        DB_HOST: `${database.instanceEndpoint}`,
       },
     });
-    console.log(`db_id = ${database.id}`)
+    console.log(`db_id = ${database.instanceEndpoint}`)
 
     // Grant access to the database from the Lambda function
     database.grantConnect(wisawFn);
