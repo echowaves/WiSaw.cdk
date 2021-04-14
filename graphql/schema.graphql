@@ -10,42 +10,42 @@ type Photo {
   imgUrl: String!
   thumbUrl: String!
 }
-
-input CreatePhotoInput {
-  id: ID!
-  uuid: String!
-  location: AWSJSON!
-  likes: Int!
-  commentsCount: Int!
-  createdAt: AWSDateTime!
-  updatedAt: AWSDateTime!
-  active: Boolean!
-}
-
-input UpdatePhotoInput {
-  id: ID!
-  likes: Int!
-  commentsCount: Int!
-  updatedAt: AWSDateTime!
-  active: Boolean!
-}
+#
+# input CreatePhotoInput {
+#   id: ID!
+#   uuid: String!
+#   location: AWSJSON!
+#   likes: Int!
+#   commentsCount: Int!
+#   createdAt: AWSDateTime!
+#   updatedAt: AWSDateTime!
+#   active: Boolean!
+# }
+#
+# input UpdatePhotoInput {
+#   id: ID!
+#   likes: Int!
+#   commentsCount: Int!
+#   updatedAt: AWSDateTime!
+#   active: Boolean!
+# }
 
 type Query {
   listPhotos: [Photo]
   getPhotoById(photoId: ID!): Photo
 }
 
-type Mutation {
-  createPhoto(photo: CreatePhotoInput!): Photo
-  updatePhoto(photo: UpdatePhotoInput!): Photo
-  deletePhoto(photoId: ID!): Photo
-}
-
-type Subscription {
-  onCreatePhoto: Photo
-    @aws_subscribe(mutations: ["createPhoto"])
-  onUpdatePhoto: Photo
-    @aws_subscribe(mutations: ["updatePhoto"])
-  onDeletePhoto: Photo
-    @aws_subscribe(mutations: ["deletePhoto"])
-}
+# type Mutation {
+#   createPhoto(photo: CreatePhotoInput!): Photo
+#   updatePhoto(photo: UpdatePhotoInput!): Photo
+#   deletePhoto(photoId: ID!): Photo
+# }
+#
+# type Subscription {
+#   onCreatePhoto: Photo
+#     @aws_subscribe(mutations: ["createPhoto"])
+#   onUpdatePhoto: Photo
+#     @aws_subscribe(mutations: ["updatePhoto"])
+#   onDeletePhoto: Photo
+#     @aws_subscribe(mutations: ["deletePhoto"])
+# }
