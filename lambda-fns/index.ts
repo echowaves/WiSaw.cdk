@@ -1,5 +1,5 @@
 import listPhotos from './listPhotos';
-import Photo from './Photo';
+import Photo from './models/Photo';
 
 type AppSyncEvent = {
   info: {
