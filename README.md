@@ -3,6 +3,9 @@
 Main walkthrough doc:
 https://aws.amazon.com/blogs/mobile/building-real-time-serverless-apis-with-postgres-cdk-typescript-and-aws-appsync/
 
+Build API with GraphQL, Node.js, and Sequelize
+https://dev.to/nedsoft/build-api-with-graphql-node-js-and-sequelize-5e8e
+
 
 GraphQL geo location:
 https://hasura.io/blog/graphql-and-geo-location-on-postgres-using-hasura-562e7bd47a2f/

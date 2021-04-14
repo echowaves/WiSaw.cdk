@@ -24,6 +24,10 @@
     "jest": "^26.4.2",
     "ts-jest": "^26.2.0",
     "ts-node": "^9.0.0",
+    "sequelize": "6.5.0",
+    "sequelize-cli": "6.2.0",
+    "pg": "8.6.0",
+    "pg-hstore": "2.3.3",
     "typescript": "~3.9.7"
   },
   "dependencies": {
@@ -33,10 +37,6 @@
     "@aws-cdk/aws-rds": "^1.89.0",
     "@aws-cdk/core": "1.89.0",
     "dotenv": "8.2.0",
-    "pg": "8.5.1",
-    "pg-hstore": "2.3.3",
-    "sequelize": "6.5.0",
-    "sequelize-cli": "6.2.0",
     "source-map-support": "^0.5.16"
   }
 }
