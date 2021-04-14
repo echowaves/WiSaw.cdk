@@ -5,10 +5,12 @@ import * as rds from '@aws-cdk/aws-rds';
 import * as appsync from '@aws-cdk/aws-appsync';
 import { ISecret, Secret } from "@aws-cdk/aws-secretsmanager";
 
+
 export function deployEnv() {
   return process.env.DEPLOY_ENV || "test";
 }
 
+const config = require(`../.env.${deployEnv()}`).config()
 
 function envSpecific(logicalName: string | Function) {
   const suffix =
@@ -29,16 +31,6 @@ export class WiSawCdkStack extends cdk.Stack {
     const vpc = new ec2.Vpc(this, `${deployEnv()}-WiSaw-VPC-cdk`)
 
     // create RDS database
-    const port = 5432
-    const dbname = 'wisaw'
-    const username = 'awsroot'
-    const password =
-      Secret.fromSecretCompleteArn(
-        this,
-        "BackendPersistencePassword",
-        // Pass your password secret ARN
-        "arn:aws:secretsmanager:us-east-1:963958500685:secret:prod/service/db/password-vFMQWh"
-      ).secretValue
 
     const database = new rds.DatabaseInstance(this, `${deployEnv()}-WiSaw-Postgres-cdk`, {
       engine: rds.DatabaseInstanceEngine.postgres({
@@ -58,15 +50,15 @@ export class WiSawCdkStack extends cdk.Stack {
       // monitoringInterval: 60,
       deletionProtection: deployEnv() === "prod", // should be conditional for prod
       instanceIdentifier: `${deployEnv()}-wisaw-db-cdk`,
-      databaseName: dbname,
-      port,
+      databaseName: config.DB_DATABASE,
+      port: config.DB_PORT,
       credentials: {
-        username,
-        password,
+        username: config.DB_USERNAME,
+        password: config.DB_PASSWORD,
       },
     })
 
-    database.connections.allowFromAnyIpv4(ec2.Port.tcp(port))
+    database.connections.allowFromAnyIpv4(ec2.Port.tcp(parseInt(config.DB_PORT)))
     database.connections.allowDefaultPortInternally()
 
 
@@ -91,15 +83,9 @@ export class WiSawCdkStack extends cdk.Stack {
       handler: 'index.handler',
       memorySize: 1024,
       environment: {
-        DB_NAME: dbname,
-        DB_USER: username,
-        DB_PASSWORD: `${password}`,
-        DB_PORT: '5432',
-        DB_HOST: `${database.instanceEndpoint}`,
+        DATABASE_URL: config.DATABASE_URL,
       },
     });
-    console.log(`db_id = ${database.instanceEndpoint}`)
-
     // Grant access to the database from the Lambda function
     database.grantConnect(wisawFn);
     // Set the new Lambda function as a data source for the AppSync API
@@ -137,7 +123,5 @@ export class WiSawCdkStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'ProjectRegion', {
       value: this.region
     });
-
-
   }
 }

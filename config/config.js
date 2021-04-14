@@ -9,7 +9,6 @@ module.exports = {
     database: devConfig.DB_DATABASE,
     host: devConfig.DB_HOST,
     dialect: devConfig.DB_DIALECT,
-    DATABASE_URL: devConfig.DATABASE_URL,
   },
   test: {
     username: testConfig.DB_USERNAME,
@@ -17,7 +16,6 @@ module.exports = {
     database: testConfig.DB_DATABASE,
     host: testConfig.DB_HOST,
     dialect: testConfig.DB_DIALECT,
-    DATABASE_URL: testConfig.DATABASE_URL,
   },
   prod: {
     username: prodConfig.DB_USERNAME,
@@ -25,6 +23,5 @@ module.exports = {
     database: prodConfig.DB_DATABASE,
     host: prodConfig.DB_HOST,
     dialect: prodConfig.DB_DIALECT,
-    DATABASE_URL: prodConfig.DATABASE_URL,
   },
 }
