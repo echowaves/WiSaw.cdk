@@ -83,7 +83,7 @@ export class WiSawCdkStack extends cdk.Stack {
       handler: 'index.handler',
       memorySize: 1024,
       environment: {
-        DATABASE_URL: config.DATABASE_URL,
+        ...config
       },
     });
     // Grant access to the database from the Lambda function
