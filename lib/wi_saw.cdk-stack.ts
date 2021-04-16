@@ -63,7 +63,8 @@ export class WiSawCdkStack extends cdk.Stack {
 
 
     // Create the AppSync API
-    const api = new appsync.GraphqlApi(this, `${deployEnv()}-WiSaw-appsyncApi-cdk`, {
+    const api = new appsync.GraphqlApi(this, `${deployEnv()}-WiSaw-appsyncApi-cdk`,
+    {
       name: `${deployEnv()}-cdk-wisaw-appsync-api`,
       schema: appsync.Schema.fromAsset('graphql/schema.graphql'),
       authorizationConfig: {
