@@ -1,5 +1,5 @@
 # WiSaw.cdk
-
+## References
 Main walkthrough doc:
 https://aws.amazon.com/blogs/mobile/building-real-time-serverless-apis-with-postgres-cdk-typescript-and-aws-appsync/
 
@@ -36,3 +36,7 @@ Availablity and durablity: do not create standby node, us-east-1d
 Database Authentication: password
 
 Then right click and modify to change the master password
+
+
+
+To see your and others photos visit https://www.wisaw.com
