@@ -32,31 +32,39 @@ export class WiSawCdkStack extends cdk.Stack {
 
     // create RDS database
 
-    const database = new rds.DatabaseInstance(this, `${deployEnv()}-WiSaw-Postgres-cdk`, {
-      engine: rds.DatabaseInstanceEngine.postgres({
-        version: rds.PostgresEngineVersion.VER_12_4,
-      }),
-      instanceType: ec2.InstanceType.of(
-        ec2.InstanceClass.T3,
-        ec2.InstanceSize.MICRO
-      ),
-      vpc,
-      vpcPlacement: {
-        subnetType: ec2.SubnetType.PUBLIC,
-      },
-      storageType: rds.StorageType.GP2,
-      allocatedStorage: 20,
-      maxAllocatedStorage: 40,
-      // monitoringInterval: 60,
-      deletionProtection: deployEnv() === "prod", // should be conditional for prod
-      instanceIdentifier: `${deployEnv()}-wisaw-db-cdk`,
-      databaseName: config.DB_DATABASE,
-      port: config.DB_PORT,
-      credentials: {
-        username: config.DB_USERNAME,
-        password: config.DB_PASSWORD,
-      },
-    })
+    // const database = new rds.DatabaseInstance(this, `${deployEnv()}-WiSaw-Postgres-cdk`, {
+    //   engine: rds.DatabaseInstanceEngine.postgres({
+    //     version: rds.PostgresEngineVersion.VER_12_4,
+    //   }),
+    //   instanceType: ec2.InstanceType.of(
+    //     ec2.InstanceClass.T3,
+    //     ec2.InstanceSize.MICRO
+    //   ),
+    //   vpc,
+    //   vpcPlacement: {
+    //     subnetType: ec2.SubnetType.PUBLIC,
+    //   },
+    //   storageType: rds.StorageType.GP2,
+    //   allocatedStorage: 20,
+    //   maxAllocatedStorage: 40,
+    //   // monitoringInterval: 60,
+    //   deletionProtection: deployEnv() === "prod", // should be conditional for prod
+    //   instanceIdentifier: `${deployEnv()}-wisaw-db-cdk`,
+    //   databaseName: config.DB_DATABASE,
+    //   port: config.DB_PORT,
+    //   credentials: {
+    //     username: config.DB_USERNAME,
+    //     password: config.DB_PASSWORD,
+    //   },
+    // })
+
+    // will refer to already created DB instance instead of creating new one. 
+    const database = rds.DatabaseInstance.fromDatabaseInstanceAttributes(this, `wisaw-${deployEnv()}`, {
+          instanceIdentifier: `wisaw-${deployEnv()}`,
+          instanceEndpointAddress: `wisaw-${deployEnv()}.cbaw0b5dcxjh.us-east-1.rds.amazonaws.com`,
+          port: 5432,
+          securityGroups: [],
+    });
 
     database.connections.allowFromAnyIpv4(ec2.Port.tcp(parseInt(config.DB_PORT)))
     database.connections.allowDefaultPortInternally()

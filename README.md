@@ -20,3 +20,19 @@ https://dev.to/skona27/deploy-scalable-nodejs-application-with-postgres-database
 
 Deploy aws-cdk app to different environments
 https://dev.to/miensol/deploy-aws-cdk-app-to-different-environments-297d
+
+
+
+
+
+## Restore snapshot for tesdt db
+DB instance identifier: wisaw-test
+Default VPC
+subnet group: default
+Public access: yes
+VPC security group: existing, default
+DB instance class: burstable, t3.micro
+Availablity and durablity: do not create standby node, us-east-1d
+Database Authentication: password
+
+Then right click and modify to change the master password
