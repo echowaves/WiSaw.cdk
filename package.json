@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
-    "test": "./node_modules/nyc/bin/nyc.js --reporter=html ./node_modules/mocha/bin/mocha --exit --require babel-core/register ./tests/**/*.js --timeout 30000",
+    "test": "./node_modules/nyc/bin/nyc.js --reporter=html ./node_modules/mocha/bin/mocha --exit --require babel-core/register ./tests/*.js --timeout 30000",
     "cdk": "cdk",
     "bootstrap": "cdk bootstrap",
     "test:deploy": "DEPLOY_ENV=test yarn build && DEPLOY_ENV=test npx cdk deploy -O cdk-exports.json",
