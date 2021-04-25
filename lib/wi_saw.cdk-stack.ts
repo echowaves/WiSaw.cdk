@@ -28,7 +28,7 @@ export class WiSawCdkStack extends cdk.Stack {
     // The code that defines your stack goes here
 
     // Create the VPC needed for the Aurora Serverless DB instance
-    const vpc = new ec2.Vpc(this, `${deployEnv()}-WiSaw-VPC-cdk`)
+    // const vpc = new ec2.Vpc(this, `${deployEnv()}-WiSaw-VPC-cdk`)
 
     // create RDS database
 
@@ -58,7 +58,7 @@ export class WiSawCdkStack extends cdk.Stack {
     //   },
     // })
 
-    // will refer to already created DB instance instead of creating new one. 
+    // will refer to already created DB instance instead of creating new one.
     const database = rds.DatabaseInstance.fromDatabaseInstanceAttributes(this, `wisaw-${deployEnv()}`, {
           instanceIdentifier: `wisaw-${deployEnv()}`,
           instanceEndpointAddress: `wisaw-${deployEnv()}.cbaw0b5dcxjh.us-east-1.rds.amazonaws.com`,
