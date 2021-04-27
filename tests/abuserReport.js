@@ -1,5 +1,6 @@
-import uuid from 'uuid'
+import regeneratorRuntime from "regenerator-runtime"
 
+import uuid from 'uuid'
 import supertest from 'supertest'
 import chai from 'chai'
 
