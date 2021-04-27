@@ -1,4 +1,4 @@
-import regeneratorRuntime from "regenerator-runtime"
+import regeneratorRuntime from "regenerator-runtime" // eslint-disable-line
 
 import uuid from 'uuid'
 import supertest from 'supertest'
@@ -25,9 +25,9 @@ describe('abusereport', () => {
 
     const response =
     await request
-    	.post('/abusereport')
-    	.set('Content-Type', 'application/json')
-    	.send({uuid: guid,})
+      .post('/abusereport')
+      .set('Content-Type', 'application/json')
+      .send({uuid: guid,})
 
     expect(response.status).to.equal(201)
     expect(response.body.status).to.equal('success')
@@ -59,10 +59,10 @@ describe('abusereport', () => {
 
     const response =
     await request
-    	.post('/photos')
-    	.set('Content-Type', 'application/json')
-    	.send({uuid: guid,})
-    	.send({location: point,})
+      .post('/photos')
+      .set('Content-Type', 'application/json')
+      .send({uuid: guid,})
+      .send({location: point,})
 
     expect(response.status).to.equal(401)
     expect(response.body.error).to.equal('Anauthorized.')
