@@ -25,7 +25,6 @@
     ]
   },
   "exclude": [
-    "cdk.out",
-    "tests"
+    "cdk.out"
   ]
 }

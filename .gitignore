@@ -22,4 +22,3 @@ cdk-exports.json
 !migrations/*.js
 
 !config/*
-!tests/*.js
