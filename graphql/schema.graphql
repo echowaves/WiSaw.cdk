@@ -1,25 +1,25 @@
-type Photo {
-  id: ID!
-  uuid: String!
-  location: AWSJSON!
-  likes: Int!
-  commentsCount: Int!
-  createdAt: AWSDateTime!
-  updatedAt: AWSDateTime!
-  active: Boolean!
-  imgUrl: String!
-  thumbUrl: String!
-}
-input CreatePhotoInput {
-  id: ID!
-  uuid: String!
-  location: AWSJSON!
-  likes: Int!
-  commentsCount: Int!
-  createdAt: AWSDateTime!
-  updatedAt: AWSDateTime!
-  active: Boolean!
-}
+# type Photo {
+#   id: ID!
+#   uuid: String!
+#   location: AWSJSON!
+#   likes: Int!
+#   commentsCount: Int!
+#   createdAt: AWSDateTime!
+#   updatedAt: AWSDateTime!
+#   active: Boolean!
+#   imgUrl: String!
+#   thumbUrl: String!
+# }
+# input CreatePhotoInput {
+#   id: ID!
+#   uuid: String!
+#   location: AWSJSON!
+#   likes: Int!
+#   commentsCount: Int!
+#   createdAt: AWSDateTime!
+#   updatedAt: AWSDateTime!
+#   active: Boolean!
+# }
 #
 # input UpdatePhotoInput {
 #   id: ID!
@@ -36,21 +36,17 @@ type AbuseReport {
   createdAt: AWSDateTime!
   updatedAt: AWSDateTime!
 }
-input CreateAbuseReportInput {
+input AbuseReportInputCreate {
   photoId: ID
   uuid: String
 }
 
 type Query {
-  listPhotos: [Photo]
-  getPhotoById(photoId: ID!): Photo
+  # getPhotoById(photoId: ID!): Photo
 }
 
 type Mutation {
-  createPhoto(photo: CreatePhotoInput!): Photo
-  createAbuseReport(abuseReport: CreateAbuseReportInput): AbuseReport
-  # updatePhoto(photo: UpdatePhotoInput!): Photo
-  # deletePhoto(photoId: ID!): Photo
+  abuseReportsCreate(abuseReport: AbuseReportInputCreate): AbuseReport
 }
 #
 # type Subscription {

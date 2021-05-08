@@ -105,22 +105,10 @@ export class WiSawCdkStack extends cdk.Stack {
       typeName: 'Query',
       fieldName: 'listPhotos'
     });
-    // lambdaDs.createResolver({
-    //   typeName: 'Query',
-    //   fieldName: 'getPhotoById'
-    // });
-    // lambdaDs.createResolver({
-    //   typeName: 'Mutation',
-    //   fieldName: 'createPhoto'
-    // });
-    // lambdaDs.createResolver({
-    //   typeName: 'Mutation',
-    //   fieldName: 'updatePhoto'
-    // });
-    // lambdaDs.createResolver({
-    //   typeName: 'Mutation',
-    //   fieldName: 'deletePhoto'
-    // });
+    lambdaDs.createResolver({
+      typeName: 'Mutation',
+      fieldName: 'createAbuseReport'
+    });
 
     // CFN Outputs
     new cdk.CfnOutput(this, 'AppSyncAPIURL', {
