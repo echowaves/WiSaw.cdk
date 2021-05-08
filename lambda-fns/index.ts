@@ -1,6 +1,9 @@
+import abuseReportsCreate from './controllers/abuseReports/create'
+
 import listPhotos from './listPhotos'
 
-import Photo from './models/Photo'
+import AbuseReport from './models/abuseReport'
+import Photo from './models/photo'
 
 type AppSyncEvent = {
   info: {
@@ -8,7 +11,8 @@ type AppSyncEvent = {
   },
   arguments: {
     photo: Photo,
-    photoId: string
+    abuseReport: AbuseReport,
+    photoId: bigint,
   }
 }
 
@@ -16,8 +20,8 @@ exports.handler = async (event:AppSyncEvent) => {
   switch (event.info.fieldName) {
     case 'listPhotos':
       return await listPhotos();
-    // case 'updatePost':
-    //   return await updatePost(event.arguments.post);
+    case 'abuseReportsCreate':
+      return await abuseReportsCreate(event.arguments.abuseReport)
     // case 'deletePost':
     //   return await deletePost(event.arguments.postId);
     // case 'getPostById':

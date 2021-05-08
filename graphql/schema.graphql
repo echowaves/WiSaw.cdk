@@ -10,7 +10,6 @@ type Photo {
   imgUrl: String!
   thumbUrl: String!
 }
-#
 input CreatePhotoInput {
   id: ID!
   uuid: String!
@@ -30,6 +29,18 @@ input CreatePhotoInput {
 #   active: Boolean!
 # }
 
+type AbuseReport {
+  id: ID
+  photoId: ID
+  uuid: String
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+input CreateAbuseReportInput {
+  photoId: ID
+  uuid: String
+}
+
 type Query {
   listPhotos: [Photo]
   getPhotoById(photoId: ID!): Photo
@@ -37,6 +48,7 @@ type Query {
 
 type Mutation {
   createPhoto(photo: CreatePhotoInput!): Photo
+  createAbuseReport(abuseReport: CreateAbuseReportInput): AbuseReport
   # updatePhoto(photo: UpdatePhotoInput!): Photo
   # deletePhoto(photoId: ID!): Photo
 }
