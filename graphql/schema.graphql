@@ -1,15 +1,15 @@
-# type Photo {
-#   id: ID!
-#   uuid: String!
-#   location: AWSJSON!
-#   likes: Int!
-#   commentsCount: Int!
-#   createdAt: AWSDateTime!
-#   updatedAt: AWSDateTime!
-#   active: Boolean!
-#   imgUrl: String!
-#   thumbUrl: String!
-# }
+type Photo {
+  id: ID!
+  uuid: String!
+  location: AWSJSON!
+  likes: Int!
+  commentsCount: Int!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+  active: Boolean!
+  imgUrl: String!
+  thumbUrl: String!
+}
 # input CreatePhotoInput {
 #   id: ID!
 #   uuid: String!
