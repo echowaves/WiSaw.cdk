@@ -31,7 +31,7 @@ type Photo {
 
 type AbuseReport {
   id: ID!
-  photoId: ID!
+  photo: Photo!
   uuid: String!
   createdAt: AWSDateTime!
   updatedAt: AWSDateTime!
