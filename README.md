@@ -23,6 +23,10 @@ https://dev.to/miensol/deploy-aws-cdk-app-to-different-environments-297d
 
 
 
+The Power of Serverless GraphQL with AWS AppSync
+https://serverless.pub/the-power-of-serverless-graphql-with-appsync/
+
+
 
 
 ## Restore snapshot for tesdt db
