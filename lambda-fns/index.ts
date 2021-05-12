@@ -1,6 +1,6 @@
 import abuseReportsCreate from './controllers/abuseReports/create'
 
-import listPhotos from './listPhotos'
+// import listPhotos from './listPhotos'
 
 import AbuseReport from './models/abuseReport'
 import Photo from './models/photo'
@@ -18,8 +18,8 @@ type AppSyncEvent = {
 
 exports.handler = async (event:AppSyncEvent) => {
   switch (event.info.fieldName) {
-    case 'listPhotos':
-      return await listPhotos();
+    // case 'listPhotos':
+    //   return await listPhotos();
     case 'abuseReportsCreate':
       return await abuseReportsCreate(event.arguments.abuseReport)
     // case 'deletePost':

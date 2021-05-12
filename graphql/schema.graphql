@@ -36,7 +36,7 @@ type AbuseReport {
   createdAt: AWSDateTime!
   updatedAt: AWSDateTime!
 }
-input AbuseReportInputCreate {
+input CreateAbuseReportInput  {
   photoId: ID!
   uuid: String!
 }
@@ -46,7 +46,7 @@ type Query {
 }
 
 type Mutation {
-  abuseReportsCreate(abuseReport: AbuseReportInputCreate!): AbuseReport!
+  abuseReportsCreate(abuseReport: CreateAbuseReportInput!): AbuseReport!
 }
 #
 # type Subscription {
