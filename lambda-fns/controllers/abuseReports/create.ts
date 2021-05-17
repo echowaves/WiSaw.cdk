@@ -1,7 +1,10 @@
 // import moment from 'moment'
 const moment = require('moment')
 
-import db from '../../db'
+// boilerplate for connecting to DB
+const postgres = require('postgres')
+const {env} =  process
+const sql = postgres({ ...env })
 
 import AbuseReport from '../../models/abuseReport'
 
@@ -26,7 +29,7 @@ export default async function main(abuseReport: AbuseReport) {
                         abuseReporst (uuid,photoId,createdAt,updatedAt)
                         VALUES(:uuid,:photoId,:createdAt, :updatedAt)
                         RETURNING id`
-        abuseReport.id = await db.query(query, { uuid, photoId, createdAt, updatedAt })
+        // abuseReport.id = await db.query(query, { uuid, photoId, createdAt, updatedAt })
 
         return abuseReport
     } catch (err) {

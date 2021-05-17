@@ -66,7 +66,7 @@ export class WiSawCdkStack extends cdk.Stack {
           securityGroups: [],
     });
 
-    database.connections.allowFromAnyIpv4(ec2.Port.tcp(parseInt(config.DB_PORT)))
+    database.connections.allowFromAnyIpv4(ec2.Port.tcp(parseInt(config.port)))
     database.connections.allowDefaultPortInternally()
 
 
