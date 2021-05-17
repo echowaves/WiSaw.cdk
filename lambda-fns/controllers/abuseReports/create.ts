@@ -10,28 +10,16 @@ import AbuseReport from '../../models/abuseReport'
 
 export default async function main(abuseReport: AbuseReport) {
   const { uuid, photoId } = abuseReport
-  let {  createdAt, updatedAt } = abuseReport
-
-  if(!uuid) {
-    console.log(`missing parameter uuid`)
-    return null
-  }
-  if(!photoId) {
-    console.log(`missing parameter photoId`)
-    return null
-  }
-
-    createdAt = moment()
-    updatedAt = abuseReport.createdAt
-
+  abuseReport.createdAt = moment()
+  abuseReport.updatedAt = abuseReport.createdAt
+    
     try {
-        const query = `INSERT INTO
-                        abuseReporst (uuid,photoId,createdAt,updatedAt)
-                        VALUES(:uuid,:photoId,:createdAt, :updatedAt)
-                        RETURNING id`
-        // abuseReport.id = await db.query(query, { uuid, photoId, createdAt, updatedAt })
-
-        return abuseReport
+        return await sql`
+                          insert into AbuseReports ${
+                            sql(abuseReport)
+                          }
+                          returning *
+                          `
     } catch (err) {
         console.log('Postgres error: ', err)
         return null
