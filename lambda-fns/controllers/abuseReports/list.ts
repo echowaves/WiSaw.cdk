@@ -8,11 +8,9 @@ import AbuseReport from '../../models/abuseReport'
 export default async function main() {
 
     try {
-        return await sql`
-                          select * from  AbuseReports
-                        `
-    } catch (err) {
-        console.log('Postgres error: ', err)
+        return await sql`select * from "AbuseReports"`
+    } catch (error) {
+        console.log({error})
         return null
     }
 }

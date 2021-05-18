@@ -1,4 +1,4 @@
-const moment = require('moment')
+import * as moment from 'moment'
 
 // boilerplate for connecting to DB
 const postgres = require('postgres')
@@ -9,7 +9,7 @@ import AbuseReport from '../../models/abuseReport'
 
 export default async function main(abuseReport: AbuseReport) {
   const { uuid, photoId } = abuseReport
-  abuseReport.createdAt = moment()
+  abuseReport.createdAt = moment().format()
   abuseReport.updatedAt = abuseReport.createdAt
 
     try {

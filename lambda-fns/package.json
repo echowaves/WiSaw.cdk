@@ -1,0 +1,9 @@
+{
+  "name": "wi_saw.cdk.lambda-fns",
+  "version": "0.1.0",
+  "dependencies": {
+    "moment": "2.29.1",
+    "postgres": "1.0.2",
+    "uuid": "8.3.2"
+  }
+}
