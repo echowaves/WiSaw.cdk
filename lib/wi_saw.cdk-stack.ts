@@ -101,13 +101,13 @@ export class WiSawCdkStack extends cdk.Stack {
     const lambdaDs = api.addLambdaDataSource('lambdaDatasource', wisawFn);
 
     // Map the resolvers to the Lambda function
-    // lambdaDs.createResolver({
-    //   typeName: 'Query',
-    //   fieldName: 'listPhotos'
-    // });
+    lambdaDs.createResolver({
+      typeName: 'Query',
+      fieldName: 'listAbuseReports'
+    });
     lambdaDs.createResolver({
       typeName: 'Mutation',
-      fieldName: 'abuseReportsCreate'
+      fieldName: 'createAbuseReport'
     });
 
     // CFN Outputs

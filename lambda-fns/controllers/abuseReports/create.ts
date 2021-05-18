@@ -1,4 +1,3 @@
-// import moment from 'moment'
 const moment = require('moment')
 
 // boilerplate for connecting to DB
@@ -12,7 +11,7 @@ export default async function main(abuseReport: AbuseReport) {
   const { uuid, photoId } = abuseReport
   abuseReport.createdAt = moment()
   abuseReport.updatedAt = abuseReport.createdAt
-    
+
     try {
         return await sql`
                           insert into AbuseReports ${

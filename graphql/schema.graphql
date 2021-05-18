@@ -10,24 +10,6 @@ type Photo {
   imgUrl: String!
   thumbUrl: String!
 }
-# input CreatePhotoInput {
-#   id: ID!
-#   uuid: String!
-#   location: AWSJSON!
-#   likes: Int!
-#   commentsCount: Int!
-#   createdAt: AWSDateTime!
-#   updatedAt: AWSDateTime!
-#   active: Boolean!
-# }
-#
-# input UpdatePhotoInput {
-#   id: ID!
-#   likes: Int!
-#   commentsCount: Int!
-#   updatedAt: AWSDateTime!
-#   active: Boolean!
-# }
 
 type AbuseReport {
   id: ID!
@@ -42,18 +24,14 @@ input CreateAbuseReportInput  {
 }
 
 type Query {
-  # getPhotoById(photoId: ID!): Photo
+  listAbuseReports: [AbuseReport]
 }
 
 type Mutation {
-  abuseReportsCreate(abuseReport: CreateAbuseReportInput!): AbuseReport!
+  createAbuseReport(abuseReport: CreateAbuseReportInput!): AbuseReport!
 }
-#
-# type Subscription {
-#   onCreatePhoto: Photo
-#     @aws_subscribe(mutations: ["createPhoto"])
-#   onUpdatePhoto: Photo
-#     @aws_subscribe(mutations: ["updatePhoto"])
-#   onDeletePhoto: Photo
-#     @aws_subscribe(mutations: ["deletePhoto"])
-# }
+
+schema {
+  query: Query
+  mutation: Mutation
+}
