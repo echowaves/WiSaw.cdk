@@ -8,19 +8,27 @@ const sql = postgres({ ...env })
 import AbuseReport from '../../models/abuseReport'
 
 export default async function main(abuseReport: AbuseReport) {
-  const { uuid, photoId } = abuseReport
   abuseReport.createdAt = moment().format()
   abuseReport.updatedAt = abuseReport.createdAt
-
+  console.log({abuseReport})
     try {
-        return await sql`
-                          insert into AbuseReports ${
-                            sql(abuseReport)
-                          }
+        return (await sql`
+                          insert into "AbuseReports"
+                          (
+                              "photoId",
+                              "uuid",
+                              "createdAt",
+                              "updatedAt"
+                          ) values (
+                            ${abuseReport.photoId},
+                            ${abuseReport.uuid},
+                            ${abuseReport.createdAt},
+                            ${abuseReport.updatedAt}
+                          )
                           returning *
-                          `
-    } catch (err) {
-        console.log('Postgres error: ', err)
+                          `)[0]
+    } catch (error) {
+        console.log({error})
         return null
     }
 }
