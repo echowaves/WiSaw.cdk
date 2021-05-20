@@ -8,7 +8,7 @@ const sql = postgres({ ...env })
 import AbuseReport from '../../models/abuseReport'
 
 export default async function main(abuseReport: AbuseReport) {
-  abuseReport.createdAt = moment().format()
+  abuseReport.createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
   abuseReport.updatedAt = abuseReport.createdAt
   console.log({abuseReport})
     try {

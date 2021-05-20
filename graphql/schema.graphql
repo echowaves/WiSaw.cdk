@@ -22,6 +22,11 @@ input CreateAbuseReportInput  {
   photoId: ID!
   uuid: String!
 }
+input CreateAbuseReportOutput  {
+  id: ID!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
 
 type Query {
   listAbuseReports: [AbuseReport]
