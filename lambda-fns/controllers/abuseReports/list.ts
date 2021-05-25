@@ -1,7 +1,4 @@
-// boilerplate for connecting to DB
-const postgres = require('postgres')
-const {env} =  process
-const sql = postgres({ ...env })
+import sql from '../../sql'
 
 import AbuseReport from '../../models/abuseReport'
 
