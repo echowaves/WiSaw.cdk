@@ -1,3 +1,9 @@
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+
 type Photo {
   id: ID!
   uuid: String!
@@ -35,9 +41,4 @@ type Query {
 
 type Mutation {
   createAbuseReport(abuseReport: CreateAbuseReportInput!): AbuseReport!
-}
-
-schema {
-  query: Query
-  mutation: Mutation
 }
