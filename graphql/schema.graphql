@@ -25,20 +25,14 @@ type AbuseReport {
   createdAt: AWSDateTime!
   updatedAt: AWSDateTime!
 }
-input CreateAbuseReportInput  {
-  photoId: ID!
-  uuid: String!
-}
-input CreateAbuseReportOutput  {
-  id: ID!
-  createdAt: AWSDateTime!
-  updatedAt: AWSDateTime!
-}
 
 type Query {
   listAbuseReports: [AbuseReport]
 }
 
 type Mutation {
-  createAbuseReport(abuseReport: CreateAbuseReportInput!): AbuseReport!
+  createAbuseReport(
+    photoId: ID!
+    uuid: String!
+  ): AbuseReport!
 }
