@@ -12,6 +12,7 @@ type AppSyncEvent = {
     photo: Photo,
     abuseReport: AbuseReport,
     photoId: bigint,
+    uuid: string,
   }
 }
 
@@ -20,7 +21,10 @@ exports.handler = async (event:AppSyncEvent) => {
     case 'listAbuseReports':
       return await listAbuseReports();
     case 'createAbuseReport':
-      return await createAbuseReport(event.arguments.abuseReport)
+      return await createAbuseReport(
+        event.arguments.photoId,
+        event.arguments.uuid
+      )
     // case 'deletePost':
     //   return await deletePost(event.arguments.postId);
     // case 'getPostById':

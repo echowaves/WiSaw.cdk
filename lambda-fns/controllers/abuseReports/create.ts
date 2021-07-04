@@ -2,13 +2,12 @@ import * as moment from 'moment'
 
 import sql from '../../sql'
 
-import AbuseReport from '../../models/abuseReport'
+// import AbuseReport from '../../models/abuseReport'
 
-export default async function main(abuseReport: AbuseReport) {
-  abuseReport.createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
-  abuseReport.updatedAt = abuseReport.createdAt
+export default async function main(photoId: bigint, uuid: string) {
+  const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
   try {
-    return (await sql`
+    const result = (await sql`
                       insert into "AbuseReports"
                       (
                           "photoId",
@@ -16,13 +15,15 @@ export default async function main(abuseReport: AbuseReport) {
                           "createdAt",
                           "updatedAt"
                       ) values (
-                        ${abuseReport.photoId},
-                        ${abuseReport.uuid},
-                        ${abuseReport.createdAt},
-                        ${abuseReport.updatedAt}
+                        ${photoId},
+                        ${uuid},
+                        ${createdAt},
+                        ${createdAt}
                       )
                       returning *
-                      `)[0]
+                      `)
+                      // console.log({result})
+                      return result[0]
     } catch (error) {
         console.log({error})
         return null
