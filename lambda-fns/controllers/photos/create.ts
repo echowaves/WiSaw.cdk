@@ -5,14 +5,14 @@ import sql from '../../sql'
 
 // import AbuseReport from '../../models/abuseReport'
 
-export default async function main(uuid: string, lat: string, lon: string) {
+export default async function main(uuid: string, lat: number, lon: number) {
   // first count how many times photos from this device were reported
-  const abuseCount = await sql`select count(*)
+  const abuseCount = await sql`SELECT COUNT(*)
               FROM "AbuseReports"
               INNER JOIN "Photos" on "AbuseReports"."photoId" = "Photos"."id"
               WHERE "Photos"."uuid" = ${uuid}
   `
-  console.log(`count of abuse: ${abuseCount}`)
+  console.log(`count of abuse: ${JSON.stringify(abuseCount)}`)
   if (abuseCount > 3) {
     throw "You are banned"
   }
@@ -20,14 +20,6 @@ export default async function main(uuid: string, lat: string, lon: string) {
   const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
   const updatedAt = createdAt
   const watchedAt = createdAt
-
-  const location = {
-            type: 'Point',
-            coordinates: [
-              lat,
-              lon,
-            ],
-        }
 
   const photo = (await sql`
                     insert into "Photos"
@@ -39,7 +31,7 @@ export default async function main(uuid: string, lat: string, lon: string) {
                         "updatedAt"
                     ) values (
                       ${uuid},
-                      ${location},
+                      ST_SetSRID(ST_MakePoint(${lat}, ${lon}), 4326),                      
                       0,
                       ${createdAt},
                       ${updatedAt}
@@ -47,6 +39,8 @@ export default async function main(uuid: string, lat: string, lon: string) {
                     returning *
                     `
                   )[0]
+
+console.log({photo})
 
   const watcher =
   (await sql`

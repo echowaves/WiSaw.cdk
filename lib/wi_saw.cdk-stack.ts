@@ -106,8 +106,17 @@ export class WiSawCdkStack extends cdk.Stack {
       fieldName: 'listAbuseReports'
     });
     lambdaDs.createResolver({
+      typeName: 'Query',
+      fieldName: 'uploadUrl'
+    });
+
+    lambdaDs.createResolver({
       typeName: 'Mutation',
       fieldName: 'createAbuseReport'
+    });
+    lambdaDs.createResolver({
+      typeName: 'Mutation',
+      fieldName: 'createPhoto'
     });
 
     // CFN Outputs

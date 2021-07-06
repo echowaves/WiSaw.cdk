@@ -39,7 +39,7 @@ type Mutation {
 
   createPhoto(
     uuid: String!
-    lat: String!
-    lon: String!
+    lat: Float!
+    lon: Float!
   ): Photo!
 }

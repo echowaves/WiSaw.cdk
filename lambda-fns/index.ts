@@ -16,8 +16,8 @@ type AppSyncEvent = {
     abuseReport: AbuseReport,
     photoId: bigint,
     uuid: string,
-    lat: string,
-    lon: string,
+    lat: number,
+    lon: number,
   }
 }
 
@@ -34,7 +34,7 @@ exports.handler = async (event:AppSyncEvent) => {
       return await createPhoto(
         event.arguments.uuid,
         event.arguments.lat,
-        event.arguments.lon,
+        event.arguments.lon,      
       )
     case 'generateUploadUrl':
       return await generateUploadUrl(
