@@ -1,6 +1,9 @@
 import createAbuseReport from './controllers/abuseReports/create'
 import listAbuseReports from './controllers/abuseReports/list'
 
+import createPhoto from './controllers/photos/create'
+import generateUploadUrl from './controllers/photos/uploadUrl'
+
 import AbuseReport from './models/abuseReport'
 import Photo from './models/photo'
 
@@ -13,6 +16,8 @@ type AppSyncEvent = {
     abuseReport: AbuseReport,
     photoId: bigint,
     uuid: string,
+    lat: string,
+    lon: string,
   }
 }
 
@@ -25,10 +30,17 @@ exports.handler = async (event:AppSyncEvent) => {
         event.arguments.photoId,
         event.arguments.uuid
       )
-    // case 'deletePost':
-    //   return await deletePost(event.arguments.postId);
-    // case 'getPostById':
-    //   return await getPostById(event.arguments.postId);
+    case 'createPhoto':
+      return await createPhoto(
+        event.arguments.uuid,
+        event.arguments.lat,
+        event.arguments.lon,
+      )
+    case 'generateUploadUrl':
+      return await generateUploadUrl(
+        event.arguments.photoId,
+      )
+
     default:
       return null;
   }
