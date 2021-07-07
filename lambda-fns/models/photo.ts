@@ -1,4 +1,4 @@
-type Photo = {
+class Photo {
   id: bigint
   uuid: string
   location: object
@@ -7,8 +7,16 @@ type Photo = {
   createdAt: string
   updatedAt: string
   active: boolean
-  imgUrl: string
-  thumbUrl: string
+
+  // add custom derived attributes to the object
+  public toJSON()
+	{
+		return {
+	     ...this,
+       imgUrl: `https://s3.amazonaws.com/${process.env.S3_BUCKET}/${this.id}`,
+       thumbUrl: `https://s3.amazonaws.com/${process.env.S3_BUCKET}/${this.id}-thumb`,
+		};
+	}
 }
 
 export default Photo

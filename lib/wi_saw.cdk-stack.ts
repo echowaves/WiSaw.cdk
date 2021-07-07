@@ -90,7 +90,7 @@ export class WiSawCdkStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_14_X,
       code: new lambda.AssetCode('lambda-fns'),
       handler: 'index.handler',
-      memorySize: 1024,
+      memorySize: 10240,
       environment: {
         ...config
       },
