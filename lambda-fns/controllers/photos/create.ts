@@ -8,13 +8,14 @@ import Photo from '../../models/photo'
 
 export default async function main(uuid: string, lat: number, lon: number) {
   // first count how many times photos from this device were reported
-  const abuseCount = await sql`SELECT COUNT(*)
+  const abuseCount = (await sql`SELECT COUNT(*)
               FROM "AbuseReports"
               INNER JOIN "Photos" on "AbuseReports"."photoId" = "Photos"."id"
               WHERE "Photos"."uuid" = ${uuid}
-  `.count
+  `)[0].count
 
-  console.log(`count of abuse: ${abuseCount}`)
+  console.log({abuseCount})
+
   if (abuseCount > 3) {
     throw "You are banned"
   }
