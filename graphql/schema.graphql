@@ -28,7 +28,8 @@ type AbuseReport {
 
 type Query {
   listAbuseReports: [AbuseReport]
-  uploadUrl(photoId: ID!): String!
+  
+  generateUploadUrl(photoId: ID!): String!
 }
 
 type Mutation {

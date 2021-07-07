@@ -91,6 +91,7 @@ export class WiSawCdkStack extends cdk.Stack {
       code: new lambda.AssetCode('lambda-fns'),
       handler: 'index.handler',
       memorySize: 10240,
+      timeout: cdk.Duration.seconds(30),
       environment: {
         ...config
       },
@@ -107,7 +108,7 @@ export class WiSawCdkStack extends cdk.Stack {
     });
     lambdaDs.createResolver({
       typeName: 'Query',
-      fieldName: 'uploadUrl'
+      fieldName: 'generateUploadUrl'
     });
 
     lambdaDs.createResolver({
