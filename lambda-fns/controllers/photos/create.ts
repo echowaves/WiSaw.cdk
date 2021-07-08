@@ -62,7 +62,7 @@ export default async function main(uuid: string, lat: number, lon: number) {
       returning *
       `
     )[0]
-    console.log({watcher})
+    // console.log({watcher})
   const ppp = plainToClass(Photo, photo)
 
   return ppp

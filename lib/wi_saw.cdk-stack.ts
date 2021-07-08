@@ -1,4 +1,5 @@
 import * as cdk from '@aws-cdk/core';
+import * as s3 from "@aws-cdk/aws-s3"
 import * as ec2 from '@aws-cdk/aws-ec2';
 import * as lambda from '@aws-cdk/aws-lambda';
 import * as rds from '@aws-cdk/aws-rds';
@@ -97,6 +98,18 @@ export class WiSawCdkStack extends cdk.Stack {
         ...config
       },
     });
+
+    // Grant access to s3 bucket for lambda function
+    const imgBucket =
+      s3.Bucket.fromBucketName(
+        this,
+        `wisaw-img-${deployEnv()}`,
+        `wisaw-img-${deployEnv()}`
+      )
+    imgBucket.grantPut(wisawFn)
+    imgBucket.grantPutAcl(wisawFn)
+
+
     // Grant access to the database from the Lambda function
     database.grantConnect(wisawFn);
     // Set the new Lambda function as a data source for the AppSync API
