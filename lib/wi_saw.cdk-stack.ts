@@ -1,10 +1,13 @@
 import * as cdk from '@aws-cdk/core';
-import * as s3 from "@aws-cdk/aws-s3"
+import * as s3 from "@aws-cdk/aws-s3";
+import * as s3n from '@aws-cdk/aws-s3-notifications';
 import * as ec2 from '@aws-cdk/aws-ec2';
 import * as lambda from '@aws-cdk/aws-lambda';
 import * as rds from '@aws-cdk/aws-rds';
 import * as appsync from '@aws-cdk/aws-appsync';
 import { ISecret, Secret } from "@aws-cdk/aws-secretsmanager";
+import * as path from 'path';
+
 
 
 export function deployEnv() {
@@ -108,6 +111,24 @@ export class WiSawCdkStack extends cdk.Stack {
       )
     imgBucket.grantPut(wisawFn)
     imgBucket.grantPutAcl(wisawFn)
+
+
+
+    // define lambda for thumbnails processing
+        const processUploadedImageLambdaFunction =
+          new lambda.Function(this, `${deployEnv()}-processUploadedImage`, {
+            runtime: lambda.Runtime.NODEJS_14_X,
+            handler: 'index.main',
+            code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos/processUploadedImage')),
+        })
+    // invoke lambda every time an object is created in the bucket
+        imgBucket.addEventNotification(
+          s3.EventType.OBJECT_CREATED,
+          new s3n.LambdaDestination(processUploadedImageLambdaFunction),
+          // only invoke lambda if object matches the filter
+          // {prefix: 'test/', suffix: '.yaml'},
+        )
+
 
 
     // Grant access to the database from the Lambda function
