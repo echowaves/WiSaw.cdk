@@ -90,7 +90,8 @@ export class WiSawCdkStack extends cdk.Stack {
     })
 
     // Create the Lambda function that will map GraphQL operations into Postgres
-    const wisawFn = new lambda.Function(this, `${deployEnv()}-WiSaw-GraphQlMapFunction-cdk`, {
+    const wisawFn = new lambda.Function(this, `${deployEnv()}-WiSaw-GraphQlMapFunction-cdk`,
+    {
       runtime: lambda.Runtime.NODEJS_14_X,
       code: new lambda.AssetCode('lambda-fns'),
       handler: 'index.handler',
@@ -116,11 +117,19 @@ export class WiSawCdkStack extends cdk.Stack {
 
     // define lambda for thumbnails processing
         const processUploadedImageLambdaFunction =
-          new lambda.Function(this, `${deployEnv()}-processUploadedImage`, {
-            runtime: lambda.Runtime.NODEJS_14_X,
-            handler: 'index.main',
-            code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos/processUploadedImage')),
-        })
+          new lambda.Function(
+            this,
+            `${deployEnv()}-processUploadedImage`,
+            {
+              runtime: lambda.Runtime.NODEJS_14_X,
+              code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos/processUploadedImage')),
+              handler: 'index.main',
+              memorySize: 3008,
+              timeout: cdk.Duration.seconds(30),
+              environment: {
+                ...config
+              },
+            })
     // invoke lambda every time an object is created in the bucket
         imgBucket.addEventNotification(
           s3.EventType.OBJECT_CREATED,
