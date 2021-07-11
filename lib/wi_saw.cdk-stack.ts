@@ -148,6 +148,7 @@ export class WiSawCdkStack extends cdk.Stack {
           new s3n.LambdaDestination(processUploadedImageLambdaFunction),
           // only invoke lambda if object matches the filter
           // {prefix: 'test/', suffix: '.yaml'},
+          {suffix: '.upload'},
         )
 
 

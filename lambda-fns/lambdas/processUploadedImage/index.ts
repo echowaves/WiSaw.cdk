@@ -24,7 +24,7 @@ export async function main(event: any = {}, context: any, cb: any) {
   const record = event.Records[0];
   const name = record.s3.object.key
   // we only want to deal with originals
-  console.log(`received image: ${name}`)
+  console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!received image: ${name}`)
   if (name.includes('-thumb')) {
     console.log('thumbnail uploaded, activating image')
     const photoId = name.replace('-thumb', '')
