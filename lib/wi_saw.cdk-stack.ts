@@ -106,20 +106,6 @@ export class WiSawCdkStack extends cdk.Stack {
         }
       );
 
-    // Grant access to s3 bucket for lambda function
-    const imgBucket =
-      s3.Bucket.fromBucketName(
-        this,
-        `wisaw-img-${deployEnv()}`,
-        `wisaw-img-${deployEnv()}`
-      )
-    imgBucket.grantPut(wisawFn)
-    imgBucket.grantPutAcl(wisawFn)
-    // expiration can't be configured on the exiting bucket programmatically -- has to be done in the admin UI
-    // imgBucket.addLifecycleRule({
-    //      expiration: cdk.Duration.days(90),
-    //    })
-
 
     // define lambda for thumbnails processing
         const processUploadedImageLambdaFunction =
@@ -138,6 +124,24 @@ export class WiSawCdkStack extends cdk.Stack {
                 },
               }
             )
+
+        // Grant access to s3 bucket for lambda function
+        const imgBucket =
+          s3.Bucket.fromBucketName(
+            this,
+            `wisaw-img-${deployEnv()}`,
+            `wisaw-img-${deployEnv()}`
+          )
+        imgBucket.grantPut(wisawFn)
+        imgBucket.grantPutAcl(wisawFn)
+        imgBucket.grantPut(processUploadedImageLambdaFunction)
+        imgBucket.grantPutAcl(processUploadedImageLambdaFunction)
+        // expiration can't be configured on the exiting bucket programmatically -- has to be done in the admin UI
+        // imgBucket.addLifecycleRule({
+        //      expiration: cdk.Duration.days(90),
+        //    })
+
+
     // invoke lambda every time an object is created in the bucket
         imgBucket.addEventNotification(
           s3.EventType.OBJECT_CREATED,
