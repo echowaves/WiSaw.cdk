@@ -23,51 +23,97 @@ export async function main(event: any = {}, context: any, cb: any) {
   //
   const record = event.Records[0];
   const name = record.s3.object.key
+  const photoId = name.replace('.upload', '')
   // we only want to deal with originals
   console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!received image: ${name}`)
-  if (name.includes('-thumb')) {
-    console.log('thumbnail uploaded, activating image')
-    const photoId = name.replace('-thumb', '')
-    // activate image
-    // const activateUrl = `${process.env.HOST}/photos/${photoId}/activate`
-    // console.log({ activateUrl })
-  //   await axios.put(activateUrl)
-  //
-  //   console.log('------------------------ about to call ImageAnalyser')
-  //   const metaData = await ImageAnalyser.recognizeImage({
-  //     bucket: record.s3.bucket.name,
-  //     imageName: photoId,
-  //   })
-  //   console.log('------------------------ called ImageAnalyser')
-  //   console.log(stringifyObject(metaData))
-  //
-  //   if (metaData) {
-  //     await Recognition.destroy({ where: { photoId } })
-  //     await Recognition.create({ photoId, metaData })
-  //   }
-  //
-    cb(null, 'activating the image in DB')
-    return true
-  }
-
-  // download the original to disk
+  console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!       photoId: ${photoId}`)
 
   const s3 = new AWS.S3()
 
-  const image = await s3.getObject({
-    Bucket: record.s3.bucket.name,
-    Key: record.s3.object.key,
-  }).promise()
+  const image =
+    await s3.getObject({
+      Bucket: record.s3.bucket.name,
+      Key: record.s3.object.key,
+    }).promise()
+
+  await _genWebpThumb({image, Bucket: record.s3.bucket.name, Key: `${photoId}-thumb`})
+  await _genWebp({image, Bucket: record.s3.bucket.name, Key: `${photoId}`})
+  await _deleteUpload({ Bucket: record.s3.bucket.name, Key: `${name}`})
+
+  cb(null, 'success everything')
+  return true
+}
+
+const _genWebpThumb = async({image, Bucket, Key}: {image: any, Bucket: string, Key: string}) => {
 
   const buffer = await sharp(image.Body).webp().resize({height: 300}).toBuffer()
-
+  const s3 = new AWS.S3()
   await s3.putObject({
-      Bucket: record.s3.bucket.name,
-      Key: `${record.s3.object.key}-thumb`,
+      Bucket,
+      Key,
+      Body: buffer,
+      ContentType: 'image',
+    }).promise()
+}
+
+const _genWebp = async({image, Bucket, Key}: {image: any, Bucket: string, Key: string}) => {
+
+  const buffer = await sharp(image.Body).webp().toBuffer()
+  const s3 = new AWS.S3()
+  await s3.putObject({
+      Bucket,
+      Key,
       Body: buffer,
       ContentType: 'image',
     }).promise()
 
-  cb(null, 'success everything')
-  return true
+}
+
+const _deleteUpload = async({Bucket, Key}: {Bucket: string, Key: string}) => {
+  const s3 = new AWS.S3()
+  await s3.deleteObject({
+    Bucket,
+    Key,
+  }).promise()
+}
+
+const _recognizeImage = async({key}: {key: string}) => {
+  //   const params = {
+  //     Image: {
+  //       S3Object: {
+  //         Bucket: s3Config.bucket,
+  //         Name: key,
+  //       },
+  //     },
+  //   }
+  //
+  //   const result = {}
+  //   try {
+  //     const [
+  //       labelsData,
+  //       moderationData,
+  //       textData,
+  //     ] =
+  //       await Promise.all([
+  //         rekognition.detectLabels(params).promise(),
+  //         rekognition.detectModerationLabels(params).promise(),
+  //         rekognition.detectText(params).promise(),
+  //       ]);
+  //
+  //
+  //     result.Labels = labelsData.Labels
+  //     // console.log(JSON.stringify(labelsData))
+  //
+  //     result.ModerationLabels = moderationData.ModerationLabels
+  //     // console.log(JSON.stringify(moderationData))
+  //
+  //     result.TextDetections = textData.TextDetections
+  //     // console.log(JSON.stringify(textData))
+  //   } catch (err) {
+  //     console.log('Error parsing image')
+  //     console.log(err)
+  //     return null
+  //   }
+  //   return result
+  // }
 }

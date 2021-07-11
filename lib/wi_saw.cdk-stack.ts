@@ -136,6 +136,8 @@ export class WiSawCdkStack extends cdk.Stack {
         imgBucket.grantPutAcl(wisawFn)
         imgBucket.grantPut(processUploadedImageLambdaFunction)
         imgBucket.grantPutAcl(processUploadedImageLambdaFunction)
+        imgBucket.grantDelete(processUploadedImageLambdaFunction)
+        
         // expiration can't be configured on the exiting bucket programmatically -- has to be done in the admin UI
         // imgBucket.addLifecycleRule({
         //      expiration: cdk.Duration.days(90),
