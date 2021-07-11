@@ -1,14 +1,6 @@
-// import axios from 'axios'
-//
-// import { exec } from 'child_process'
-//
-// import Recognition from '../../models/recognition'
-//
-// import ImageAnalyser from '../recognitions/imageAnalyser'
-//
-// const stringifyObject = require('stringify-object')
+import * as moment from 'moment'
 
-// const fs = require('fs-extra')
+import sql from '../../sql'
 
 const AWS = require('aws-sdk')
 
@@ -38,6 +30,7 @@ export async function main(event: any = {}, context: any, cb: any) {
 
   await _genWebpThumb({image, Bucket: record.s3.bucket.name, Key: `${photoId}-thumb`})
   await _genWebp({image, Bucket: record.s3.bucket.name, Key: `${photoId}`})
+  await _recognizeImage({Bucket: record.s3.bucket.name, Name: `${photoId}`})
   await _deleteUpload({ Bucket: record.s3.bucket.name, Key: `${name}`})
 
   cb(null, 'success everything')
@@ -77,43 +70,69 @@ const _deleteUpload = async({Bucket, Key}: {Bucket: string, Key: string}) => {
   }).promise()
 }
 
-const _recognizeImage = async({key}: {key: string}) => {
-  //   const params = {
-  //     Image: {
-  //       S3Object: {
-  //         Bucket: s3Config.bucket,
-  //         Name: key,
-  //       },
-  //     },
-  //   }
-  //
-  //   const result = {}
-  //   try {
-  //     const [
-  //       labelsData,
-  //       moderationData,
-  //       textData,
-  //     ] =
-  //       await Promise.all([
-  //         rekognition.detectLabels(params).promise(),
-  //         rekognition.detectModerationLabels(params).promise(),
-  //         rekognition.detectText(params).promise(),
-  //       ]);
-  //
-  //
-  //     result.Labels = labelsData.Labels
-  //     // console.log(JSON.stringify(labelsData))
-  //
-  //     result.ModerationLabels = moderationData.ModerationLabels
-  //     // console.log(JSON.stringify(moderationData))
-  //
-  //     result.TextDetections = textData.TextDetections
-  //     // console.log(JSON.stringify(textData))
-  //   } catch (err) {
-  //     console.log('Error parsing image')
-  //     console.log(err)
-  //     return null
-  //   }
-  //   return result
-  // }
+const _recognizeImage = async({Bucket, Name}: {Bucket: string, Name: string}) => {
+  const rekognition = new AWS.Rekognition()
+  const params = {
+    Image: {
+      S3Object: {
+        Bucket,
+        Name,
+      },
+    },
+  }
+
+  const metaData = {
+    Labels: null,
+    TextDetections: null,
+    ModerationLabels: null,
+  }
+  try {
+    const [
+      labelsData,
+      moderationData,
+      textData,
+    ] =
+      await Promise.all([
+        rekognition.detectLabels(params).promise(),
+        rekognition.detectModerationLabels(params).promise(),
+        rekognition.detectText(params).promise(),
+      ])
+
+
+    metaData.Labels = labelsData.Labels
+    // console.log(JSON.stringify(labelsData))
+
+    metaData.ModerationLabels = moderationData.ModerationLabels
+    // console.log(JSON.stringify(moderationData))
+
+    metaData.TextDetections = textData.TextDetections
+    // console.log(JSON.stringify(textData))
+  } catch (err) {
+    console.log('Error parsing image')
+    console.log(err)
+  }
+
+  try {
+    const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
+    const result = (await sql`
+                    insert into "Recognitions"
+                    (
+                        "photoId",
+                        "metaData",
+                        "createdAt",
+                        "updatedAt"
+                    ) values (
+                      ${Name},
+                      ${metaData},
+                      ${createdAt},
+                      ${createdAt}
+                    )
+                    returning *
+                    `
+                  )
+} catch (err) {
+  console.log('Error saving recognitions')
+  console.log(err)
+}
+
 }

@@ -5,6 +5,7 @@ import * as ec2 from '@aws-cdk/aws-ec2';
 import * as lambda from '@aws-cdk/aws-lambda';
 import * as rds from '@aws-cdk/aws-rds';
 import * as appsync from '@aws-cdk/aws-appsync';
+import * as iam from '@aws-cdk/aws-iam';
 import { ISecret, Secret } from "@aws-cdk/aws-secretsmanager";
 import * as path from 'path';
 
@@ -137,7 +138,18 @@ export class WiSawCdkStack extends cdk.Stack {
         imgBucket.grantPut(processUploadedImageLambdaFunction)
         imgBucket.grantPutAcl(processUploadedImageLambdaFunction)
         imgBucket.grantDelete(processUploadedImageLambdaFunction)
-        
+
+        processUploadedImageLambdaFunction.addToRolePolicy(new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          // permission policy to allow label detection from rekognition across all resources
+          actions: [
+            'rekognition:DetectLabels',
+            'rekognition:DetectModerationLabels',
+            'rekognition:DetectText'
+          ],
+          resources: ['*']
+        }))
+
         // expiration can't be configured on the exiting bucket programmatically -- has to be done in the admin UI
         // imgBucket.addLifecycleRule({
         //      expiration: cdk.Duration.days(90),
