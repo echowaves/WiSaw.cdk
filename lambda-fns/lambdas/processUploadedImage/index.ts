@@ -28,10 +28,17 @@ export async function main(event: any = {}, context: any, cb: any) {
       Key: record.s3.object.key,
     }).promise()
 
-  await _genWebpThumb({image, Bucket: record.s3.bucket.name, Key: `${photoId}-thumb`})
-  await _genWebp({image, Bucket: record.s3.bucket.name, Key: `${photoId}`})
-  await _recognizeImage({Bucket: record.s3.bucket.name, Key: `${name}`})
-  await _deleteUpload({ Bucket: record.s3.bucket.name, Key: `${name}`})
+
+    await Promise.all([
+       _genWebpThumb({image, Bucket: record.s3.bucket.name, Key: `${photoId}-thumb`}),
+       _genWebp({image, Bucket: record.s3.bucket.name, Key: `${photoId}`}),
+       _recognizeImage({Bucket: record.s3.bucket.name, Key: `${name}`}),
+    ])
+
+    await Promise.all([
+      _deleteUpload({ Bucket: record.s3.bucket.name, Key: `${name}`}),
+      _activatePhoto({ photoId }),
+    ])
 
   cb(null, 'success everything')
   return true
@@ -112,7 +119,7 @@ const _recognizeImage = async({Bucket, Key}: {Bucket: string, Key: string}) => {
     // console.log(JSON.stringify(metaData))
   } catch (err) {
     console.log('Error parsing image')
-    console.log(err)
+    console.log({err})
   }
 
   try {
@@ -136,7 +143,26 @@ const _recognizeImage = async({Bucket, Key}: {Bucket: string, Key: string}) => {
     // console.log({result})
   } catch (err) {
     console.log('Error saving recognitions')
-    console.log(err)
+    console.log({err})
+  }
+}
+
+
+const _activatePhoto = async({photoId}: {photoId: string}) => {
+  try {
+    const updatedAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
+
+    const result = (await sql`
+                    UPDATE "Photos"
+                    set active = true, "updatedAt" = ${updatedAt}
+                    WHERE
+                    id = ${photoId}
+                    `
+                  )
+    console.log({result})
+  } catch (err) {
+    console.log('Error activating photo')
+    console.log({err})
   }
 
 }
