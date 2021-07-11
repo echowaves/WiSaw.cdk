@@ -71,7 +71,7 @@ const _deleteUpload = async({Bucket, Key}: {Bucket: string, Key: string}) => {
 }
 
 const _recognizeImage = async({Bucket, Key}: {Bucket: string, Key: string}) => {
-  console.log({Bucket, Key})
+  // console.log({Bucket, Key})
   const rekognition = new AWS.Rekognition()
   const params = {
     Image: {
@@ -133,7 +133,7 @@ const _recognizeImage = async({Bucket, Key}: {Bucket: string, Key: string}) => {
                     returning *
                     `
                   )
-    console.log({result})
+    // console.log({result})
   } catch (err) {
     console.log('Error saving recognitions')
     console.log(err)
