@@ -30,7 +30,7 @@ export async function main(event: any = {}, context: any, cb: any) {
 
   await _genWebpThumb({image, Bucket: record.s3.bucket.name, Key: `${photoId}-thumb`})
   await _genWebp({image, Bucket: record.s3.bucket.name, Key: `${photoId}`})
-  await _recognizeImage({Bucket: record.s3.bucket.name, Name: `${photoId}`})
+  await _recognizeImage({Bucket: record.s3.bucket.name, Key: `${name}`})
   await _deleteUpload({ Bucket: record.s3.bucket.name, Key: `${name}`})
 
   cb(null, 'success everything')
@@ -70,13 +70,14 @@ const _deleteUpload = async({Bucket, Key}: {Bucket: string, Key: string}) => {
   }).promise()
 }
 
-const _recognizeImage = async({Bucket, Name}: {Bucket: string, Name: string}) => {
+const _recognizeImage = async({Bucket, Key}: {Bucket: string, Key: string}) => {
+  console.log({Bucket, Key})
   const rekognition = new AWS.Rekognition()
   const params = {
     Image: {
       S3Object: {
         Bucket,
-        Name,
+        Name: Key,
       },
     },
   }
@@ -107,6 +108,8 @@ const _recognizeImage = async({Bucket, Name}: {Bucket: string, Name: string}) =>
 
     metaData.TextDetections = textData.TextDetections
     // console.log(JSON.stringify(textData))
+
+    // console.log(JSON.stringify(metaData))
   } catch (err) {
     console.log('Error parsing image')
     console.log(err)
@@ -122,17 +125,18 @@ const _recognizeImage = async({Bucket, Name}: {Bucket: string, Name: string}) =>
                         "createdAt",
                         "updatedAt"
                     ) values (
-                      ${Name},
-                      ${metaData},
+                      ${Key.replace('.upload', '')},
+                      ${sql.json(metaData)},
                       ${createdAt},
                       ${createdAt}
                     )
                     returning *
                     `
                   )
-} catch (err) {
-  console.log('Error saving recognitions')
-  console.log(err)
-}
+    console.log({result})
+  } catch (err) {
+    console.log('Error saving recognitions')
+    console.log(err)
+  }
 
 }
