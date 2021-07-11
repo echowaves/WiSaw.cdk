@@ -90,18 +90,21 @@ export class WiSawCdkStack extends cdk.Stack {
     })
 
     // Create the Lambda function that will map GraphQL operations into Postgres
-    const wisawFn = new lambda.Function(this, `${deployEnv()}-WiSaw-GraphQlMapFunction-cdk`,
-    {
-      runtime: lambda.Runtime.NODEJS_14_X,
-      code: new lambda.AssetCode('lambda-fns'),
-      handler: 'index.handler',
-      // memorySize: 10240,
-      memorySize: 3008,
-      timeout: cdk.Duration.seconds(30),
-      environment: {
-        ...config
-      },
-    });
+    const wisawFn = new lambda.Function(this,
+      `${deployEnv()}-WiSaw-GraphQlMapFunction-cdk`,
+        {
+          runtime: lambda.Runtime.NODEJS_14_X,
+          code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
+          // code: new lambda.AssetCode('lambda-fns'),
+          handler: 'index.handler',
+          // memorySize: 10240,
+          memorySize: 3008,
+          timeout: cdk.Duration.seconds(30),
+          environment: {
+            ...config
+          },
+        }
+      );
 
     // Grant access to s3 bucket for lambda function
     const imgBucket =
@@ -112,7 +115,10 @@ export class WiSawCdkStack extends cdk.Stack {
       )
     imgBucket.grantPut(wisawFn)
     imgBucket.grantPutAcl(wisawFn)
-
+    // expiration can't be configured on the exiting bucket programmatically -- has to be done in the admin UI
+    // imgBucket.addLifecycleRule({
+    //      expiration: cdk.Duration.days(90),
+    //    })
 
 
     // define lambda for thumbnails processing
@@ -120,16 +126,18 @@ export class WiSawCdkStack extends cdk.Stack {
           new lambda.Function(
             this,
             `${deployEnv()}-processUploadedImage`,
-            {
-              runtime: lambda.Runtime.NODEJS_14_X,
-              code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos/processUploadedImage')),
-              handler: 'index.main',
-              memorySize: 3008,
-              timeout: cdk.Duration.seconds(30),
-              environment: {
-                ...config
-              },
-            })
+              {
+                runtime: lambda.Runtime.NODEJS_14_X,
+                code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
+                // code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos')),
+                handler: 'lambdas/processUploadedImage.main',
+                memorySize: 3008,
+                timeout: cdk.Duration.seconds(30),
+                environment: {
+                  ...config
+                },
+              }
+            )
     // invoke lambda every time an object is created in the bucket
         imgBucket.addEventNotification(
           s3.EventType.OBJECT_CREATED,

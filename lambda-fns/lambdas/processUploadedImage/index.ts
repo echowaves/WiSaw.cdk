@@ -1,5 +1,3 @@
-// import fs from 'fs'
-// import AWS from 'aws-sdk'
 // import axios from 'axios'
 //
 // import { exec } from 'child_process'
@@ -10,6 +8,12 @@
 //
 // const stringifyObject = require('stringify-object')
 
+// const fs = require('fs-extra')
+
+const AWS = require('aws-sdk')
+
+const sharp = require('sharp')
+
 // eslint-disable-next-line import/prefer-default-export
 export async function main(event: any = {}, context: any, cb: any) {
   console.log('function triggered')
@@ -18,16 +22,16 @@ export async function main(event: any = {}, context: any, cb: any) {
   //   300: '-thumbnail x300', // converting to the height of 300
   // }
   //
-  // const record = event.Records[0];
-  // const name = record.s3.object.key
-  // // we only want to deal with originals
-  // console.log(`received image: ${name}`)
-  // if (name.includes('-thumb')) {
-  //   console.log('thumbnail uploaded, activating image')
-  //   const photoId = name.replace('-thumb', '')
-  //   // activate image
-  //   const activateUrl = `${process.env.HOST}/photos/${photoId}/activate`
-  //   console.log({ activateUrl })
+  const record = event.Records[0];
+  const name = record.s3.object.key
+  // we only want to deal with originals
+  console.log(`received image: ${name}`)
+  if (name.includes('-thumb')) {
+    console.log('thumbnail uploaded, activating image')
+    const photoId = name.replace('-thumb', '')
+    // activate image
+    // const activateUrl = `${process.env.HOST}/photos/${photoId}/activate`
+    // console.log({ activateUrl })
   //   await axios.put(activateUrl)
   //
   //   console.log('------------------------ about to call ImageAnalyser')
@@ -43,25 +47,40 @@ export async function main(event: any = {}, context: any, cb: any) {
   //     await Recognition.create({ photoId, metaData })
   //   }
   //
-  //   cb(null, 'activating the image in DB')
-  //   return true
-  // }
-  //
-  // // get the prefix, and get the hash
-  //
-  // console.log('record.s3.bucket.name:', record.s3.bucket.name)
-  // console.log('record.s3.object.key:', record.s3.object.key)
-  // // download the original to disk
-  // const s3 = new AWS.S3()
-  // const sourcePath = `/tmp/${name}`
+    cb(null, 'activating the image in DB')
+    return true
+  }
+
+  // get the prefix, and get the hash
+
+  console.log('record.s3.bucket.name:', record.s3.bucket.name)
+  console.log('record.s3.object.key:', record.s3.object.key)
+  // download the original to disk
+  const s3 = new AWS.S3()
+  const sourcePath = `/tmp/${name}`
   // const targetStream = fs.createWriteStream(sourcePath)
-  // const fileStream = s3.getObject({
-  //   Bucket: record.s3.bucket.name,
-  //   Key: record.s3.object.key,
-  // }).createReadStream()
+  const image = s3.getObject({
+    Bucket: record.s3.bucket.name,
+    Key: record.s3.object.key,
+  }).createReadStream()
+
+
+  const width = 300
+  const buffer = await sharp(image.Body).resize(width).toBuffer()
+
+  return s3
+    .putObject({
+      Bucket: record.s3.bucket.name,
+      Key: `${record.s3.object.key}-thumb`,
+      Body: buffer,
+      ContentType: 'image',
+    })
+    .promise()
+
+
   // fileStream.pipe(targetStream)
-  //
-  // // when file is downloaded, start processing
+
+  // when file is downloaded, start processing
   // fileStream.on('end', () => {
   //   // resize to every configured size
   //   Object.keys(widths).forEach((size) => {
