@@ -112,7 +112,7 @@ export class WiSawCdkStack extends cdk.Stack {
         const processUploadedImageLambdaFunction =
           new lambda.Function(
             this,
-            `${deployEnv()}-processUploadedImage`,
+            `${deployEnv()}_processUploadedImage`,
               {
                 runtime: lambda.Runtime.NODEJS_14_X,
                 code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
@@ -129,7 +129,7 @@ export class WiSawCdkStack extends cdk.Stack {
         const processDeletedImageLambdaFunction =
           new lambda.Function(
             this,
-            `${deployEnv()}-processDeletedImage`,
+            `${deployEnv()}_processDeletedImage`,
               {
                 runtime: lambda.Runtime.NODEJS_14_X,
                 code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
@@ -176,53 +176,57 @@ export class WiSawCdkStack extends cdk.Stack {
 
 
     // invoke lambda every time an object is created in the bucket
-        imgBucket.addEventNotification(
-          s3.EventType.OBJECT_CREATED,
-          new s3n.LambdaDestination(processUploadedImageLambdaFunction),
-          // only invoke lambda if object matches the filter
-          // {prefix: 'test/', suffix: '.yaml'},
-          {suffix: '.upload'},
-        )
+    imgBucket.addEventNotification(
+      s3.EventType.OBJECT_CREATED,
+      new s3n.LambdaDestination(processUploadedImageLambdaFunction),
+      // only invoke lambda if object matches the filter
+      // {prefix: 'test/', suffix: '.yaml'},
+      {suffix: '.upload'},
+    )
 
-      // invoke lambda every time an object is deleted in the bucket
-      imgBucket.addEventNotification(
-        s3.EventType.OBJECT_REMOVED,
-        new s3n.LambdaDestination(processDeletedImageLambdaFunction),
-        // only invoke lambda if object matches the filter
-        // {prefix: 'test/', suffix: '.yaml'},
-        {suffix: '-thumb'},
-      )
+    // invoke lambda every time an object is deleted in the bucket
+    imgBucket.addEventNotification(
+      s3.EventType.OBJECT_REMOVED,
+      new s3n.LambdaDestination(processDeletedImageLambdaFunction),
+      // only invoke lambda if object matches the filter
+      // {prefix: 'test/', suffix: '.yaml'},
+      {suffix: '-thumb'},
+    )
 
 
 
     // Grant access to the database from the Lambda function
     database.grantConnect(wisawFn);
     // Set the new Lambda function as a data source for the AppSync API
-    const lambdaDs = api.addLambdaDataSource('lambdaDatasource', wisawFn);
+    const lambdaDs = api.addLambdaDataSource(`lambdaDatasource`, wisawFn);
 
     // Map the resolvers to the Lambda function
     lambdaDs.createResolver({
       typeName: 'Query',
       fieldName: 'listAbuseReports'
-    });
+    })
     lambdaDs.createResolver({
       typeName: 'Query',
       fieldName: 'generateUploadUrl'
-    });
+    })
+    lambdaDs.createResolver({
+      typeName: 'Query',
+      fieldName: 'feedByDate'
+    })
 
     lambdaDs.createResolver({
       typeName: 'Mutation',
       fieldName: 'createAbuseReport'
-    });
+    })
     lambdaDs.createResolver({
       typeName: 'Mutation',
       fieldName: 'createPhoto'
-    });
+    })
 
     // CFN Outputs
     new cdk.CfnOutput(this, 'AppSyncAPIURL', {
       value: api.graphqlUrl
-    });
+    })
     new cdk.CfnOutput(this, 'AppSyncAPIKey', {
       value: api.apiKey || ''
     });

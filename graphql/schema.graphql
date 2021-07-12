@@ -28,8 +28,15 @@ type AbuseReport {
 
 type Query {
   listAbuseReports: [AbuseReport]
-  
+
   generateUploadUrl(photoId: ID!): String!
+
+  feedByDate(
+    lat: Float!
+    lon: Float!
+    daysAgo: Int!,
+    batch: String!,
+    ): [Photo]
 }
 
 type Mutation {
