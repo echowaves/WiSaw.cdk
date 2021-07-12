@@ -125,6 +125,23 @@ export class WiSawCdkStack extends cdk.Stack {
                 },
               }
             )
+    // define lambda for thumbnails deletion processing
+        const processDeletedImageLambdaFunction =
+          new lambda.Function(
+            this,
+            `${deployEnv()}-processDeletedImage`,
+              {
+                runtime: lambda.Runtime.NODEJS_14_X,
+                code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
+                // code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos')),
+                handler: 'lambdas/processDeletedImage.main',
+                memorySize: 3008,
+                timeout: cdk.Duration.seconds(30),
+                environment: {
+                  ...config
+                },
+              }
+            )
 
         // Grant access to s3 bucket for lambda function
         const imgBucket =
@@ -138,6 +155,8 @@ export class WiSawCdkStack extends cdk.Stack {
         imgBucket.grantPut(processUploadedImageLambdaFunction)
         imgBucket.grantPutAcl(processUploadedImageLambdaFunction)
         imgBucket.grantDelete(processUploadedImageLambdaFunction)
+
+        imgBucket.grantDelete(processDeletedImageLambdaFunction)
 
         processUploadedImageLambdaFunction.addToRolePolicy(new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
@@ -164,6 +183,15 @@ export class WiSawCdkStack extends cdk.Stack {
           // {prefix: 'test/', suffix: '.yaml'},
           {suffix: '.upload'},
         )
+
+      // invoke lambda every time an object is deleted in the bucket
+      imgBucket.addEventNotification(
+        s3.EventType.OBJECT_REMOVED,
+        new s3n.LambdaDestination(processDeletedImageLambdaFunction),
+        // only invoke lambda if object matches the filter
+        // {prefix: 'test/', suffix: '.yaml'},
+        {suffix: '-thumb'},
+      )
 
 
 

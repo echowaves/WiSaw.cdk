@@ -159,7 +159,7 @@ const _activatePhoto = async({photoId}: {photoId: string}) => {
                     id = ${photoId}
                     `
                   )
-    console.log({result})
+    // console.log({result})
   } catch (err) {
     console.log('Error activating photo')
     console.log({err})
