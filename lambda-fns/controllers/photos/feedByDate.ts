@@ -17,14 +17,7 @@ export default async function main(
   const results = await sql
   `
   SELECT
-  id
-  , "uuid"
-  , "location"
-  , "createdAt"
-  , "updatedAt"
-  , "active"
-  , "likes"
-  , "commentsCount"
+  *
   , ST_Distance(
 		  "location",
       ST_MakePoint(${lat}, ${lon})
@@ -32,9 +25,12 @@ export default async function main(
   FROM "Photos"
   WHERE
       "createdAt" >= ${currentDate.clone().subtract(daysAgo, 'days').format("YYYY-MM-DD HH:mm:ss.SSS")}
-  and "createdAt" <= ${currentDate.clone().add(1, 'days').subtract(daysAgo, 'days').format("YYYY-MM-DD HH:mm:ss.SSS")}
-  and active = true
+  AND "createdAt" <= ${currentDate.clone().add(1, 'days').subtract(daysAgo, 'days').format("YYYY-MM-DD HH:mm:ss.SSS")}
+  AND active = true
+  ORDER BY distance
+  LIMIT 100
+  OFFSET 0
   `
-  console.log({results})
+  // console.log({results})
   return results
 }
