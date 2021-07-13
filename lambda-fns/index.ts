@@ -21,7 +21,8 @@ type AppSyncEvent = {
     lat: number,
     lon: number,
     daysAgo: number,
-    batch: string,
+    batch: number,
+    whenToStop: string,
   }
 }
 
@@ -51,6 +52,7 @@ exports.handler = async (event:AppSyncEvent) => {
         event.arguments.lon,
         event.arguments.daysAgo,
         event.arguments.batch,
+        event.arguments.whenToStop,
       )
 
     default:

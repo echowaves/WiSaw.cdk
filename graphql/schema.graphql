@@ -26,9 +26,11 @@ type AbuseReport {
   updatedAt: AWSDateTime!
 }
 
-# type PhotoFeed {
-#   photos: [Photo]
-# }
+type PhotoFeed {
+  photos: [Photo]
+  batch: Long!
+  noMoreData: Boolean!
+}
 
 type Query {
   listAbuseReports: [AbuseReport]
@@ -39,8 +41,9 @@ type Query {
     lat: Float!
     lon: Float!
     daysAgo: Int!,
-    batch: String!,
-    ): [Photo]
+    batch: Long!,
+    whenToStop: AWSDateTime!
+    ): PhotoFeed
 }
 
 type Mutation {

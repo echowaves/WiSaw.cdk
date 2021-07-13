@@ -52,7 +52,7 @@ const _genWebpThumb = async({image, Bucket, Key}: {image: any, Bucket: string, K
       Bucket,
       Key,
       Body: buffer,
-      ContentType: 'image',
+      ContentType: 'image/webp',
     }).promise()
 }
 
@@ -64,7 +64,7 @@ const _genWebp = async({image, Bucket, Key}: {image: any, Bucket: string, Key: s
       Bucket,
       Key,
       Body: buffer,
-      ContentType: 'image',
+      ContentType: 'image/webp',
     }).promise()
 
 }
