@@ -11,5 +11,28 @@ export default async function main(
   daysAgo: number,
   batch: string,
 ) {
-  return null
+  const currentDate = moment()
+
+  const results = await sql
+  `
+  SELECT
+  id
+  , "uuid"
+  , "location"
+  , "createdAt"
+  , "updatedAt"
+  , "active"
+  , "likes"
+  , "commentsCount"
+  , ST_Distance(
+		"location",
+    ST_MakePoint(${lat}, ${lon}) as distance
+  FROM "Photos"
+  WHERE
+      "createdAt" >= ${currentDate.clone().subtract(daysAgo, 'days')}
+  and "createdAt" <= ${currentDate.clone().add(1, 'days').subtract(daysAgo, 'days')}
+  and active = true
+  `
+  console.log({results})
+  return results
 }

@@ -34,7 +34,7 @@ export default async function main(uuid: string, lat: number, lon: number) {
                         "updatedAt"
                     ) values (
                       ${uuid},
-                      ST_SetSRID(ST_MakePoint(${lat}, ${lon}), 4326),
+                      ST_MakePoint(${lat}, ${lon}),
                       0,
                       ${createdAt},
                       ${updatedAt}
