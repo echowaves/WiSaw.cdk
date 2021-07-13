@@ -26,6 +26,10 @@ type AbuseReport {
   updatedAt: AWSDateTime!
 }
 
+# type PhotoFeed {
+#   photos: [Photo]
+# }
+
 type Query {
   listAbuseReports: [AbuseReport]
 

@@ -1,5 +1,7 @@
 import * as moment from 'moment'
 import sql from '../../sql'
+import { plainToClass } from 'class-transformer';
+import Photo from '../../models/photo'
 
 const AWS = require('aws-sdk')
 
@@ -18,6 +20,7 @@ export default async function main(
   `
   SELECT
   *
+  , ${batch} as batch
   , ST_Distance(
 		  "location",
       ST_MakePoint(${lat}, ${lon})
@@ -31,6 +34,7 @@ export default async function main(
   LIMIT 100
   OFFSET 0
   `
-  // console.log({results})
-  return results
+  console.log({results})
+
+  return results.map((photo: any) => plainToClass(Photo, photo))
 }
