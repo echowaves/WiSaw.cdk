@@ -11,6 +11,7 @@ export default async function main(
   daysAgo: number,
   batch: string,
 ) {
+  console.log({lat, lon, daysAgo, batch})
   const currentDate = moment()
 
   const results = await sql
@@ -25,12 +26,13 @@ export default async function main(
   , "likes"
   , "commentsCount"
   , ST_Distance(
-		"location",
-    ST_MakePoint(${lat}, ${lon}) as distance
+		  "location",
+      ST_MakePoint(${lat}, ${lon})
+    ) as distance
   FROM "Photos"
   WHERE
-      "createdAt" >= ${currentDate.clone().subtract(daysAgo, 'days')}
-  and "createdAt" <= ${currentDate.clone().add(1, 'days').subtract(daysAgo, 'days')}
+      "createdAt" >= ${currentDate.clone().subtract(daysAgo, 'days').format("YYYY-MM-DD HH:mm:ss.SSS")}
+  and "createdAt" <= ${currentDate.clone().add(1, 'days').subtract(daysAgo, 'days').format("YYYY-MM-DD HH:mm:ss.SSS")}
   and active = true
   `
   console.log({results})
