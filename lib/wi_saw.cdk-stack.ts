@@ -217,6 +217,14 @@ export class WiSawCdkStack extends cdk.Stack {
       typeName: 'Query',
       fieldName: 'feedByDate'
     })
+    lambdaDs.createResolver({
+      typeName: 'Query',
+      fieldName: 'feedForWatcher'
+    })
+    lambdaDs.createResolver({
+      typeName: 'Query',
+      fieldName: 'feedForTextSearch'
+    })
 
     lambdaDs.createResolver({
       typeName: 'Mutation',

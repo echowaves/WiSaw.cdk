@@ -41,9 +41,21 @@ type Query {
   feedByDate(
     lat: Float!
     lon: Float!
-    daysAgo: Int!,
-    batch: Long!,
+    daysAgo: Int!
+    batch: Long!
     whenToStop: AWSDateTime!
+    ): PhotoFeed
+  feedForWatcher(
+    uuid: String!
+    pageNumber: Int!
+    batch: Long!
+    whenToStop: AWSDateTime!
+    ): PhotoFeed
+  feedForTextSearch(
+      searchTerm: String!
+      pageNumber: Int!
+      batch: Long!
+      whenToStop: AWSDateTime!
     ): PhotoFeed
 }
 
