@@ -37,16 +37,17 @@ export default async function main(
     OFFSET 0
   `)
 
-  console.log({results})
+  // console.log({results})
   // console.log({slicedRezults: results.slice(0, -2) })// remove 2 last elements
   const photos = results.map((photo: any) => plainToClass(Photo, photo))
+    .sort((a: Photo, b: Photo) => moment(b.createdAt).diff(moment(a.createdAt)))
   let noMoreData = false
 
   // if(photos.length === 0) {
   //   const min = (await sql`select min("createdAt") from "Photos"`)[0].min
   //   console.log({min})
 
-  console.log({diff: currentDate.clone().add(1, 'days').subtract(daysAgo, 'days').diff(whenToStopDate)})
+  // console.log({diff: currentDate.clone().add(1, 'days').subtract(daysAgo, 'days').diff(whenToStopDate)})
   if(currentDate.clone().add(1, 'days').subtract(daysAgo, 'days').diff(whenToStopDate) < 0 ) {
     noMoreData = true
   }
