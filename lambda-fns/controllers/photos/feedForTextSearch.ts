@@ -25,12 +25,12 @@ export default async function main(
           SELECT "photoId"
           FROM "Recognitions"
           WHERE
-          to_tsvector('English', "metaData"::text) @@ plainto_tsquery('English', ${searchTerm}) \
+          to_tsvector('English', "metaData"::text) @@ plainto_tsquery('English', ${searchTerm})
         UNION
           SELECT "photoId"
           FROM "Comments"
           WHERE
-            active = true AND to_tsvector('English', "comment"::text) @@ plainto_tsquery('English', '${searchTerm}')
+            active = true AND to_tsvector('English', "comment"::text) @@ plainto_tsquery('English', ${searchTerm})
         )
     ORDER BY id desc
     LIMIT ${limit}
