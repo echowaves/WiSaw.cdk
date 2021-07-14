@@ -14,7 +14,7 @@ export default async function main(
 ) {
   const limit = 100
   const offset = pageNumber * limit
-
+console.log({uuid})
   const results =
   (await sql`
     SELECT
@@ -23,7 +23,7 @@ export default async function main(
     INNER JOIN "Watchers" w
       ON p.id = w."photoId"
     WHERE
-      w.uuid = '${uuid}'
+      w.uuid = ${uuid}
     AND p.active = true
     ORDER BY w."watchedAt" DESC
     LIMIT ${limit}

@@ -25,7 +25,7 @@ export default async function main(
           SELECT "photoId"
           FROM "Recognitions"
           WHERE
-          to_tsvector('English', "metaData"::text) @@ plainto_tsquery('English', '${searchTerm}') \
+          to_tsvector('English', "metaData"::text) @@ plainto_tsquery('English', ${searchTerm}) \
         UNION
           SELECT "photoId"
           FROM "Comments"

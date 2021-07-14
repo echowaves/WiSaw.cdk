@@ -39,9 +39,9 @@ type Query {
   zeroMoment: AWSDateTime!
 
   feedByDate(
+    daysAgo: Int!
     lat: Float!
     lon: Float!
-    daysAgo: Int!
     batch: Long!
     whenToStop: AWSDateTime!
     ): PhotoFeed

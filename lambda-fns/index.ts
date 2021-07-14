@@ -55,9 +55,9 @@ exports.handler = async (event:AppSyncEvent) => {
       return await zeroMoment()
     case 'feedByDate':
       return await feedByDate(
+        event.arguments.daysAgo,
         event.arguments.lat,
         event.arguments.lon,
-        event.arguments.daysAgo,
         event.arguments.batch,
         event.arguments.whenToStop,
       )

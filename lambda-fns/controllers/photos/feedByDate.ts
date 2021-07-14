@@ -8,9 +8,9 @@ const AWS = require('aws-sdk')
 // import AbuseReport from '../../models/abuseReport'
 
 export default async function main(
+  daysAgo: number,
   lat: number,
   lon: number,
-  daysAgo: number,
   batch: number,
   whenToStop: string,
 ) {
