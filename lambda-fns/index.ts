@@ -3,6 +3,8 @@ import listAbuseReports from './controllers/abuseReports/list'
 
 import createPhoto from './controllers/photos/create'
 import generateUploadUrl from './controllers/photos/generateUploadUrl'
+import zeroMoment from './controllers/photos/zeroMoment'
+
 
 import feedByDate from './controllers/photos/feedByDate'
 
@@ -45,7 +47,8 @@ exports.handler = async (event:AppSyncEvent) => {
       return await generateUploadUrl(
         event.arguments.photoId,
         )
-
+    case 'zeroMoment':
+      return await zeroMoment()
     case 'feedByDate':
       return await feedByDate(
         event.arguments.lat,

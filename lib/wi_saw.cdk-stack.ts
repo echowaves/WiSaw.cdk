@@ -211,6 +211,10 @@ export class WiSawCdkStack extends cdk.Stack {
     })
     lambdaDs.createResolver({
       typeName: 'Query',
+      fieldName: 'zeroMoment'
+    })
+    lambdaDs.createResolver({
+      typeName: 'Query',
       fieldName: 'feedByDate'
     })
 

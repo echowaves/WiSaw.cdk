@@ -36,6 +36,7 @@ type Query {
   listAbuseReports: [AbuseReport]
 
   generateUploadUrl(photoId: ID!): String!
+  zeroMoment: AWSDateTime!
 
   feedByDate(
     lat: Float!
