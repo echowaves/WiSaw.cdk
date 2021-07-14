@@ -49,13 +49,11 @@ type Query {
     uuid: String!
     pageNumber: Int!
     batch: Long!
-    whenToStop: AWSDateTime!
     ): PhotoFeed
   feedForTextSearch(
       searchTerm: String!
       pageNumber: Int!
       batch: Long!
-      whenToStop: AWSDateTime!
     ): PhotoFeed
 }
 

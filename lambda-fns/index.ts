@@ -66,14 +66,12 @@ exports.handler = async (event:AppSyncEvent) => {
         event.arguments.uuid,
         event.arguments.pageNumber,
         event.arguments.batch,
-        event.arguments.whenToStop,
       )
     case 'feedForTextSearch':
       return await feedForTextSearch(
         event.arguments.searchTerm,
         event.arguments.pageNumber,
         event.arguments.batch,
-        event.arguments.whenToStop,
       )
 
     default:
