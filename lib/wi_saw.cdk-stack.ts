@@ -200,11 +200,7 @@ export class WiSawCdkStack extends cdk.Stack {
     // Set the new Lambda function as a data source for the AppSync API
     const lambdaDs = api.addLambdaDataSource(`lambdaDatasource`, wisawFn);
 
-    // Map the resolvers to the Lambda function
-    lambdaDs.createResolver({
-      typeName: 'Query',
-      fieldName: 'listAbuseReports'
-    })
+    // Map the resolvers to the Lambda function    
     lambdaDs.createResolver({
       typeName: 'Query',
       fieldName: 'generateUploadUrl'

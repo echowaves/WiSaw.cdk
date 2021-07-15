@@ -33,8 +33,6 @@ type PhotoFeed {
 }
 
 type Query {
-  listAbuseReports: [AbuseReport]
-
   generateUploadUrl(photoId: ID!): String!
   zeroMoment: AWSDateTime!
 
