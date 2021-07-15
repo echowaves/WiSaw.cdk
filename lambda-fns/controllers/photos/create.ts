@@ -14,7 +14,7 @@ export default async function main(uuid: string, lat: number, lon: number) {
               WHERE "Photos"."uuid" = ${uuid}
   `)[0].count
 
-  console.log({abuseCount})
+  // console.log({abuseCount})
 
   if (abuseCount > 3) {
     throw "You are banned"
@@ -63,7 +63,5 @@ export default async function main(uuid: string, lat: number, lon: number) {
       `
     )[0]
     // console.log({watcher})
-  const ppp = plainToClass(Photo, photo)
-
-  return ppp
+  return plainToClass(Photo, photo)
 }

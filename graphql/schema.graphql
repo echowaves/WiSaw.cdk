@@ -3,6 +3,9 @@ schema {
   mutation: Mutation
 }
 
+# ... ******************************************************
+# ...                   types
+# ... ******************************************************
 type ContactForm {
   id: ID!
   uuid: String!
@@ -39,6 +42,9 @@ type PhotoFeed {
   noMoreData: Boolean!
 }
 
+# ... ******************************************************
+# ...                   queries
+# ... ******************************************************
 type Query {
   generateUploadUrl(photoId: ID!): String!
   zeroMoment: AWSDateTime!
@@ -62,6 +68,9 @@ type Query {
     ): PhotoFeed
 }
 
+# ... ******************************************************
+# ...                    mutations
+# ... ******************************************************
 type Mutation {
   createContactForm(
     uuid: String!
@@ -78,4 +87,9 @@ type Mutation {
     lat: Float!
     lon: Float!
   ): Photo!
+
+  likePhoto(
+      photoId: ID!
+      uuid: String!
+    ): AbuseReport!
 }

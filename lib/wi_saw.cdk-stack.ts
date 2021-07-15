@@ -201,6 +201,10 @@ export class WiSawCdkStack extends cdk.Stack {
     const lambdaDs = api.addLambdaDataSource(`lambdaDatasource`, wisawFn);
 
     // Map the resolvers to the Lambda function
+
+    // ******************************************************
+    //                       queries
+    // ******************************************************
     lambdaDs.createResolver({
       typeName: 'Query',
       fieldName: 'generateUploadUrl'
@@ -222,7 +226,9 @@ export class WiSawCdkStack extends cdk.Stack {
       fieldName: 'feedForTextSearch'
     })
 
-
+    // ******************************************************
+    //                       mutations
+    // ******************************************************
     lambdaDs.createResolver({
       typeName: 'Mutation',
       fieldName: 'createContactForm'
@@ -234,6 +240,10 @@ export class WiSawCdkStack extends cdk.Stack {
     lambdaDs.createResolver({
       typeName: 'Mutation',
       fieldName: 'createPhoto'
+    })
+    lambdaDs.createResolver({
+      typeName: 'Mutation',
+      fieldName: 'likePhoto'
     })
 
     // CFN Outputs

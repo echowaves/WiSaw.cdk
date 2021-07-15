@@ -1,14 +1,23 @@
-import createContactForm from './controllers/contactForms/create'
-import createAbuseReport from './controllers/abuseReports/create'
-
-import createPhoto from './controllers/photos/create'
+// ******************************************************
+//                       queries
+// ******************************************************
 import generateUploadUrl from './controllers/photos/generateUploadUrl'
 import zeroMoment from './controllers/photos/zeroMoment'
-
 
 import feedByDate from './controllers/photos/feedByDate'
 import feedForWatcher from './controllers/photos/feedForWatcher'
 import feedForTextSearch from './controllers/photos/feedForTextSearch'
+
+// ******************************************************
+//                       mutations
+// ******************************************************
+
+import createContactForm from './controllers/contactForms/create'
+import createAbuseReport from './controllers/abuseReports/create'
+
+import createPhoto from './controllers/photos/create'
+import likePhoto from './controllers/photos/like'
+
 
 import AbuseReport from './models/abuseReport'
 import Photo from './models/photo'
@@ -35,22 +44,9 @@ type AppSyncEvent = {
 
 exports.handler = async (event:AppSyncEvent) => {
   switch (event.info.fieldName) {
-    case 'createContactForm':
-      return await createContactForm(
-        event.arguments.uuid,
-        event.arguments.description,
-        )
-    case 'createAbuseReport':
-      return await createAbuseReport(
-        event.arguments.photoId,
-        event.arguments.uuid,
-        )
-    case 'createPhoto':
-      return await createPhoto(
-        event.arguments.uuid,
-        event.arguments.lat,
-        event.arguments.lon,
-        )
+    // ******************************************************
+    //                       queries
+    // ******************************************************
 
     case 'generateUploadUrl':
       return await generateUploadUrl(
@@ -58,6 +54,7 @@ exports.handler = async (event:AppSyncEvent) => {
         )
     case 'zeroMoment':
       return await zeroMoment()
+
 
     case 'feedByDate':
       return await feedByDate(
@@ -80,6 +77,32 @@ exports.handler = async (event:AppSyncEvent) => {
         event.arguments.batch,
       )
 
+    // ******************************************************
+    //                       mutations
+    // ******************************************************
+
+    case 'createContactForm':
+      return await createContactForm(
+        event.arguments.uuid,
+        event.arguments.description,
+        )
+    case 'createAbuseReport':
+      return await createAbuseReport(
+        event.arguments.photoId,
+        event.arguments.uuid,
+        )
+    case 'createPhoto':
+      return await createPhoto(
+        event.arguments.uuid,
+        event.arguments.lat,
+        event.arguments.lon,
+        )
+
+    case 'likePhoto':
+      return await likePhoto(
+        event.arguments.photoId,
+        event.arguments.uuid,
+        )
     default:
       return null
   }
