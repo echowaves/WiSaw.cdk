@@ -3,6 +3,13 @@ schema {
   mutation: Mutation
 }
 
+type ContactForm {
+  id: ID!
+  uuid: String!
+  description: String!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
 
 type Photo {
   id: ID!
@@ -56,6 +63,11 @@ type Query {
 }
 
 type Mutation {
+  createContactForm(
+    uuid: String!
+    description: String!
+  ): ContactForm!
+
   createAbuseReport(
     photoId: ID!
     uuid: String!

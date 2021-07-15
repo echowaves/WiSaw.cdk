@@ -1,3 +1,4 @@
+import createContactForm from './controllers/contactForms/create'
 import createAbuseReport from './controllers/abuseReports/create'
 
 import createPhoto from './controllers/photos/create'
@@ -28,15 +29,21 @@ type AppSyncEvent = {
     whenToStop: string,
     pageNumber: number,
     searchTerm: string,
+    description: string,
   }
 }
 
 exports.handler = async (event:AppSyncEvent) => {
-  switch (event.info.fieldName) {    
+  switch (event.info.fieldName) {
+    case 'createContactForm':
+      return await createContactForm(
+        event.arguments.uuid,
+        event.arguments.description,
+        )
     case 'createAbuseReport':
       return await createAbuseReport(
         event.arguments.photoId,
-        event.arguments.uuid
+        event.arguments.uuid,
         )
     case 'createPhoto':
       return await createPhoto(
@@ -44,12 +51,14 @@ exports.handler = async (event:AppSyncEvent) => {
         event.arguments.lat,
         event.arguments.lon,
         )
+
     case 'generateUploadUrl':
       return await generateUploadUrl(
         event.arguments.photoId,
         )
     case 'zeroMoment':
       return await zeroMoment()
+
     case 'feedByDate':
       return await feedByDate(
         event.arguments.daysAgo,
@@ -72,6 +81,6 @@ exports.handler = async (event:AppSyncEvent) => {
       )
 
     default:
-      return null;
+      return null
   }
 }
