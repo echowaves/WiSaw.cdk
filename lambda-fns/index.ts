@@ -20,6 +20,7 @@ import likePhoto from './controllers/photos/like'
 import watchPhoto from './controllers/photos/watch'
 import unwatchPhoto from './controllers/photos/unwatch'
 import deletePhoto from './controllers/photos/delete'
+import commentPhoto from './controllers/photos/comment'
 
 
 import AbuseReport from './models/abuseReport'
@@ -119,8 +120,16 @@ exports.handler = async (event:AppSyncEvent) => {
     case 'deletePhoto':
       return await deletePhoto(
         event.arguments.photoId,
-        event.arguments.uuid,        
+        event.arguments.uuid,
         )
+
+    case 'commentPhoto':
+      return await commentPhoto(
+        event.arguments.photoId,
+        event.arguments.uuid,
+        event.arguments.description,
+        )
+
     default:
       return null
   }

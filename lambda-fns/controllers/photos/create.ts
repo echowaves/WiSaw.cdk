@@ -25,7 +25,7 @@ export default async function main(uuid: string, lat: number, lon: number) {
   const watchedAt = createdAt
 
   const photo = (await sql`
-                    insert into "Photos"
+                    INSERT INTO "Photos"
                     (
                         "uuid",
                         "location",
@@ -45,7 +45,7 @@ export default async function main(uuid: string, lat: number, lon: number) {
 
   const watcher =
   (await sql`
-      insert into "Watchers"
+      INSERT INTO "Watchers"
       (
           "uuid",
           "photoId",

@@ -14,8 +14,7 @@ export default async function main(photoId: bigint, uuid: string) {
     DELETE from "Watchers"
     WHERE "photoId" = ${photoId}`
 
-  const watcher =
-    (await sql`
+    await sql`
       insert into "Watchers"
         (
             "uuid",
@@ -31,8 +30,6 @@ export default async function main(photoId: bigint, uuid: string) {
           ${createdAt}
         )
         returning *
-        `
-      )[0]
-
+        `    
   return "OK"
 }

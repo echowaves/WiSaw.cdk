@@ -51,6 +51,15 @@ type Watcher {
   watchedAt: AWSDateTime!
 }
 
+type Comment {
+  id: ID!
+  photoId: ID!
+  uuid: String!
+  active: Boolean!
+  comment: String!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
 # ... ******************************************************
 # ...                   queries
 # ... ******************************************************
@@ -112,7 +121,12 @@ type Mutation {
 
   deletePhoto(
       photoId: ID!
-      uuid: String!      
+      uuid: String!
     ): String!
 
+  commentPhoto(
+      photoId: ID!
+      uuid: String!
+      description: String!
+    ): Comment!
 }
