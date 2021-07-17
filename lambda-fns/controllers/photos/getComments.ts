@@ -7,6 +7,7 @@ export const _getComments = async( photoId: bigint) => {
                       "photoId" = ${photoId}
                       AND
                       "active" = true
+                    ORDER BY "createdAt"
                     `
                   )
   return result
