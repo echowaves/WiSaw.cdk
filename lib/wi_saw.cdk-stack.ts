@@ -259,7 +259,11 @@ export class WiSawCdkStack extends cdk.Stack {
     })
     lambdaDs.createResolver({
       typeName: 'Mutation',
-      fieldName: 'commentPhoto'
+      fieldName: 'createComment'
+    })
+    lambdaDs.createResolver({
+      typeName: 'Mutation',
+      fieldName: 'deleteComment'
     })
 
     // CFN Outputs

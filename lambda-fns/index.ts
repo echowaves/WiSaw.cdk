@@ -20,7 +20,8 @@ import likePhoto from './controllers/photos/like'
 import watchPhoto from './controllers/photos/watch'
 import unwatchPhoto from './controllers/photos/unwatch'
 import deletePhoto from './controllers/photos/delete'
-import commentPhoto from './controllers/photos/comment'
+import createComment from './controllers/comments/create'
+import deleteComment from './controllers/comments/delete'
 
 
 import AbuseReport from './models/abuseReport'
@@ -43,6 +44,7 @@ type AppSyncEvent = {
     pageNumber: number,
     searchTerm: string,
     description: string,
+    commentId: bigint,
   }
 }
 
@@ -123,11 +125,16 @@ exports.handler = async (event:AppSyncEvent) => {
         event.arguments.uuid,
         )
 
-    case 'commentPhoto':
-      return await commentPhoto(
+    case 'createComment':
+      return await createComment(
         event.arguments.photoId,
         event.arguments.uuid,
         event.arguments.description,
+        )
+    case 'deleteComment':
+      return await deleteComment(
+        event.arguments.commentId,
+        event.arguments.uuid,
         )
 
     default:

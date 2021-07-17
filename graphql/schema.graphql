@@ -124,9 +124,13 @@ type Mutation {
       uuid: String!
     ): String!
 
-  commentPhoto(
+  createComment(
       photoId: ID!
       uuid: String!
       description: String!
     ): Comment!
+  deleteComment(
+      commentId: ID!
+      uuid: String!
+    ): String!
 }
