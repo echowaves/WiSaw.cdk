@@ -9,7 +9,7 @@ export default async function main(
 
   const [
     comments,
-    regognitions,
+    recognitions,
     isPhotoWatched,
   ] =
     await Promise.all([
@@ -22,7 +22,7 @@ export default async function main(
 
   return {
     comments,
-    regognitions,
+    recognitions,
     isPhotoWatched,
   }
 }

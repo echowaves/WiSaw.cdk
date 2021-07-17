@@ -7,5 +7,5 @@ export const _getComments = async( photoId: bigint) => {
                     `
                   )
                   console.log({comments: result})
-  return result[0]
+  return result
 }

@@ -7,6 +7,5 @@ export const _getRecognitions = async( photoId: bigint) => {
                       "photoId" = ${photoId}
                     `
                   )
-                  console.log({recognitions: result})
   return result[0]
 }
