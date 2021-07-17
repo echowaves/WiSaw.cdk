@@ -110,4 +110,9 @@ type Mutation {
       uuid: String!
     ): String!
 
+  deletePhoto(
+      photoId: ID!
+      uuid: String!      
+    ): String!
+
 }

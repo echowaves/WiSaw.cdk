@@ -34,5 +34,5 @@ export default async function main(photoId: bigint, uuid: string) {
         `
       )[0]
 
-  return "watched"
+  return "OK"
 }

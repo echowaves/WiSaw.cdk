@@ -12,7 +12,10 @@ export default async function main(photoId: bigint, uuid: string) {
 
   await sql`
     DELETE from "Watchers"
-    WHERE "photoId" = ${photoId}`
+    WHERE "photoId" = ${photoId}
+    AND
+    "uuid" = ${uuid}
+    `
 
-  return "unwatched"
+  return "OK"
 }
