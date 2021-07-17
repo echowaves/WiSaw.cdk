@@ -42,6 +42,12 @@ type PhotoFeed {
   noMoreData: Boolean!
 }
 
+type PhotoDetails {
+  comments: [Comment]
+  regognitions: [Recognition]
+  isPhotoWatched: Boolean!
+}
+
 type Watcher {
   id: ID!
   photoId: ID!
@@ -57,6 +63,14 @@ type Comment {
   uuid: String!
   active: Boolean!
   comment: String!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+type Recognition {
+  id: ID!
+  photoId: ID!
+  metaData: AWSJSON!
   createdAt: AWSDateTime!
   updatedAt: AWSDateTime!
 }
@@ -84,6 +98,11 @@ type Query {
       pageNumber: Int!
       batch: Long!
     ): PhotoFeed
+
+  getPhotoDetails(
+    photoId: ID!
+    uuid: String!
+    ): PhotoDetails!
 }
 
 # ... ******************************************************

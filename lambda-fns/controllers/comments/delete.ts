@@ -2,7 +2,7 @@ import * as moment from 'moment'
 
 import sql from '../../sql'
 
-import {updateCommentsCount} from './updateCommentsCount'
+import {_updateCommentsCount} from './updateCommentsCount'
 
 export default async function main(commentId: bigint, uuid: string) {
 
@@ -17,7 +17,7 @@ export default async function main(commentId: bigint, uuid: string) {
         returning *`
       )[0]
 
-  await updateCommentsCount(comment.photoId)
+  await _updateCommentsCount(comment.photoId)
 
   return "OK"
 }

@@ -225,6 +225,10 @@ export class WiSawCdkStack extends cdk.Stack {
       typeName: 'Query',
       fieldName: 'feedForTextSearch'
     })
+    lambdaDs.createResolver({
+      typeName: 'Query',
+      fieldName: 'getPhotoDetails'
+    })
 
     // ******************************************************
     //                       mutations
@@ -265,6 +269,7 @@ export class WiSawCdkStack extends cdk.Stack {
       typeName: 'Mutation',
       fieldName: 'deleteComment'
     })
+
 
     // CFN Outputs
     new cdk.CfnOutput(this, 'AppSyncAPIURL', {

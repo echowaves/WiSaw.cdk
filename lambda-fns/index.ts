@@ -8,6 +8,8 @@ import feedByDate from './controllers/photos/feedByDate'
 import feedForWatcher from './controllers/photos/feedForWatcher'
 import feedForTextSearch from './controllers/photos/feedForTextSearch'
 
+import getPhotoDetails from './controllers/photos/getPhotoDetails'
+
 // ******************************************************
 //                       mutations
 // ******************************************************
@@ -81,6 +83,11 @@ exports.handler = async (event:AppSyncEvent) => {
         event.arguments.searchTerm,
         event.arguments.pageNumber,
         event.arguments.batch,
+      )
+    case 'getPhotoDetails':
+      return await getPhotoDetails(
+        event.arguments.photoId,
+        event.arguments.uuid,
       )
 
     // ******************************************************
