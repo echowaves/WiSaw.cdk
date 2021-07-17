@@ -42,6 +42,15 @@ type PhotoFeed {
   noMoreData: Boolean!
 }
 
+type Watcher {
+  id: ID!
+  photoId: ID!
+  uuid: String!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+  watchedAt: AWSDateTime!
+}
+
 # ... ******************************************************
 # ...                   queries
 # ... ******************************************************
@@ -92,4 +101,13 @@ type Mutation {
       photoId: ID!
       uuid: String!
     ): AbuseReport!
+  watchPhoto(
+      photoId: ID!
+      uuid: String!
+    ): String!
+  unwatchPhoto(
+      photoId: ID!
+      uuid: String!
+    ): String!
+
 }

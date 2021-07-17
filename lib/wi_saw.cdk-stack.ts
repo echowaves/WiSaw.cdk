@@ -245,6 +245,14 @@ export class WiSawCdkStack extends cdk.Stack {
       typeName: 'Mutation',
       fieldName: 'likePhoto'
     })
+    lambdaDs.createResolver({
+      typeName: 'Mutation',
+      fieldName: 'watchPhoto'
+    })
+    lambdaDs.createResolver({
+      typeName: 'Mutation',
+      fieldName: 'unwatchPhoto'
+    })
 
     // CFN Outputs
     new cdk.CfnOutput(this, 'AppSyncAPIURL', {

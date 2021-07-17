@@ -17,6 +17,8 @@ import createAbuseReport from './controllers/abuseReports/create'
 
 import createPhoto from './controllers/photos/create'
 import likePhoto from './controllers/photos/like'
+import watchPhoto from './controllers/photos/watch'
+import unwatchPhoto from './controllers/photos/unwatch'
 
 
 import AbuseReport from './models/abuseReport'
@@ -100,6 +102,16 @@ exports.handler = async (event:AppSyncEvent) => {
 
     case 'likePhoto':
       return await likePhoto(
+        event.arguments.photoId,
+        event.arguments.uuid,
+        )
+    case 'watchPhoto':
+      return await watchPhoto(
+        event.arguments.photoId,
+        event.arguments.uuid,
+        )
+    case 'unwatchPhoto':
+      return await unwatchPhoto(
         event.arguments.photoId,
         event.arguments.uuid,
         )
