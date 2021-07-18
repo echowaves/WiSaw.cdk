@@ -26,7 +26,7 @@ export default async function main(photoId: bigint, uuid: string, description: s
       returning *
       `
     )[0]
-
+// console.log({comment})
   await _updateCommentsCount(photoId)
 
   return comment
