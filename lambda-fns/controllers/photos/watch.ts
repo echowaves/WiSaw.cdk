@@ -12,7 +12,9 @@ export default async function main(photoId: bigint, uuid: string) {
 
   await sql`
     DELETE from "Watchers"
-    WHERE "photoId" = ${photoId}`
+    WHERE "photoId" = ${photoId}
+      AND
+    "uuid" = ${uuid}`
 
     await sql`
       insert into "Watchers"
@@ -30,6 +32,6 @@ export default async function main(photoId: bigint, uuid: string) {
           ${createdAt}
         )
         returning *
-        `    
+        `
   return "OK"
 }

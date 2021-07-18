@@ -44,7 +44,7 @@ type PhotoFeed {
 
 type PhotoDetails {
   comments: [Comment]
-  recognitions: Recognition
+  recognitions: [Recognition]
   isPhotoWatched: Boolean!
 }
 

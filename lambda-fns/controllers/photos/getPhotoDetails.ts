@@ -1,6 +1,6 @@
-import {_getComments} from './getComments'
-import {_getRecognitions} from './getRecognitions'
-import {_isPhotoWatched} from './isPhotoWatched'
+import {_getComments} from './_getComments'
+import {_getRecognitions} from './_getRecognitions'
+import {_isPhotoWatched} from './_isPhotoWatched'
 
 export default async function main(
   photoId: bigint,
