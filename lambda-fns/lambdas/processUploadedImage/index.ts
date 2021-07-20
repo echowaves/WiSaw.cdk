@@ -58,7 +58,7 @@ const _genWebpThumb = async({image, Bucket, Key}: {image: any, Bucket: string, K
 
 const _genWebp = async({image, Bucket, Key}: {image: any, Bucket: string, Key: string}) => {
 
-  const buffer = await sharp(image.Body).rotate().webp({ lossless: false, quality: 95 }).toBuffer()
+  const buffer = await sharp(image.Body).rotate().webp({ lossless: false, quality: 90 }).toBuffer()
   const s3 = new AWS.S3()
   await s3.putObject({
       Bucket,
