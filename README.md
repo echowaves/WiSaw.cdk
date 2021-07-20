@@ -26,7 +26,8 @@ https://dev.to/miensol/deploy-aws-cdk-app-to-different-environments-297d
 The Power of Serverless GraphQL with AWS AppSync
 https://serverless.pub/the-power-of-serverless-graphql-with-appsync/
 
-
+5 Ways To Bundle a Lambda Function Within an AWS CDK Construct
+https://www.sebastianhesse.de/2021/01/16/5-ways-to-bundle-a-lambda-function-within-an-aws-cdk-construct/
 
 
 ## Restore snapshot for tesdt db

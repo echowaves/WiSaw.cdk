@@ -2,18 +2,18 @@ import * as moment from 'moment'
 
 import sql from '../../sql'
 
-export default async function main(photoId: bigint, uuid: string) {
+export default async function main(uuid: string, description: string) {
   const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
   const result = (await sql`
-                    insert into "AbuseReports"
+                    insert into "ContactForms"
                     (
-                        "photoId",
                         "uuid",
+                        "description",
                         "createdAt",
                         "updatedAt"
                     ) values (
-                      ${photoId},
                       ${uuid},
+                      ${description},
                       ${createdAt},
                       ${createdAt}
                     )

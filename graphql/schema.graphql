@@ -1,3 +1,19 @@
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+# ... ******************************************************
+# ...                   types
+# ... ******************************************************
+type ContactForm {
+  id: ID!
+  uuid: String!
+  description: String!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
 type Photo {
   id: ID!
   uuid: String!
@@ -19,25 +35,121 @@ type AbuseReport {
   createdAt: AWSDateTime!
   updatedAt: AWSDateTime!
 }
-input CreateAbuseReportInput  {
+
+type PhotoFeed {
+  photos: [Photo]
+  batch: Long!
+  noMoreData: Boolean!
+}
+
+type PhotoDetails {
+  comments: [Comment]
+  recognitions: [Recognition]
+  isPhotoWatched: Boolean!
+}
+
+type Watcher {
+  id: ID!
   photoId: ID!
   uuid: String!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+  watchedAt: AWSDateTime!
 }
-input CreateAbuseReportOutput  {
+
+type Comment {
   id: ID!
+  photoId: ID!
+  uuid: String!
+  active: Boolean!
+  comment: String!
   createdAt: AWSDateTime!
   updatedAt: AWSDateTime!
 }
 
+type Recognition {
+  id: ID!
+  photoId: ID!
+  metaData: AWSJSON!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+# ... ******************************************************
+# ...                   queries
+# ... ******************************************************
 type Query {
-  listAbuseReports: [AbuseReport]
+  generateUploadUrl(photoId: ID!): String!
+  zeroMoment: AWSDateTime!
+
+  feedByDate(
+    daysAgo: Int!
+    lat: Float!
+    lon: Float!
+    batch: Long!
+    whenToStop: AWSDateTime!
+    ): PhotoFeed
+  feedForWatcher(
+    uuid: String!
+    pageNumber: Int!
+    batch: Long!
+    ): PhotoFeed
+  feedForTextSearch(
+      searchTerm: String!
+      pageNumber: Int!
+      batch: Long!
+    ): PhotoFeed
+
+  getPhotoDetails(
+    photoId: ID!
+    uuid: String!
+    ): PhotoDetails!
 }
 
+# ... ******************************************************
+# ...                    mutations
+# ... ******************************************************
 type Mutation {
-  createAbuseReport(abuseReport: CreateAbuseReportInput!): AbuseReport!
-}
+  createContactForm(
+    uuid: String!
+    description: String!
+  ): ContactForm!
 
-schema {
-  query: Query
-  mutation: Mutation
+  createAbuseReport(
+    photoId: ID!
+    uuid: String!
+  ): AbuseReport!
+
+  createPhoto(
+    uuid: String!
+    lat: Float!
+    lon: Float!
+  ): Photo!
+
+  likePhoto(
+      photoId: ID!
+      uuid: String!
+    ): AbuseReport!
+  watchPhoto(
+      photoId: ID!
+      uuid: String!
+    ): String!
+  unwatchPhoto(
+      photoId: ID!
+      uuid: String!
+    ): String!
+
+  deletePhoto(
+      photoId: ID!
+      uuid: String!
+    ): String!
+
+  createComment(
+      photoId: ID!
+      uuid: String!
+      description: String!
+    ): Comment!
+  deleteComment(
+      commentId: ID!
+      uuid: String!
+    ): String!
 }
