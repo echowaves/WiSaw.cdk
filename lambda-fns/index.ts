@@ -10,6 +10,9 @@ import feedForTextSearch from './controllers/photos/feedForTextSearch'
 
 import getPhotoDetails from './controllers/photos/getPhotoDetails'
 
+import getPhotoAllCurr from './controllers/photos/getPhotoAllCurr'
+import getPhotoAllNext from './controllers/photos/getPhotoAllNext'
+import getPhotoAllPrev from './controllers/photos/getPhotoAllPrev'
 // ******************************************************
 //                       mutations
 // ******************************************************
@@ -88,6 +91,19 @@ exports.handler = async (event:AppSyncEvent) => {
       return await getPhotoDetails(
         event.arguments.photoId,
         event.arguments.uuid,
+      )
+
+    case 'getPhotoAllCurr':
+      return await getPhotoAllCurr(
+        event.arguments.photoId,
+      )
+    case 'getPhotoAllNext':
+      return await getPhotoAllNext(
+        event.arguments.photoId,
+      )
+    case 'getPhotoAllPrev':
+      return await getPhotoAllPrev(
+        event.arguments.photoId,
       )
 
     // ******************************************************

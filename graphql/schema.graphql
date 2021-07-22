@@ -48,6 +48,12 @@ type PhotoDetails {
   isPhotoWatched: Boolean!
 }
 
+type PhotoAll {
+  photo: Photo
+  comments: [Comment]
+  recognitions: [Recognition]
+}
+
 type Watcher {
   id: ID!
   photoId: ID!
@@ -103,6 +109,10 @@ type Query {
     photoId: ID!
     uuid: String!
     ): PhotoDetails!
+
+  getPhotoAllCurr( photoId: ID!): PhotoAll!
+  getPhotoAllNext( photoId: ID!): PhotoAll!
+  getPhotoAllPrev( photoId: ID!): PhotoAll!
 }
 
 # ... ******************************************************

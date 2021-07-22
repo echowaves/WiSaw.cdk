@@ -230,6 +230,18 @@ export class WiSawCdkStack extends cdk.Stack {
       fieldName: 'getPhotoDetails'
     })
 
+    lambdaDs.createResolver({
+      typeName: 'Query',
+      fieldName: 'getPhotoAllCurr'
+    })
+    lambdaDs.createResolver({
+      typeName: 'Query',
+      fieldName: 'getPhotoAllNext'
+    })
+    lambdaDs.createResolver({
+      typeName: 'Query',
+      fieldName: 'getPhotoAllPrev'
+    })
     // ******************************************************
     //                       mutations
     // ******************************************************
