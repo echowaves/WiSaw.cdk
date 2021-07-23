@@ -54,6 +54,7 @@ const _genWebpThumb = async({image, Bucket, Key}: {image: any, Bucket: string, K
       Body: buffer,
       ContentType: 'image/webp',
       ACL: 'public-read',
+      CacheControl: 'max-age=31536000',
     }).promise()
 }
 
@@ -67,6 +68,7 @@ const _genWebp = async({image, Bucket, Key}: {image: any, Bucket: string, Key: s
       Body: buffer,
       ContentType: 'image/webp',
       ACL: 'public-read',
+      CacheControl: 'max-age=31536000',
     }).promise()
 
 }
