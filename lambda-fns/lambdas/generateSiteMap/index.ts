@@ -33,7 +33,7 @@ export async function main(event: any = {}, context: any, cb: any) {
     console.log('Unable to retrieve Photos feed', {err})
     // return false
   }
-
+  console.log('photos.length:', photos.length)
   photos?.forEach((photo: any) => {
     const jsonObj = JSON.parse(JSON.stringify(photo))
     smStream.write({ url: `/photos/${photo.id}` })
@@ -53,7 +53,7 @@ export async function main(event: any = {}, context: any, cb: any) {
       Body: buffer.toString(),
       Bucket: 'wisaw-client',
     }).promise()
-    
+
     console.log('finished uploading')
   } catch (err) {
     console.log('Unable to upload sitemap.xml', {err})
