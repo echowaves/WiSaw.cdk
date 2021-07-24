@@ -3,6 +3,8 @@ import * as s3 from "@aws-cdk/aws-s3";
 import * as s3n from '@aws-cdk/aws-s3-notifications';
 import * as ec2 from '@aws-cdk/aws-ec2';
 import * as lambda from '@aws-cdk/aws-lambda';
+import {LambdaFunction} from '@aws-cdk/aws-events-targets';
+import { Rule, Schedule } from '@aws-cdk/aws-events';
 import * as rds from '@aws-cdk/aws-rds';
 import * as appsync from '@aws-cdk/aws-appsync';
 import * as iam from '@aws-cdk/aws-iam';
@@ -119,12 +121,13 @@ export class WiSawCdkStack extends cdk.Stack {
                 // code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos')),
                 handler: 'lambdas/processUploadedImage.main',
                 memorySize: 3008,
-                timeout: cdk.Duration.seconds(30),
+                timeout: cdk.Duration.seconds(300),
                 environment: {
                   ...config
                 },
               }
             )
+
     // define lambda for thumbnails deletion processing
         const processDeletedImageLambdaFunction =
           new lambda.Function(
@@ -136,12 +139,50 @@ export class WiSawCdkStack extends cdk.Stack {
                 // code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos')),
                 handler: 'lambdas/processDeletedImage.main',
                 memorySize: 3008,
-                timeout: cdk.Duration.seconds(30),
+                timeout: cdk.Duration.seconds(300),
                 environment: {
                   ...config
                 },
               }
             )
+
+        if(deployEnv() === 'prod') {
+            // generate sitemap.xml lambda
+                const generateSiteMapLambdaFunction =
+                  new lambda.Function(
+                    this,
+                    `${deployEnv()}_generateSiteMap`,
+                      {
+                        runtime: lambda.Runtime.NODEJS_14_X,
+                        code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
+                        // code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos')),
+                        handler: 'lambdas/generateSiteMap.main',
+                        memorySize: 3008,
+                        timeout: cdk.Duration.seconds(300),
+                        environment: {
+                          ...config
+                        },
+                      }
+                    )
+                const pollingLambdaTarget = new LambdaFunction(generateSiteMapLambdaFunction);
+
+                new Rule(this, 'lambda-polling-rule', {
+                  description: 'Rule to trigger scheduled lambda',
+                  schedule: Schedule.rate(cdk.Duration.minutes(1)),
+                  // schedule: Schedule.rate(cdk.Duration.hours(3)),
+                  targets: [pollingLambdaTarget],
+                });
+
+                const webAppBucket =
+                  s3.Bucket.fromBucketName(
+                    this,
+                    `wisaw-client`,
+                    `wisaw-client`
+                  )
+                webAppBucket.grantPut(generateSiteMapLambdaFunction)
+                webAppBucket.grantPutAcl(generateSiteMapLambdaFunction)
+
+        }
 
         // Grant access to s3 bucket for lambda function
         const imgBucket =
