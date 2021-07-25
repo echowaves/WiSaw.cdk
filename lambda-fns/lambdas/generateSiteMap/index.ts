@@ -6,8 +6,6 @@ import sql from '../../sql'
 
 const AWS = require('aws-sdk')
 
-const sharp = require('sharp')
-
 // eslint-disable-next-line import/prefer-default-export
 export async function main(event: any = {}, context: any, cb: any) {
 

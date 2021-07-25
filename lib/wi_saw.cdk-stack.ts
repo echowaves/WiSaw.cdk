@@ -146,31 +146,59 @@ export class WiSawCdkStack extends cdk.Stack {
               }
             )
 
+    // cleanup older abuse reports
+    const cleaupupAbuseReports_LambdaFunction =
+      new lambda.Function(
+        this,
+        `${deployEnv()}_cleaupupAbuseReports`,
+          {
+            runtime: lambda.Runtime.NODEJS_14_X,
+            code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
+            handler: 'lambdas/cleaupupAbuseReports.main',
+            memorySize: 3008,
+            timeout: cdk.Duration.seconds(300),
+            environment: {
+              ...config
+            },
+          }
+        )
+        const cleaupupAbuseReports_LambdaTarget = new LambdaFunction(cleaupupAbuseReports_LambdaFunction);
+
+        new Rule(this, `${deployEnv()}_lambda-polling-rule`, {
+          description: 'Rule to trigger scheduled lambda',
+          // schedule: Schedule.rate(cdk.Duration.minutes(1)),
+          schedule: Schedule.rate(cdk.Duration.hours(24)),
+          targets: [cleaupupAbuseReports_LambdaTarget],
+        });
+
+
+
+
         if(deployEnv() === 'prod') {
             // generate sitemap.xml lambda
-                const generateSiteMapLambdaFunction =
-                  new lambda.Function(
-                    this,
-                    `${deployEnv()}_generateSiteMap`,
-                      {
-                        runtime: lambda.Runtime.NODEJS_14_X,
-                        code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
-                        // code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos')),
-                        handler: 'lambdas/generateSiteMap.main',
-                        memorySize: 3008,
-                        timeout: cdk.Duration.seconds(300),
-                        environment: {
-                          ...config
-                        },
-                      }
-                    )
-                const pollingLambdaTarget = new LambdaFunction(generateSiteMapLambdaFunction);
+            const generateSiteMap_LambdaFunction =
+              new lambda.Function(
+                this,
+                `${deployEnv()}_generateSiteMap`,
+                  {
+                    runtime: lambda.Runtime.NODEJS_14_X,
+                    code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
+                    // code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos')),
+                    handler: 'lambdas/generateSiteMap.main',
+                    memorySize: 3008,
+                    timeout: cdk.Duration.seconds(300),
+                    environment: {
+                      ...config
+                    },
+                  }
+                )
+                const generateSiteMapLambdaFunction_LambdaTarget = new LambdaFunction(generateSiteMap_LambdaFunction);
 
                 new Rule(this, 'lambda-polling-rule', {
                   description: 'Rule to trigger scheduled lambda',
                   // schedule: Schedule.rate(cdk.Duration.minutes(1)),
                   schedule: Schedule.rate(cdk.Duration.hours(1)),
-                  targets: [pollingLambdaTarget],
+                  targets: [generateSiteMapLambdaFunction_LambdaTarget],
                 });
 
                 const webAppBucket =
@@ -179,8 +207,8 @@ export class WiSawCdkStack extends cdk.Stack {
                     `wisaw-client`,
                     `wisaw-client`
                   )
-                webAppBucket.grantPut(generateSiteMapLambdaFunction)
-                webAppBucket.grantPutAcl(generateSiteMapLambdaFunction)
+                webAppBucket.grantPut(generateSiteMap_LambdaFunction)
+                webAppBucket.grantPutAcl(generateSiteMap_LambdaFunction)
 
         }
 
