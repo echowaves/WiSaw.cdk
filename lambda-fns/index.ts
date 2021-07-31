@@ -21,7 +21,6 @@ import createContactForm from './controllers/contactForms/create'
 import createAbuseReport from './controllers/abuseReports/create'
 
 import createPhoto from './controllers/photos/create'
-import likePhoto from './controllers/photos/like'
 import watchPhoto from './controllers/photos/watch'
 import unwatchPhoto from './controllers/photos/unwatch'
 import deletePhoto from './controllers/photos/delete'
@@ -127,11 +126,6 @@ exports.handler = async (event:AppSyncEvent) => {
         event.arguments.lon,
         )
 
-    case 'likePhoto':
-      return await likePhoto(
-        event.arguments.photoId,
-        event.arguments.uuid,
-        )
     case 'watchPhoto':
       return await watchPhoto(
         event.arguments.photoId,

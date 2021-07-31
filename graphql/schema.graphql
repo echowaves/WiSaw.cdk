@@ -18,8 +18,8 @@ type Photo {
   id: ID!
   uuid: String!
   location: AWSJSON!
-  likes: Int!
   commentsCount: Int!
+  watchersCount: Int!
   createdAt: AWSDateTime!
   updatedAt: AWSDateTime!
   active: Boolean!
@@ -135,18 +135,14 @@ type Mutation {
     lon: Float!
   ): Photo!
 
-  likePhoto(
-      photoId: ID!
-      uuid: String!
-    ): AbuseReport!
   watchPhoto(
       photoId: ID!
       uuid: String!
-    ): String!
+    ): Int!
   unwatchPhoto(
       photoId: ID!
       uuid: String!
-    ): String!
+    ): Int!
 
   deletePhoto(
       photoId: ID!

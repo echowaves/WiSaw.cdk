@@ -2,8 +2,8 @@ class Photo {
   id: bigint
   uuid: string
   location: object
-  likes: bigint
   commentsCount: bigint
+  watchersCount: bigint
   createdAt: string
   updatedAt: string
   active: boolean
