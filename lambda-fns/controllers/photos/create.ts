@@ -5,6 +5,7 @@ import { plainToClass } from 'class-transformer';
 import sql from '../../sql'
 
 import Photo from '../../models/photo'
+import watch from './watch'
 
 export default async function main(uuid: string, lat: number, lon: number) {
   // first count how many times photos from this device were reported
@@ -29,13 +30,11 @@ export default async function main(uuid: string, lat: number, lon: number) {
                     (
                         "uuid",
                         "location",
-                        "likes",
                         "createdAt",
                         "updatedAt"
                     ) values (
                       ${uuid},
                       ST_MakePoint(${lat}, ${lon}),
-                      0,
                       ${createdAt},
                       ${updatedAt}
                     )
@@ -43,25 +42,8 @@ export default async function main(uuid: string, lat: number, lon: number) {
                     `
                   )[0]
 
-  const watcher =
-  (await sql`
-      INSERT INTO "Watchers"
-      (
-          "uuid",
-          "photoId",
-          "createdAt",
-          "updatedAt",
-          "watchedAt"
-      ) values (
-        ${uuid},
-        ${photo.id},
-        ${createdAt},
-        ${updatedAt},
-        ${watchedAt}
-      )
-      returning *
-      `
-    )[0]
+  await watch(photo.id, uuid)
+
     // console.log({watcher})
   return plainToClass(Photo, photo)
 }

@@ -328,10 +328,6 @@ export class WiSawCdkStack extends cdk.Stack {
     })
     lambdaDs.createResolver({
       typeName: 'Mutation',
-      fieldName: 'likePhoto'
-    })
-    lambdaDs.createResolver({
-      typeName: 'Mutation',
       fieldName: 'watchPhoto'
     })
     lambdaDs.createResolver({

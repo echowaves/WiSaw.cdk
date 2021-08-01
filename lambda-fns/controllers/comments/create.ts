@@ -3,7 +3,8 @@ import * as moment from 'moment'
 import sql from '../../sql'
 
 import {_updateCommentsCount} from './_updateCommentsCount'
-import {_updateWatchers} from './_updateWatchers'
+import {_notifyAllWatchers} from '../photos/_notifyAllWatchers'
+import watch from '../photos/watch'
 
 export default async function main(photoId: bigint, uuid: string, description: string) {
 
@@ -29,8 +30,9 @@ export default async function main(photoId: bigint, uuid: string, description: s
     )[0]
 // console.log({comment})
   await Promise.all([
-    _updateWatchers(photoId),
+    watch(photoId, uuid),
     _updateCommentsCount(photoId),
+    _notifyAllWatchers(photoId),
   ])
 
   return comment

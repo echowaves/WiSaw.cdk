@@ -18,8 +18,6 @@ export default async function main(
       _isPhotoWatched(photoId, uuid),
     ])
 
-
-
   return {
     comments,
     recognitions,
