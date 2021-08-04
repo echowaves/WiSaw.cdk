@@ -3,6 +3,8 @@ import * as moment from 'moment'
 import sql from '../../sql'
 
 import {_updateCommentsCount} from './_updateCommentsCount'
+import {_updateLastComment} from './_updateLastComment'
+
 import {_notifyAllWatchers} from '../photos/_notifyAllWatchers'
 import watch from '../photos/watch'
 
@@ -33,6 +35,7 @@ export default async function main(photoId: bigint, uuid: string, description: s
     watch(photoId, uuid),
     _updateCommentsCount(photoId),
     _notifyAllWatchers(photoId),
+    _updateLastComment(photoId),
   ])
 
   return comment

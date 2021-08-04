@@ -3,6 +3,7 @@ import * as moment from 'moment'
 import sql from '../../sql'
 
 import {_updateCommentsCount} from './_updateCommentsCount'
+import {_updateLastComment} from './_updateLastComment'
 
 export default async function main(commentId: bigint, uuid: string) {
 
@@ -17,7 +18,16 @@ export default async function main(commentId: bigint, uuid: string) {
         returning *`
       )[0]
 
-  await _updateCommentsCount(comment.photoId)
+  const {photoId} = comment
 
-  return "OK"
+  const [
+    commentsCount,
+    lastComment,
+  ] =
+  await Promise.all([
+    _updateCommentsCount(photoId),
+    _updateLastComment(photoId),
+  ])
+
+  return lastComment
 }
