@@ -12,6 +12,9 @@ export default async function main(photoId: bigint, uuid: string, description: s
 
   const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
 
+  if(description.trim().length === 0) {
+      throw('Unable to save empty comment.')
+  }
   const comment = (await sql`
     INSERT INTO "Comments"
       (
