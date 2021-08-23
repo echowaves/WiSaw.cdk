@@ -124,6 +124,7 @@ exports.handler = async (event:AppSyncEvent) => {
         event.arguments.uuid,
         event.arguments.lat,
         event.arguments.lon,
+        event.arguments.video,  
         )
 
     case 'watchPhoto':

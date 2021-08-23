@@ -29,6 +29,9 @@ export async function main(event: any = {}, context: any, cb: any) {
     }).promise()
 
 
+// check if photo is video
+
+
     await Promise.all([
        _genWebpThumb({image, Bucket: record.s3.bucket.name, Key: `${photoId}-thumb`}),
        _genWebp({image, Bucket: record.s3.bucket.name, Key: `${photoId}`}),
