@@ -36,7 +36,7 @@ export default async function main(uuid: string, lat: number, lon: number, video
                     ) values (
                       ${uuid},
                       ST_MakePoint(${lat}, ${lon}),
-                      ${video ? true: false}, // this is the way to deal with null values
+                      ${video ? true: false}, 
                       ${createdAt},
                       ${updatedAt}
                     )
