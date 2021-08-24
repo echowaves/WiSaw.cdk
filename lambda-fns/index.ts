@@ -49,6 +49,7 @@ type AppSyncEvent = {
     searchTerm: string,
     description: string,
     commentId: bigint,
+    video: boolean,
   }
 }
 
@@ -124,7 +125,7 @@ exports.handler = async (event:AppSyncEvent) => {
         event.arguments.uuid,
         event.arguments.lat,
         event.arguments.lon,
-        event.arguments.video,  
+        event.arguments.video,
         )
 
     case 'watchPhoto':
