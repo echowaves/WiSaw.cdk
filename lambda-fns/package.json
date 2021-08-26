@@ -10,10 +10,10 @@
     "@aws-cdk/aws-lambda-nodejs": "1.115.0",
     "aws-sdk": "2.953.0",
     "class-transformer": "0.4.0",
-    "fs-extra": "10.0.0",
     "moment": "2.29.1",
     "postgres": "1.0.2",
     "sharp": "^0.29.0",
+    "simple-thumbnail": "1.6.5",
     "sitemap": "^7.0.0",
     "uuid": "8.3.2"
   }
