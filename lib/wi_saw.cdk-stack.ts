@@ -112,9 +112,9 @@ export class WiSawCdkStack extends cdk.Stack {
 
 
     // create a layer
-    const ffmpegLayer = lambda.LayerVersion.fromLayerVersionArn(this, 'ffmpegLayer',
-      'arn:aws:lambda:us-east-1:963958500685:layer:ffmpeg:1'
-    )
+    // const ffmpegLayer = lambda.LayerVersion.fromLayerVersionArn(this, 'ffmpegLayer',
+    //   'arn:aws:lambda:us-east-1:963958500685:layer:ffmpeg:1'
+    // )
 
 
     // define lambda for thumbnails processing
@@ -129,7 +129,7 @@ export class WiSawCdkStack extends cdk.Stack {
                 handler: 'lambdas/processUploadedImage.main',
                 memorySize: 3008,
                 timeout: cdk.Duration.seconds(300),
-                layers: [ffmpegLayer],
+                // layers: [ffmpegLayer],
                 environment: {
                   ...config
                 },
