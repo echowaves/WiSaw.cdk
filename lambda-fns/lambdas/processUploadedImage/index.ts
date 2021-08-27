@@ -65,7 +65,6 @@ export async function main(event: any = {}, context: any, cb: any) {
                   )[0]
 
   if(sqlPhoto.video === false) {
-    console.log(1)
       await Promise.all([
          _genWebpThumb({image, Bucket, Key: `${photoId}-thumb`}),
          _genWebp({image, Bucket, Key: `${photoId}`}),
@@ -73,7 +72,7 @@ export async function main(event: any = {}, context: any, cb: any) {
       ])
 
       await Promise.all([
-        _deleteUpload({ Bucket, Key: `${name}`}),
+        _deleteUpload({ Bucket, Key: name}),
         _activatePhoto({ photoId }),
       ])
 
@@ -81,72 +80,44 @@ export async function main(event: any = {}, context: any, cb: any) {
     return true
   } else { // the received file is the video
     // next two operations are to move the .upload file to .video file in s3 bucket
-    console.log(2)
-    console.log({Bucket})
-    console.log({name})
-    console.log({photoId})
 
     await s3.copyObject({
                    Bucket,
                    CopySource: `/${Bucket}/${name}`,
-                   Key: `${photoId}.video`
+                   Key: `${photoId}.mov`,
+                   // ContentType: "video/quicktime",
                  }).promise()
+    await _deleteUpload({ Bucket, Key: name})
 
-    console.log(3)
 
-
-    const readStream = s3.getObject({ Bucket, Key: `${photoId}.video` }).createReadStream()
-
-    // const readStream2 = readStream.pipe(genThumbnail(null, null, '100%'))
-
-    // await uploadReadableStream(Bucket, photoId, readStream2 )
-    const   {writeStream, upload} =  uploadReadableStream(Bucket, photoId)
-    genThumbnail(readStream, writeStream, '100%', {
-      path: './ffmpeg/ffmpeg-4.4-amd64-static/ffmpeg'
+    const readStream = s3.getObject({ Bucket, Key: `${photoId}.mov` }).createReadStream()
+    const   {writeStream, upload} =  uploadReadableStream(Bucket, name)
+    genThumbnail(readStream, writeStream, '50%', {
+      path: '/opt/bin/ffmpeg',
+      args: [
+        '-analyzeduration 2147483647',
+        // '-probesize 2147483647'
+      ],
     })
-
-
-
     await upload
-
-    //
-    // var s3obj = new AWS.S3({params: {
-    //   Bucket,
-    //   Key: photoId,
-    //   // ContentType : yourContentType,
-    // }
-    // });
-    //
-    // await s3obj.upload({Body: body}).promise()
-      // .on('httpUploadProgress', function(evt: any) { console.log(evt); })
-      // .send(function(err: any, data: any) { console.log(err, data) });
-
-
-
-    // await upload
-
-    console.log(4)
 
     image =
       await s3.getObject({
         Bucket,
-        Key: photoId,
+        Key: name,
       }).promise()
 
-    console.log(5)
 
     await Promise.all([
        _genWebpThumb({image, Bucket, Key: `${photoId}-thumb`}),
        _genWebp({image, Bucket, Key: `${photoId}`}),
        _recognizeImage({Bucket, Key: `${name}`}),
     ])
-  console.log(6)
 
     await Promise.all([
-      _deleteUpload({ Bucket, Key: `${name}`}),
+      _deleteUpload({ Bucket, Key: name}),
       _activatePhoto({ photoId }),
     ])
-  console.log(7)
 
   cb(null, 'success everything')
   return true

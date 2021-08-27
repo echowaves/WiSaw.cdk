@@ -45,7 +45,8 @@
   },
   "dependencies": {
     "@aws-cdk/aws-appsync": "1.120.0",
-    "@aws-cdk/aws-ec2": "1.115.0",
+    "@aws-cdk/aws-secretsmanager": "1.120.0",
+    "@aws-cdk/aws-ec2": "1.120.0",
     "@aws-cdk/aws-events-targets": "1.120.0",
     "@aws-cdk/aws-iam": "1.120.0",
     "@aws-cdk/aws-lambda": "1.120.0",

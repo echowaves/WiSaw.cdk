@@ -3,6 +3,7 @@ import * as s3 from "@aws-cdk/aws-s3";
 import * as s3n from '@aws-cdk/aws-s3-notifications';
 import * as ec2 from '@aws-cdk/aws-ec2';
 import * as lambda from '@aws-cdk/aws-lambda';
+
 import {LambdaFunction} from '@aws-cdk/aws-events-targets';
 import { Rule, Schedule } from '@aws-cdk/aws-events';
 import * as rds from '@aws-cdk/aws-rds';
@@ -110,6 +111,12 @@ export class WiSawCdkStack extends cdk.Stack {
       );
 
 
+    // create a layer
+    const ffmpegLayer = lambda.LayerVersion.fromLayerVersionArn(this, 'ffmpegLayer',
+      'arn:aws:lambda:us-east-1:963958500685:layer:ffmpeg:1'
+    )
+
+
     // define lambda for thumbnails processing
         const processUploadedImageLambdaFunction =
           new lambda.Function(
@@ -122,6 +129,7 @@ export class WiSawCdkStack extends cdk.Stack {
                 handler: 'lambdas/processUploadedImage.main',
                 memorySize: 3008,
                 timeout: cdk.Duration.seconds(300),
+                layers: [ffmpegLayer],
                 environment: {
                   ...config
                 },

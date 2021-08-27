@@ -29,6 +29,11 @@ https://serverless.pub/the-power-of-serverless-graphql-with-appsync/
 5 Ways To Bundle a Lambda Function Within an AWS CDK Construct
 https://www.sebastianhesse.de/2021/01/16/5-ways-to-bundle-a-lambda-function-within-an-aws-cdk-construct/
 
+FFmpeg/FFprobe Lambda Layer for Amazon Linux 2 AMIs
+https://serverlessrepo.aws.amazon.com/applications/us-east-1/145266761615/ffmpeg-lambda-layer
+https://github.com/serverlesspub/ffmpeg-aws-lambda-layer
+https://bobbyhadz.com/blog/aws-cdk-lambda-layers
+
 
 ## Restore snapshot for tesdt db
 DB instance identifier: wisaw-test
