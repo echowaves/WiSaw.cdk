@@ -86,7 +86,7 @@ type Recognition {
 # ...                   queries
 # ... ******************************************************
 type Query {
-  generateUploadUrl(photoId: ID!): String!
+  generateUploadUrl(assetKey: String!, contentType: String!): String!
   zeroMoment: AWSDateTime!
 
   feedByDate(

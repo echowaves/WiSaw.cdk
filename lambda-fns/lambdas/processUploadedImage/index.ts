@@ -21,10 +21,6 @@ export async function main(event: any = {}, context: any, cb: any) {
   console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!received image: ${name}`)
   console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!       photoId: ${photoId}`)
 
-  if(name.contains('.mov')) {// do nothing
-    cb(null, 'success everything, uploaded video')
-    return true
-  }
   const s3 = new AWS.S3()
 
   let image =
@@ -45,7 +41,7 @@ export async function main(event: any = {}, context: any, cb: any) {
   ])
 
   cb(null, 'success everything')
-  return true  
+  return true
 }
 
 const _genWebpThumb = async({image, Bucket, Key}: {image: any, Bucket: string, Key: string}) => {
