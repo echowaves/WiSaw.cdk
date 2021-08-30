@@ -25,6 +25,7 @@ type Photo {
   active: Boolean!
   imgUrl: String!
   thumbUrl: String!
+  videoUrl: String!
   lastComment: String!
   video: Boolean!
 }
