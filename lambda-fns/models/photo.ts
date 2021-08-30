@@ -7,6 +7,7 @@ class Photo {
   createdAt: string
   updatedAt: string
   active: boolean
+  video: boolean
 
   // add custom derived attributes to the object
   public toJSON()
@@ -17,6 +18,7 @@ class Photo {
        // thumbUrl: `https://s3.amazonaws.com/${process.env.S3_BUCKET}/${this.id}-thumb`,
        imgUrl: `https://${process.env.S3_BUCKET}.s3.amazonaws.com/${this.id}`,
        thumbUrl: `https://${process.env.S3_BUCKET}.s3.amazonaws.com/${this.id}-thumb`,
+       videoUrl: `https://${process.env.S3_BUCKET}.s3.amazonaws.com/${this.id}.mov`,
 		};
 	}
 }

@@ -49,6 +49,9 @@ type AppSyncEvent = {
     searchTerm: string,
     description: string,
     commentId: bigint,
+    video: boolean,
+    assetKey: string,
+    contentType: string,
   }
 }
 
@@ -60,7 +63,8 @@ exports.handler = async (event:AppSyncEvent) => {
 
     case 'generateUploadUrl':
       return await generateUploadUrl(
-        event.arguments.photoId,
+        event.arguments.assetKey,
+        event. arguments.contentType,
         )
     case 'zeroMoment':
       return await zeroMoment()
@@ -124,6 +128,7 @@ exports.handler = async (event:AppSyncEvent) => {
         event.arguments.uuid,
         event.arguments.lat,
         event.arguments.lon,
+        event.arguments.video,
         )
 
     case 'watchPhoto':

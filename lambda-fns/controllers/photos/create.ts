@@ -7,7 +7,7 @@ import sql from '../../sql'
 import Photo from '../../models/photo'
 import watch from './watch'
 
-export default async function main(uuid: string, lat: number, lon: number) {
+export default async function main(uuid: string, lat: number, lon: number, video: boolean) {
   // first count how many times photos from this device were reported
   const abuseCount = (await sql`SELECT COUNT(*)
               FROM "AbuseReports"
@@ -30,11 +30,13 @@ export default async function main(uuid: string, lat: number, lon: number) {
                     (
                         "uuid",
                         "location",
+                        "video",
                         "createdAt",
                         "updatedAt"
                     ) values (
                       ${uuid},
                       ST_MakePoint(${lat}, ${lon}),
+                      ${video ? true: false}, 
                       ${createdAt},
                       ${updatedAt}
                     )

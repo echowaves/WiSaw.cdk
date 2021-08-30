@@ -25,7 +25,9 @@ type Photo {
   active: Boolean!
   imgUrl: String!
   thumbUrl: String!
+  videoUrl: String!
   lastComment: String!
+  video: Boolean!
 }
 
 type AbuseReport {
@@ -85,7 +87,7 @@ type Recognition {
 # ...                   queries
 # ... ******************************************************
 type Query {
-  generateUploadUrl(photoId: ID!): String!
+  generateUploadUrl(assetKey: String!, contentType: String!): String!
   zeroMoment: AWSDateTime!
 
   feedByDate(
@@ -134,6 +136,7 @@ type Mutation {
     uuid: String!
     lat: Float!
     lon: Float!
+    video: Boolean
   ): Photo!
 
   watchPhoto(
