@@ -38,9 +38,9 @@ export default async function main(
   `)
 
   // console.log({results})
-  // const photos = results.map((photo: any) => plainToClass(Photo, photo))
-  // .sort((a: Photo, b: Photo) => moment(b.createdAt).diff(moment(a.createdAt)))
   const photos = results.map((photo: any) => plainToClass(Photo, photo))
+  // .sort((a: Photo, b: Photo) => moment(b.createdAt).diff(moment(a.createdAt)))
+
   let noMoreData = false
 
   if(currentDate.clone().subtract(daysAgo, 'days').diff(whenToStopDate) < 0 ) {
