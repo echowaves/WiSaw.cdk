@@ -18,6 +18,7 @@ export default async function main(
   const results =
   (await sql`
     SELECT
+      row_number() OVER (ORDER BY id desc) + ${offset} as row_number,
       p.*
     FROM "Photos" p
     WHERE active = true

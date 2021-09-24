@@ -18,6 +18,7 @@ console.log({uuid})
   const results =
   (await sql`
     SELECT
+      row_number() OVER (ORDER BY w."watchedAt" DESC) + ${offset} as row_number,
       p.*
     FROM "Photos" p
     INNER JOIN "Watchers" w
