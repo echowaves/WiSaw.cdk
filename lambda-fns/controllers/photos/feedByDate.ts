@@ -21,6 +21,7 @@ export default async function main(
   (await sql`
     SELECT
     *
+    , row_number()  OVER (ORDER BY distance) + (100*${daysAgo}) as row_number
     , ST_Distance(
   		  "location",
         ST_MakePoint(${lat}, ${lon})
