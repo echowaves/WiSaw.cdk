@@ -25,8 +25,8 @@ export default async function main(
   		  "location",
         ST_MakePoint(${lat}, ${lon})
       ) as distance
-    , row_number()  OVER (ORDER BY distance) + (100*${daysAgo}) as row_number
-      
+    , row_number()  OVER (ORDER BY 'distance') + (100*${daysAgo}) as row_number
+
     FROM "Photos"
     WHERE
         "createdAt" >= ${currentDate.clone().subtract(daysAgo, 'days').format("YYYY-MM-DD HH:mm:ss.SSS")}
