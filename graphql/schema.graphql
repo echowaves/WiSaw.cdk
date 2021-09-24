@@ -15,6 +15,7 @@ type ContactForm {
 }
 
 type Photo {
+  row_number: Long!
   id: ID!
   uuid: String!
   location: AWSJSON!
@@ -40,7 +41,6 @@ type AbuseReport {
 }
 
 type PhotoFeed {
-  row_number: Long!
   photos: [Photo]
   batch: Long!
   noMoreData: Boolean!
