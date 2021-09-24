@@ -25,7 +25,7 @@ export default async function main(
   		  "location",
         ST_MakePoint(${lat}, ${lon})
       ) as distance
-    , row_number()  OVER (ORDER BY 'distance') + (100*${daysAgo}) as row_number
+    , row_number()  OVER (ORDER BY "createdAt" DESC) + (100*${daysAgo}) as row_number
 
     FROM "Photos"
     WHERE
@@ -38,8 +38,9 @@ export default async function main(
   `)
 
   // console.log({results})
+  // const photos = results.map((photo: any) => plainToClass(Photo, photo))
+  // .sort((a: Photo, b: Photo) => moment(b.createdAt).diff(moment(a.createdAt)))
   const photos = results.map((photo: any) => plainToClass(Photo, photo))
-    .sort((a: Photo, b: Photo) => moment(b.createdAt).diff(moment(a.createdAt)))
   let noMoreData = false
 
   if(currentDate.clone().subtract(daysAgo, 'days').diff(whenToStopDate) < 0 ) {
