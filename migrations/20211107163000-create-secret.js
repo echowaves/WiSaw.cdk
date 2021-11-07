@@ -7,7 +7,7 @@ module.exports = {
         allowNull: false,
       },
       nickName: {
-        type: Sequelize.STRING(50),
+        type: Sequelize.STRING,
         allowNull: false,
       },
       secret: {
