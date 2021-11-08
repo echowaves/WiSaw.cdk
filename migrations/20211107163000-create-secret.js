@@ -23,9 +23,15 @@ module.exports = {
         type: Sequelize.DATE,
       },
     })
-      .then(() => queryInterface.addIndex('Secrets', ['nickName',]))
-      // .then(() => queryInterface.addIndex('Secrets', ['secret',])) // will not search by password
-      // .then(() => queryInterface.addIndex('Secrets', ['createdAt',]))
+      .then(
+        () => {
+          queryInterface.addIndex(
+            'Secrets',
+            ['nickName',],
+            {unique: true,}
+          )
+        }
+      )
   ,
   down: (queryInterface, Sequelize) => // eslint-disable-line no-unused-vars
     queryInterface.dropTable('Secrets'),
