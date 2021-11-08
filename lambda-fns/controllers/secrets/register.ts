@@ -8,21 +8,16 @@ import Secret from '../../models/secret'
 
 import {_hash,} from './_hash'
 export default async function main(uuid: string, nickName: string, secret: string) {
-  console.log("this is existingSecret creation ---------------------------------------------------------------")
+  // const existingNickNameCount = (await sql`SELECT count(*)
+  //             FROM "Secrets"
+  //             WHERE "nickName" = ${nickName}
+  // `)[0].count
 
-
-  const existingSecret = (await sql`SELECT *
-              FROM "Secrets"              
-              WHERE "nickName" = ${nickName}              
-  `)
-
-  console.log({existingSecret,})
-
+  // console.log({existingNickNameCount,})
 
 
   const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
   const updatedAt = createdAt
-
 
   const newSecret = (await sql`
                     INSERT INTO "Secrets"
@@ -34,7 +29,7 @@ export default async function main(uuid: string, nickName: string, secret: strin
                         "updatedAt"
                     ) values (
                       ${uuid},
-                      ${nickName},
+                      ${nickName.toLowerCase()}, // always conver to lowercase
                       ${_hash(secret)},
                       ${createdAt},
                       ${updatedAt}
@@ -42,6 +37,6 @@ export default async function main(uuid: string, nickName: string, secret: strin
                     returning *
                     `
   )[0]
-  console.log({newSecret,})
+
   return plainToClass(Secret, newSecret)
 }
