@@ -7,19 +7,34 @@ import sql from '../../sql'
 import Secret from '../../models/secret'
 
 import {_hash,} from './_hash'
+
+/*
+
+use cases:
+
+uuid       nickName       secret            outcome
+              0                               no records with this nickName found -- create new secret record
+                                              the new record with existing uuid should fail to create, then the new uuid needs to be regened and new request sent
+              x             0                 nickName found, but secret does not match -- throw exception (try different combination of nickName/secret)
+              x             x                 nickName and secret match -- account already exists, return uuid
+
+*/
+
 export default async function main(uuid: string, nickName: string, secret: string) {
-  // const existingNickNameCount = (await sql`SELECT count(*)
-  //             FROM "Secrets"
-  //             WHERE "nickName" = ${nickName}
-  // `)[0].count
+  const existingSecret = (await sql`SELECT *
+              FROM "Secrets"
+              WHERE "nickName" = ${nickName}
+  `)
 
-  // console.log({existingNickNameCount,})
+  // no records with this nickName found -- create new secret record
+  if(existingSecret.count === 0) {
+    console.log('case 1 ----------------------------------------------------')
+    const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
+    const updatedAt = createdAt
 
+    // here validate values before inserting into DB
 
-  const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
-  const updatedAt = createdAt
-
-  const newSecret = (await sql`
+    const newSecret = (await sql`
                     INSERT INTO "Secrets"
                     (
                         "uuid",
@@ -29,14 +44,26 @@ export default async function main(uuid: string, nickName: string, secret: strin
                         "updatedAt"
                     ) values (
                       ${uuid},
-                      ${nickName.toLowerCase()}, // always conver to lowercase
+                      ${nickName.toLowerCase()},   
                       ${_hash(secret)},
                       ${createdAt},
                       ${updatedAt}
                     )
                     returning *
                     `
-  )[0]
+    )
+    return plainToClass(Secret, newSecret[0])
+  }
 
-  return plainToClass(Secret, newSecret)
+  // nickName found, but secret does not match -- throw exception (try different combination of nickName/password)
+  if(existingSecret[0].secret !== _hash(secret)) {
+    console.log('case 2 ----------------------------------------------------')
+    console.log(`${existingSecret[0].secret} !== ${_hash(secret)}`)
+    throw new Error('try different combination of nickName/secret')
+  }
+
+  console.log('case 3 ----------------------------------------------------')
+  console.log(`${existingSecret[0].secret} === ${_hash(secret)}`)
+
+  return plainToClass(Secret, existingSecret[0])
 }
