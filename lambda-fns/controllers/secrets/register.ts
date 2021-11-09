@@ -47,8 +47,6 @@ export default async function main(uuid: string, nickName: string, secret: strin
       throw new Error(`Invalid nickName and or Secret`)
     }
 
-    console.log(_hash(secret))
-
 
     const newSecret = (await sql`
                     INSERT INTO "Secrets"
