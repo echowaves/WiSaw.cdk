@@ -23,7 +23,6 @@ export default async function main(uuid: string, lat: number, lon: number, video
 
   const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
   const updatedAt = createdAt
-  const watchedAt = createdAt
 
   const photo = (await sql`
                     INSERT INTO "Photos"

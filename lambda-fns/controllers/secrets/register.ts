@@ -1,5 +1,8 @@
 import * as moment from 'moment'
 
+import {validate as uuidValidate,} from 'uuid'
+
+
 import {plainToClass,} from 'class-transformer'
 
 import sql from '../../sql'
@@ -28,11 +31,24 @@ export default async function main(uuid: string, nickName: string, secret: strin
 
   // no records with this nickName found -- create new secret record
   if(existingSecret.count === 0) {
-    console.log('case 1 ----------------------------------------------------')
     const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
     const updatedAt = createdAt
 
     // here validate values before inserting into DB
+    if(uuidValidate(uuid) === false) {
+      throw new Error(`Wrong UUID format`)
+    }
+
+    // regex for testing nickName
+    const nickNameValid = /^[\u00BF-\u1FFF\u2C00-\uD7FF\w_-]{5,255}$/.test(nickName.toLowerCase())
+    const secretValid = secret.length >= 5 && secret.length <= 512
+
+    if(!nickNameValid || !secretValid) {
+      throw new Error(`Invalid nickName and or Secret`)
+    }
+
+    console.log(_hash(secret))
+
 
     const newSecret = (await sql`
                     INSERT INTO "Secrets"
@@ -57,13 +73,9 @@ export default async function main(uuid: string, nickName: string, secret: strin
 
   // nickName found, but secret does not match -- throw exception (try different combination of nickName/password)
   if(existingSecret[0].secret !== _hash(secret)) {
-    console.log('case 2 ----------------------------------------------------')
-    console.log(`${existingSecret[0].secret} !== ${_hash(secret)}`)
     throw new Error('try different combination of nickName/secret')
   }
 
-  console.log('case 3 ----------------------------------------------------')
-  console.log(`${existingSecret[0].secret} === ${_hash(secret)}`)
 
   return plainToClass(Secret, existingSecret[0])
 }
