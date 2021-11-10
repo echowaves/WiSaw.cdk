@@ -28,6 +28,7 @@ import createComment from './controllers/comments/create'
 import deleteComment from './controllers/comments/delete'
 
 import registerSecret from './controllers/secrets/register'
+import updateSecret from './controllers/secrets/update'
 
 import AbuseReport from './models/abuseReport'
 import Photo from './models/photo'
@@ -55,6 +56,7 @@ type AppSyncEvent = {
     contentType: string,
     nickName: string,
     secret: string,
+    newSecret: string,
   }
 }
 
@@ -167,6 +169,13 @@ exports.handler = async (event:AppSyncEvent) => {
         event.arguments.uuid,
         event.arguments.nickName,
         event.arguments.secret,
+      )
+    case 'updateSecret':
+      return await updateSecret(
+        event.arguments.uuid,
+        event.arguments.nickName,
+        event.arguments.secret,
+        event.arguments.newSecret,
       )
 
     default:

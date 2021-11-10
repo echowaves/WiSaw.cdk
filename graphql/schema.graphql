@@ -183,10 +183,11 @@ type Mutation {
     nickName: String!
     secret: String!    
   ): Secret!
-  # updateSecret(
-  #   uuid: String!
-  #   nickName: String!
-  #   secret: String!    
-  # ): Secret!
+  updateSecret(
+    uuid: String!
+    nickName: String!
+    secret: String!    
+    newSecret: String!
+  ): Secret!
 
 }

@@ -358,6 +358,10 @@ export class WiSawCdkStack extends cdk.Stack {
       typeName: 'Mutation',
       fieldName: 'registerSecret',
     })
+    lambdaDs.createResolver({
+      typeName: 'Mutation',
+      fieldName: 'updateSecret',
+    })
 
 
     // CFN Outputs
