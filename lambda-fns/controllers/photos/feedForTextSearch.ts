@@ -1,11 +1,6 @@
-import * as moment from 'moment'
 import sql from '../../sql'
-import { plainToClass } from 'class-transformer';
+import {plainToClass,} from 'class-transformer'
 import Photo from '../../models/photo'
-
-const AWS = require('aws-sdk')
-
-// import AbuseReport from '../../models/abuseReport'
 
 export default async function main(
   searchTerm: string,
