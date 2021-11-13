@@ -1,6 +1,6 @@
 import * as moment from 'moment'
 
-import { plainToClass } from 'class-transformer';
+import {plainToClass,} from 'class-transformer'
 
 import sql from '../../sql'
 
@@ -23,7 +23,6 @@ export default async function main(uuid: string, lat: number, lon: number, video
 
   const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
   const updatedAt = createdAt
-  const watchedAt = createdAt
 
   const photo = (await sql`
                     INSERT INTO "Photos"
@@ -42,10 +41,10 @@ export default async function main(uuid: string, lat: number, lon: number, video
                     )
                     returning *
                     `
-                  )[0]
+  )[0]
 
   await watch(photo.id, uuid)
 
-    // console.log({watcher})
+  // console.log({watcher})
   return plainToClass(Photo, photo)
 }

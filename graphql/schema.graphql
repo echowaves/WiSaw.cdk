@@ -84,6 +84,15 @@ type Recognition {
   createdAt: AWSDateTime!
   updatedAt: AWSDateTime!
 }
+
+type Secret {
+  uuid: String!
+  nickName: String!
+  # secret: String!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
 # ... ******************************************************
 # ...                   queries
 # ... ******************************************************
@@ -117,6 +126,11 @@ type Query {
   getPhotoAllCurr( photoId: ID!): PhotoAll!
   getPhotoAllNext( photoId: ID!): PhotoAll!
   getPhotoAllPrev( photoId: ID!): PhotoAll!
+
+  # getSecret(
+  #   nickName: String!
+  #   secret: String!    
+  # ): Secret!
 }
 
 # ... ******************************************************
@@ -163,4 +177,17 @@ type Mutation {
       commentId: ID!
       uuid: String!
     ): String!
+
+  registerSecret(
+    uuid: String!
+    nickName: String!
+    secret: String!    
+  ): Secret!
+  updateSecret(
+    uuid: String!
+    nickName: String!
+    secret: String!    
+    newSecret: String!
+  ): Secret!
+
 }

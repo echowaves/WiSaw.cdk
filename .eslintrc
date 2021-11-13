@@ -59,4 +59,7 @@
 	},
 	"settings": {
 	},
+	"globals":{
+		"bigint":true
+	  }
 }

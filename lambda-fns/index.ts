@@ -27,6 +27,8 @@ import deletePhoto from './controllers/photos/delete'
 import createComment from './controllers/comments/create'
 import deleteComment from './controllers/comments/delete'
 
+import registerSecret from './controllers/secrets/register'
+import updateSecret from './controllers/secrets/update'
 
 import AbuseReport from './models/abuseReport'
 import Photo from './models/photo'
@@ -52,6 +54,9 @@ type AppSyncEvent = {
     video: boolean,
     assetKey: string,
     contentType: string,
+    nickName: string,
+    secret: string,
+    newSecret: string,
   }
 }
 
@@ -65,7 +70,7 @@ exports.handler = async (event:AppSyncEvent) => {
       return await generateUploadUrl(
         event.arguments.assetKey,
         event. arguments.contentType,
-        )
+      )
     case 'zeroMoment':
       return await zeroMoment()
 
@@ -109,55 +114,69 @@ exports.handler = async (event:AppSyncEvent) => {
         event.arguments.photoId,
       )
 
-    // ******************************************************
-    //                       mutations
-    // ******************************************************
+      // ******************************************************
+      //                       mutations
+      // ******************************************************
 
     case 'createContactForm':
       return await createContactForm(
         event.arguments.uuid,
         event.arguments.description,
-        )
+      )
     case 'createAbuseReport':
       return await createAbuseReport(
         event.arguments.photoId,
         event.arguments.uuid,
-        )
+      )
     case 'createPhoto':
       return await createPhoto(
         event.arguments.uuid,
         event.arguments.lat,
         event.arguments.lon,
         event.arguments.video,
-        )
+      )
 
     case 'watchPhoto':
       return await watchPhoto(
         event.arguments.photoId,
         event.arguments.uuid,
-        )
+      )
     case 'unwatchPhoto':
       return await unwatchPhoto(
         event.arguments.photoId,
         event.arguments.uuid,
-        )
+      )
     case 'deletePhoto':
       return await deletePhoto(
         event.arguments.photoId,
         event.arguments.uuid,
-        )
+      )
 
     case 'createComment':
       return await createComment(
         event.arguments.photoId,
         event.arguments.uuid,
         event.arguments.description,
-        )
+      )
     case 'deleteComment':
       return await deleteComment(
         event.arguments.commentId,
         event.arguments.uuid,
-        )
+      )
+
+    case 'registerSecret':
+      return await registerSecret(
+        event.arguments.uuid,
+        event.arguments.nickName,
+        event.arguments.secret,
+      )
+    case 'updateSecret':
+      return await updateSecret(
+        event.arguments.uuid,
+        event.arguments.nickName,
+        event.arguments.secret,
+        event.arguments.newSecret,
+      )
 
     default:
       return null

@@ -7,13 +7,16 @@
     "build": "echo 'buiding sharp!!!!!!!!!!!!!!!!!!!!!!!' && yarn && rm -rf node_modules/sharp && SHARP_IGNORE_GLOBAL_LIBVIPS=1 npm_config_arch=x64 npm_config_platform=linux yarn add sharp"
   },
   "dependencies": {
-    "@aws-cdk/aws-lambda-nodejs": "1.120.0",
-    "aws-sdk": "2.978.0",
+    "@aws-cdk/aws-lambda-nodejs": "1.131.0",
+    "aws-sdk": "2.1024.0",
     "class-transformer": "0.4.0",
     "moment": "2.29.1",
     "postgres": "1.0.2",
-    "sharp": "^0.29.1",
+    "sharp": "^0.29.2",
     "sitemap": "^7.0.0",
     "uuid": "8.3.2"
+  },
+  "devDependencies": {
+    "@types/uuid": "^8.3.1"
   }
 }
