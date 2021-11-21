@@ -39,7 +39,7 @@ module.exports = {
         type: Sequelize.DATE,
       },
     })
-      .then(() => queryInterface.addIndex('Comments', ['photoId'])),
+      .then(() => queryInterface.addIndex('Comments', ['photoId',])),
   down: (queryInterface, Sequelize) => // eslint-disable-line no-unused-vars
     queryInterface.dropTable('Comments'),
 }
