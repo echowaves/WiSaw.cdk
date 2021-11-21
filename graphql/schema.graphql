@@ -224,7 +224,7 @@ type Mutation {
 # freindship management 
   createFriendship(
       uuid: String!
-  ): Friendhip!
+  ): Friendship!
   addToFriendship(
     friendshipUuid: String!
     uuid: String! # self
