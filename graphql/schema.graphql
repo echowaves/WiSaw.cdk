@@ -93,6 +93,36 @@ type Secret {
   updatedAt: AWSDateTime!
 }
 
+type Friendship {
+  friendshipUuid: String!
+  chatUuid: String!
+  createdAt: AWSDateTime!  
+}
+type Friend {
+  friendshipUuid: String!
+  uuid: String!
+  createdAt: AWSDateTime!  
+}
+type Chat {  
+  chatUuid: String!
+  createdAt: AWSDateTime!  
+}
+type ChatUser {  
+  uuid: String!
+  chatUuid: String!
+  invitedByUuid: String! 
+  createdAt: AWSDateTime!  
+  lastReadAt: AWSDateTime!  
+}
+type Message{  
+  uuid: String!
+  chatUuid: String!
+  message: String! 
+  createdAt: AWSDateTime!  
+  updatedAt: AWSDateTime!  
+}
+
+
 # ... ******************************************************
 # ...                   queries
 # ... ******************************************************
@@ -126,11 +156,12 @@ type Query {
   getPhotoAllCurr( photoId: ID!): PhotoAll!
   getPhotoAllNext( photoId: ID!): PhotoAll!
   getPhotoAllPrev( photoId: ID!): PhotoAll!
+  
+  getFriendInFriendship(     
+    friendshipUuid: String!
+    uuid: String! # self
+  ): Friend! #every friendship has only 2 friends, this returns the other side of the friendship
 
-  # getSecret(
-  #   nickName: String!
-  #   secret: String!    
-  # ): Secret!
 }
 
 # ... ******************************************************
@@ -189,5 +220,14 @@ type Mutation {
     secret: String!    
     newSecret: String!
   ): Secret!
+
+# freindship management 
+  createFriendship(
+      uuid: String!
+  ): Friendhip!
+  addToFriendship(
+    friendshipUuid: String!
+    uuid: String! # self
+  ): Friend! # returns the friend from the other side of the friendship
 
 }
