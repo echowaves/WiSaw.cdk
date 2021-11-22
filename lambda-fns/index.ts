@@ -30,7 +30,7 @@ import deleteComment from './controllers/comments/delete'
 import registerSecret from './controllers/secrets/register'
 
 import createFriendship from './controllers/friendships/createFriendship'
-import addToFriendship from './controllers/friendships/addToFriendship'
+import acceptFriendshipRequest from './controllers/friendships/acceptFriendshipRequest'
 import getFriendInFriendship from './controllers/friendships/getFriendInFriendship'
 
 
@@ -66,6 +66,7 @@ type AppSyncEvent = {
     secret: string,
     newSecret: string,
     friendshipUuid: string,
+    invitedByUuid: string,
   }
 }
 
@@ -196,10 +197,11 @@ exports.handler = async (event:AppSyncEvent) => {
       return await createFriendship(
         event.arguments.uuid,
       )
-    case 'addToFriendship':
-      return await addToFriendship(
+    case 'acceptFriendshipRequest':
+      return await acceptFriendshipRequest(
         event.arguments.friendshipUuid,
         event.arguments.uuid,
+        event.arguments.invitedByUuid,
       )
 
     default:

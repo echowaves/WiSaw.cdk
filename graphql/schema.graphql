@@ -232,9 +232,10 @@ type Mutation {
   createFriendship(
       uuid: String!
   ): CreateFriendshipResult!
-  addToFriendship(
+  acceptFriendshipRequest(
     friendshipUuid: String!
     uuid: String! # self
+    invitedByUuid: String!
   ): Friend! # returns the friend from the other side of the friendship
 
 }
