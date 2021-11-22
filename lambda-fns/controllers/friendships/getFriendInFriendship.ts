@@ -1,44 +1,35 @@
-import * as moment from 'moment'
 import sql from '../../sql'
+import {validate as uuidValidate,} from 'uuid'
+
 import {plainToClass,} from 'class-transformer'
-import Photo from '../../models/photo'
+import Friend from '../../models/friend'
 
-const AWS = require('aws-sdk')
-
-// import AbuseReport from '../../models/abuseReport'
 
 export default async function main(
   friendshipUuid: string,
   uuid: string
 ) {
-  const currentDate = moment()
 
-  const results =
-  (await sql`
-    SELECT
-    *
-    , ST_Distance(
-  		  "location",
-      ) as distance
-    , row_number()  OVER (ORDER BY "createdAt" DESC) + (100) as row_number
-
-    FROM "Photos"
-    WHERE        
-    active = true
-    ORDER BY distance
-    LIMIT 100
-    OFFSET 0
-  `)
-
-  // console.log({results})
-  const photos = results.map((photo: any) => plainToClass(Photo, photo))
-  // .sort((a: Photo, b: Photo) => moment(b.createdAt).diff(moment(a.createdAt)))
-
-  let noMoreData = false
-
-
-  return {
-    photos,
-    noMoreData,
+  if(
+    uuidValidate(uuid) === false
+  || uuidValidate(friendshipUuid) === false ) {
+    throw new Error(`Wrong UUID format`)
   }
+
+
+  const friends = (await sql`SELECT *
+      FROM "Friends"
+      WHERE "friendshipUuid" = ${friendshipUuid}
+    `)
+
+  if(friends.length !== 2) {
+    throw new Error(`Friendship is not established`)
+  }
+
+  const filteredFriends = friends.filter((friend: any) => friend.uuid !== uuid)
+  if(filteredFriends.length >= 2) {
+    throw new Error(`Too many friends in this Friendship`)
+  }
+
+  return plainToClass(Friend, filteredFriends[0])
 }
