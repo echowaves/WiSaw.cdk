@@ -122,6 +122,11 @@ type Message{
   updatedAt: AWSDateTime!  
 }
 
+type CreateFriendshipResult {
+  friendship: Friendship!
+  friend: Friend!
+  chat: Chat!
+}
 
 # ... ******************************************************
 # ...                   queries
@@ -156,7 +161,8 @@ type Query {
   getPhotoAllCurr( photoId: ID!): PhotoAll!
   getPhotoAllNext( photoId: ID!): PhotoAll!
   getPhotoAllPrev( photoId: ID!): PhotoAll!
-  
+
+  # freindship management 
   getFriendInFriendship(     
     friendshipUuid: String!
     uuid: String! # self
@@ -224,7 +230,7 @@ type Mutation {
 # freindship management 
   createFriendship(
       uuid: String!
-  ): Friendship!
+  ): CreateFriendshipResult!
   addToFriendship(
     friendshipUuid: String!
     uuid: String! # self

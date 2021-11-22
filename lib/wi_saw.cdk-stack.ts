@@ -319,6 +319,13 @@ export class WiSawCdkStack extends cdk.Stack {
       typeName: 'Query',
       fieldName: 'getPhotoAllPrev',
     })
+
+
+    lambdaDs.createResolver({
+      typeName: 'Query',
+      fieldName: 'getFriendInFriendship',
+    })
+
     // ******************************************************
     //                       mutations
     // ******************************************************
@@ -363,6 +370,15 @@ export class WiSawCdkStack extends cdk.Stack {
       fieldName: 'updateSecret',
     })
 
+
+    lambdaDs.createResolver({
+      typeName: 'Mutation',
+      fieldName: 'createFriendship',
+    })
+    lambdaDs.createResolver({
+      typeName: 'Mutation',
+      fieldName: 'addToFriendship',
+    })
 
     // CFN Outputs
     new cdk.CfnOutput(this, 'AppSyncAPIURL', {

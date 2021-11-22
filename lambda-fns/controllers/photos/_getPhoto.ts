@@ -1,4 +1,3 @@
-/* eslint-disable import/named */
 import {plainToClass,} from 'class-transformer'
 
 import sql from '../../sql'

@@ -28,7 +28,15 @@ import createComment from './controllers/comments/create'
 import deleteComment from './controllers/comments/delete'
 
 import registerSecret from './controllers/secrets/register'
+
+import createFriendship from './controllers/friendships/createFriendship'
+import addToFriendship from './controllers/friendships/addToFriendship'
+import getFriendInFriendship from './controllers/friendships/getFriendInFriendship'
+
+
+
 import updateSecret from './controllers/secrets/update'
+
 
 import AbuseReport from './models/abuseReport'
 import Photo from './models/photo'
@@ -57,6 +65,7 @@ type AppSyncEvent = {
     nickName: string,
     secret: string,
     newSecret: string,
+    friendshipUuid: string,
   }
 }
 
@@ -112,6 +121,11 @@ exports.handler = async (event:AppSyncEvent) => {
     case 'getPhotoAllPrev':
       return await getPhotoAllPrev(
         event.arguments.photoId,
+      )
+    case 'getFriendInFriendship':
+      return await getFriendInFriendship(
+        event.arguments.friendshipUuid,
+        event.arguments.uuid,
       )
 
       // ******************************************************
@@ -176,6 +190,16 @@ exports.handler = async (event:AppSyncEvent) => {
         event.arguments.nickName,
         event.arguments.secret,
         event.arguments.newSecret,
+      )
+
+    case 'createFriendship':
+      return await createFriendship(
+        event.arguments.uuid,
+      )
+    case 'addToFriendship':
+      return await addToFriendship(
+        event.arguments.friendshipUuid,
+        event.arguments.uuid,
       )
 
     default:
