@@ -9,6 +9,7 @@ import sql from '../../sql'
 import Friendship from '../../models/friendship'
 import Friend from '../../models/friend'
 import Chat from '../../models/chat'
+import ChatUser from '../../models/chatUser'
 
 export default async function main(uuid: string) {
 
@@ -23,7 +24,7 @@ export default async function main(uuid: string) {
   }
 
 
-  const [friendship, friend, chat,] = await sql.begin(async (sql: any) => {
+  const [friendship, friend, chat, chatUser,] = await sql.begin(async (sql: any) => {
 
     const [friendship,] = await sql`
                       INSERT INTO "Friendships"
@@ -43,9 +44,11 @@ export default async function main(uuid: string) {
                       INSERT INTO "Friends"
                       (
                           "uuid",
+                          "friendshipUuid",
                           "createdAt",
                       ) values (    
                         ${uuid},
+                        ${friendshipUuid},
                         ${createdAt},
                       )
                       `
@@ -53,7 +56,7 @@ export default async function main(uuid: string) {
     const [chat,] = await sql`
                       INSERT INTO "Chats"
                       (
-                          "uuid",
+                          "chatUuid",
                           "createdAt",
                       ) values (    
                         ${chatUuid},
@@ -61,8 +64,24 @@ export default async function main(uuid: string) {
                       )
                       `
 
-    return {friendship, friend, chat,}
+    const [chatUser,] = await sql`
+                      INSERT INTO "ChatUsers"
+                      (
+                          "chatUuid",
+                          "uuid",
+                          "invitedByUuid",
+                          "createdAt",
+                          "lastReadAt",
+                      ) values (    
+                        ${chatUuid},
+                        ${uuid},
+                        ${uuid},
+                        ${createdAt},
+                        ${createdAt},
+                      )
+                      `
+    return {friendship, friend, chat, chatUser,}
   })
 
-  return [plainToClass(Friendship, friendship), plainToClass(Friend, friend), plainToClass(Chat, chat), ]
+  return [plainToClass(Friendship, friendship), plainToClass(Friend, friend), plainToClass(Chat, chat),plainToClass(ChatUser, chatUser), ]
 }

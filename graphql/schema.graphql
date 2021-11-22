@@ -126,6 +126,7 @@ type CreateFriendshipResult {
   friendship: Friendship!
   friend: Friend!
   chat: Chat!
+  chatUser: ChatUser!
 }
 
 # ... ******************************************************
