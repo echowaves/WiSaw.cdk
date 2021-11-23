@@ -13,16 +13,15 @@ import ChatUser from '../../models/chatUser'
 
 export default async function main(uuid: string) {
 
-  const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
-
-  const friendshipUuid = uuidv4()
-  const chatUuid = uuidv4()
-
   // here validate values before inserting into DB
   if(uuidValidate(uuid) === false) {
     throw new Error(`Wrong UUID format`)
   }
 
+  const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
+
+  const friendshipUuid = uuidv4()
+  const chatUuid = uuidv4()
 
   const [friendship, friend, chat, chatUser,] = await sql.begin(async (sql: any) => {
 
@@ -31,12 +30,13 @@ export default async function main(uuid: string) {
                       (
                         "friendshipUuid",
                         "chatUuid",
-                        "createdAt",
+                        "createdAt"
                       ) values (
                       ${friendshipUuid},
                       ${chatUuid},
-                      ${createdAt},
-                      )
+                      ${createdAt}
+                      ) 
+                      returning *
                       `
 
 
@@ -45,23 +45,25 @@ export default async function main(uuid: string) {
                       (
                           "uuid",
                           "friendshipUuid",
-                          "createdAt",
-                      ) values (    
+                          "createdAt"
+                      ) values (
                         ${uuid},
                         ${friendshipUuid},
-                        ${createdAt},
+                        ${createdAt}
                       )
+                      returning *
                       `
 
     const [chat,] = await sql`
                       INSERT INTO "Chats"
                       (
                           "chatUuid",
-                          "createdAt",
-                      ) values (    
+                          "createdAt"
+                      ) values (
                         ${chatUuid},
-                        ${createdAt},
+                        ${createdAt}
                       )
+                      returning *
                       `
 
     const [chatUser,] = await sql`
@@ -71,17 +73,29 @@ export default async function main(uuid: string) {
                           "uuid",
                           "invitedByUuid",
                           "createdAt",
-                          "lastReadAt",
-                      ) values (    
+                          "lastReadAt"
+                      ) values (
                         ${chatUuid},
                         ${uuid},
                         ${uuid},
                         ${createdAt},
-                        ${createdAt},
+                        ${createdAt}
                       )
+                      returning *
                       `
-    return {friendship, friend, chat, chatUser,}
-  })
 
-  return [plainToClass(Friendship, friendship), plainToClass(Friend, friend), plainToClass(Chat, chat),plainToClass(ChatUser, chatUser), ]
+    // console.log({friendship, friend, chat, chatUser,})
+
+    return [friendship, friend, chat, chatUser,]
+  })
+  // console.log('hohoho')
+  // console.log({friendship, friend, chat, chatUser,})
+
+
+  return {
+    friendship:plainToClass(Friendship, friendship),
+    friend: plainToClass(Friend, friend),
+    chat: plainToClass(Chat, chat),
+    chatUser:plainToClass(ChatUser, chatUser),
+  }
 }
