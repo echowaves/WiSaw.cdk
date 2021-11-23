@@ -21,7 +21,7 @@ export default async function main(uuid: string) {
   const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
 
   const friendshipUuid = uuidv4()
-  // const chatUuid = uuidv4()
+  const chatUuid = uuidv4()
 
   const [friendship, friend, chat, chatUser,] = await sql.begin(async (sql: any) => {
 
@@ -33,7 +33,7 @@ export default async function main(uuid: string) {
                         "createdAt"
                       ) values (
                       ${friendshipUuid},
-                      ${friendshipUuid},
+                      ${chatUuid},
                       ${createdAt}
                       ) 
                       returning *
@@ -60,7 +60,7 @@ export default async function main(uuid: string) {
                           "chatUuid",
                           "createdAt"
                       ) values (
-                        ${friendshipUuid},
+                        ${chatUuid},
                         ${createdAt}
                       )
                       returning *
@@ -75,7 +75,7 @@ export default async function main(uuid: string) {
                           "createdAt",
                           "lastReadAt"
                       ) values (
-                        ${friendshipUuid},
+                        ${chatUuid},
                         ${uuid},
                         ${uuid},
                         ${createdAt},
