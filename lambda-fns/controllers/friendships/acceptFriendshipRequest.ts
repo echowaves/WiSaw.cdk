@@ -6,14 +6,12 @@ import {plainToClass,} from 'class-transformer'
 
 import sql from '../../sql'
 
-// import Friendship from '../../models/friendship'
-import Friend from '../../models/friend'
+import Friendship from '../../models/friendship'
 // import Chat from '../../models/chat'
 
 export default async function main(
   uuid: string,
   friendshipUuid: string,
-  invitedByUuid: string,
 ) {
 
   const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
@@ -22,43 +20,27 @@ export default async function main(
   if(
     uuidValidate(uuid) === false
   || uuidValidate(friendshipUuid) === false
-  || uuidValidate(invitedByUuid) === false ) {
+  ) {
     throw new Error(`Wrong UUID format`)
   }
 
 
-  const [friend,] = await sql.begin(async (sql: any) => {
+  const [friendship,] = await sql.begin(async (sql: any) => {
 
     // check how many friends are in the friendship already, can't be more than 1 for the add function to work correctly
-
-    const existingFriends = (await sql`SELECT *
-      FROM "Friends"
+    const [friendship,] = (await sql`SELECT *
+      FROM "Friendship"
       WHERE "friendshipUuid" = ${friendshipUuid}
     `)
 
-    if(existingFriends.count === 0) {
-      throw new Error(`Friendship does not exist`)
-    }
-    if(existingFriends.count > 1) {
-      throw new Error(`Friendship can't have more than two friends`)
+    if(friendship.uuid2 !== null) {
+      throw new Error(`Friendship already confirmed`)
     }
 
-    const friendship = (await sql`SELECT *
-      FROM "Friendship"
-      WHERE "friendshipUuid" = ${friendshipUuid}
-    `)[0]
-
-    const [friend,] = await sql`
-                      INSERT INTO "Friends"
-                      (
-                          "uuid",
-                          "friendshipUuid",
-                          "createdAt",
-                      ) values (    
-                        ${uuid},
-                        ${friendshipUuid},
-                        ${createdAt},
-                      )
+    const [confirmedFriendship,] = await sql`
+                      UPDATE "Friendship"
+                      SET "uuid2" = ${uuid}
+                      WHERE "friendshipUuid" = ${friendshipUuid}
                       `
 
     // const [chatUser,] =
@@ -73,14 +55,14 @@ export default async function main(
                       ) values (    
                         ${friendship.chatUuid},
                         ${uuid},
-                        ${invitedByUuid},
+                        ${friendship.uuid1},
                         ${createdAt},
                         ${createdAt},
                       )
                       `
 
-    return [friend,]
+    return [confirmedFriendship,]
   })
 
-  return plainToClass(Friend, friend)
+  return plainToClass(Friendship, friendship)
 }

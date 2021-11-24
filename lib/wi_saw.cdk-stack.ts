@@ -323,7 +323,7 @@ export class WiSawCdkStack extends cdk.Stack {
 
     lambdaDs.createResolver({
       typeName: 'Query',
-      fieldName: 'getFriendInFriendship',
+      fieldName: 'getfriendshipsList',
     })
 
     // ******************************************************

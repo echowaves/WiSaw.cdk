@@ -7,7 +7,6 @@ import {plainToClass,} from 'class-transformer'
 import sql from '../../sql'
 
 import Friendship from '../../models/friendship'
-import Friend from '../../models/friend'
 import Chat from '../../models/chat'
 import ChatUser from '../../models/chatUser'
 
@@ -23,34 +22,21 @@ export default async function main(uuid: string) {
   const friendshipUuid = uuidv4()
   const chatUuid = uuidv4()
 
-  const [friendship, friend, chat, chatUser,] = await sql.begin(async (sql: any) => {
+  const [friendship, chat, chatUser,] = await sql.begin(async (sql: any) => {
 
     const [friendship,] = await sql`
                       INSERT INTO "Friendships"
                       (
                         "friendshipUuid",
+                        "uuid1",
                         "chatUuid",
                         "createdAt"
                       ) values (
                       ${friendshipUuid},
+                      ${uuid},
                       ${chatUuid},
                       ${createdAt}
                       ) 
-                      returning *
-                      `
-
-
-    const [friend,] = await sql`
-                      INSERT INTO "Friends"
-                      (
-                          "uuid",
-                          "friendshipUuid",
-                          "createdAt"
-                      ) values (
-                        ${uuid},
-                        ${friendshipUuid},
-                        ${createdAt}
-                      )
                       returning *
                       `
 
@@ -86,7 +72,7 @@ export default async function main(uuid: string) {
 
     // console.log({friendship, friend, chat, chatUser,})
 
-    return [friendship, friend, chat, chatUser,]
+    return [friendship, chat, chatUser,]
   })
   // console.log('hohoho')
   // console.log({friendship, friend, chat, chatUser,})
@@ -94,7 +80,6 @@ export default async function main(uuid: string) {
 
   return {
     friendship:plainToClass(Friendship, friendship),
-    friend: plainToClass(Friend, friend),
     chat: plainToClass(Chat, chat),
     chatUser:plainToClass(ChatUser, chatUser),
   }

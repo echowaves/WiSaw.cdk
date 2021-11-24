@@ -95,14 +95,12 @@ type Secret {
 
 type Friendship {
   friendshipUuid: String!
+  uuid1: String! 
+  uuid2: String # if uuid2 is null == friendship is not confirmed
   chatUuid: String!
   createdAt: AWSDateTime!  
 }
-type Friend {
-  friendshipUuid: String!
-  uuid: String!
-  createdAt: AWSDateTime!  
-}
+
 type Chat {  
   chatUuid: String!
   createdAt: AWSDateTime!  
@@ -124,7 +122,6 @@ type Message{
 
 type CreateFriendshipResult {
   friendship: Friendship!
-  friend: Friend!
   chat: Chat!
   chatUser: ChatUser!
 }
@@ -164,11 +161,14 @@ type Query {
   getPhotoAllPrev( photoId: ID!): PhotoAll!
 
   # freindship management 
-  getFriendInFriendship(     
-    friendshipUuid: String!
-    uuid: String! # self
-  ): Friend! #every friendship has only 2 friends, this returns the other side of the friendship
-
+  # getFriendInFriendship(     
+  #   friendshipUuid: String!
+  #   uuid: String! # self
+  # ): Friend! #every friendship has only 2 friends, this returns the other side of the friendship
+  
+  getfriendshipsList(
+      uuid: String! # self  
+  ): [Friendship] #list of all friends by UUID, if uuid of a friend is null, the friendship is not confirmed
 }
 
 # ... ******************************************************
@@ -235,7 +235,6 @@ type Mutation {
   acceptFriendshipRequest(
     friendshipUuid: String!
     uuid: String! # self
-    invitedByUuid: String!
-  ): Friend! # returns the friend from the other side of the friendship
+  ): Friendship! # returns the friend from the other side of the friendship
 
 }

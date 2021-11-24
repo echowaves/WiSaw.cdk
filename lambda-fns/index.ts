@@ -31,7 +31,7 @@ import registerSecret from './controllers/secrets/register'
 
 import createFriendship from './controllers/friendships/createFriendship'
 import acceptFriendshipRequest from './controllers/friendships/acceptFriendshipRequest'
-import getFriendInFriendship from './controllers/friendships/getFriendInFriendship'
+import getfriendshipsList from './controllers/friendships/getfriendshipsList'
 
 
 
@@ -123,9 +123,8 @@ exports.handler = async (event:AppSyncEvent) => {
       return await getPhotoAllPrev(
         event.arguments.photoId,
       )
-    case 'getFriendInFriendship':
-      return await getFriendInFriendship(
-        event.arguments.friendshipUuid,
+    case 'getfriendshipsList':
+      return await getfriendshipsList(
         event.arguments.uuid,
       )
 
@@ -201,7 +200,6 @@ exports.handler = async (event:AppSyncEvent) => {
       return await acceptFriendshipRequest(
         event.arguments.friendshipUuid,
         event.arguments.uuid,
-        event.arguments.invitedByUuid,
       )
 
     default:
