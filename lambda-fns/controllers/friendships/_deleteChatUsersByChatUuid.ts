@@ -1,11 +1,7 @@
-
-import sql from '../../sql'
-
-
-export const _deleteChatUsersByChatUuid = async( chatUuid: string) => {
+export const _deleteChatUsersByChatUuid = async( chatUuid: string, sql: any) => {
   await sql`
       DELETE from "ChatUsers"
-      WHERE "chatUuid" = ${chatUuid}"      
+      WHERE "chatUuid" = ${chatUuid}
   `
   return "OK"
 }

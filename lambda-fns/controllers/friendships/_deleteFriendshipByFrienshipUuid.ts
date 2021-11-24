@@ -1,9 +1,8 @@
-import sql from '../../sql'
 
-export const _deleteFriendshipByFrienshipUuid = async( friendshipUuid: string) => {
+export const _deleteFriendshipByFrienshipUuid = async( friendshipUuid: string, sql: any) => {
   await sql`
     DELETE from "Friendships"
-    WHERE "freindshipUuid" = ${friendshipUuid}"      
+    WHERE "friendshipUuid" = ${friendshipUuid}
   `
   return "OK"
 }
