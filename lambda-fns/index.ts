@@ -32,7 +32,7 @@ import registerSecret from './controllers/secrets/register'
 import createFriendship from './controllers/friendships/createFriendship'
 import acceptFriendshipRequest from './controllers/friendships/acceptFriendshipRequest'
 import getfriendshipsList from './controllers/friendships/getfriendshipsList'
-
+import deleteFriendship from './controllers/friendships/delete'
 
 
 import updateSecret from './controllers/secrets/update'
@@ -201,6 +201,11 @@ exports.handler = async (event:AppSyncEvent) => {
         event.arguments.friendshipUuid,
         event.arguments.uuid,
       )
+    case 'deleteFriendship':
+      return await deleteFriendship(
+        event.arguments.friendshipUuid,
+      )
+
 
     default:
       return null

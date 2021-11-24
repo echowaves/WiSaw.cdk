@@ -379,6 +379,10 @@ export class WiSawCdkStack extends cdk.Stack {
       typeName: 'Mutation',
       fieldName: 'acceptFriendshipRequest',
     })
+    lambdaDs.createResolver({
+      typeName: 'Mutation',
+      fieldName: 'deleteFriendship',
+    })
 
     // CFN Outputs
     new cdk.CfnOutput(this, 'AppSyncAPIURL', {

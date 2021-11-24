@@ -168,7 +168,7 @@ type Query {
   
   getfriendshipsList(
       uuid: String! # self  
-  ): [Friendship] #list of all friends by UUID, if uuid of a friend is null, the friendship is not confirmed
+  ): [Friendship] #list of all friends by UUID, if uuid2 of a friend is null, the friendship is not confirmed
 }
 
 # ... ******************************************************
@@ -214,7 +214,7 @@ type Mutation {
   deleteComment(
       commentId: ID!
       uuid: String!
-    ): String!
+    ): String! # returns "OK"
 
   registerSecret(
     uuid: String!
@@ -236,5 +236,8 @@ type Mutation {
     friendshipUuid: String!
     uuid: String! # self
   ): Friendship! # returns the friend from the other side of the friendship
-
+  deleteFriendship(
+      friendshipUuid: String!
+  ): String! # returns "OK"
+  
 }
