@@ -7,7 +7,8 @@ import {plainToClass,} from 'class-transformer'
 import sql from '../../sql'
 
 import Friendship from '../../models/friendship'
-// import Chat from '../../models/chat'
+import Chat from '../../models/chat'
+import ChatUser from '../../models/chatUser'
 
 export default async function main(
   uuid: string,
@@ -25,25 +26,26 @@ export default async function main(
   }
 
 
-  const [friendship,] = await sql.begin(async (sql: any) => {
+  const [friendship,chat,chatUser,] = await sql.begin(async (sql: any) => {
 
     // check how many friends are in the friendship already, can't be more than 1 for the add function to work correctly
-    const [friendship,] = (await sql`SELECT *
+    const [friendship1,] = (await sql`SELECT *
       FROM "Friendship"
       WHERE "friendshipUuid" = ${friendshipUuid}
     `)
 
-    if(friendship.uuid2 !== null) {
+    if(friendship1.uuid2 !== null) {
       throw new Error(`Friendship already confirmed`)
     }
 
-    const [confirmedFriendship,] = await sql`
+    const [friendship,] = await sql`
                       UPDATE "Friendship"
                       SET "uuid2" = ${uuid}
                       WHERE "friendshipUuid" = ${friendshipUuid}
+                      returning *
                       `
 
-    // const [chatUser,] =
+    const [chatUser,] =
     await sql`
                       INSERT INTO "ChatUsers"
                       (
@@ -59,10 +61,23 @@ export default async function main(
                         ${createdAt},
                         ${createdAt},
                       )
+                      returning *
                       `
 
-    return [confirmedFriendship,]
+    const [chat,] = await sql`
+                      SELECT FROM "Chats"
+                      WHERE                   
+                          "chatUuid" = ${friendship.chatUuid}
+                      returning *
+                      `
+
+    return [friendship,chat, chatUser,]
   })
 
-  return plainToClass(Friendship, friendship)
+  return {
+    friendship:plainToClass(Friendship, friendship),
+    chat: plainToClass(Chat, chat),
+    chatUser:plainToClass(ChatUser, chatUser),
+  }
+
 }
