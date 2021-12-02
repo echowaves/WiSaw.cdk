@@ -71,7 +71,7 @@ export default async function main(
                       returning *
                       `
 
-    return [friendship,chat, chatUser,]
+    return [friendship,chat,chatUser,]
   })
 
   return {
@@ -79,5 +79,4 @@ export default async function main(
     chat: plainToClass(Chat, chat),
     chatUser:plainToClass(ChatUser, chatUser),
   }
-
 }

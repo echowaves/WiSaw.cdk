@@ -235,7 +235,7 @@ type Mutation {
   acceptFriendshipRequest(
     friendshipUuid: String!
     uuid: String! # self
-  ): Friendship! # returns the friend from the other side of the friendship
+  ): CreateFriendshipResult! # returns the ChatUser from the other side of the friendship
   deleteFriendship(
       friendshipUuid: String!
   ): String! # returns "OK"
