@@ -76,10 +76,9 @@ export default async function main(
     console.log({chatUser,})
 
     const [chat,] = await sql`
-                      SELECT FROM "Chats"
+                      SELECT * FROM "Chats"
                       WHERE                   
                           "chatUuid" = ${friendship.chatUuid}
-                      returning *
                       `
 
     console.log({chat,})
