@@ -46,6 +46,10 @@ module.exports = {
           type: Sequelize.UUID,
           allowNull: false,
         },
+        messageUuid: {
+          type: Sequelize.UUID,
+          allowNull: false,
+        },
         message: {
           type: Sequelize.TEXT,
           allowNull: false,
@@ -60,7 +64,8 @@ module.exports = {
         },
       }))
       .then(() => queryInterface.addIndex('Messages', ['chatUuid',]))
-      .then(() => queryInterface.addIndex('Messages', ['uuid',]))
+      // .then(() => queryInterface.addIndex('Messages', ['uuid',]))
+      .then(() => queryInterface.addIndex('Messages', ['createdAt',]))
 
   ,
   down: (queryInterface, Sequelize) => // eslint-disable-line no-unused-vars
