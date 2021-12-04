@@ -35,7 +35,7 @@ export default async function main(
       WHERE "friendshipUuid" = ${friendshipUuid}
     `)
 
-    console.log({friendship1,})
+    // console.log({friendship1,})
 
     if(friendship1.count === 0) {
       throw new Error(`Friendship not found`)

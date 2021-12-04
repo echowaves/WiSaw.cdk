@@ -384,6 +384,11 @@ export class WiSawCdkStack extends cdk.Stack {
       fieldName: 'deleteFriendship',
     })
 
+    lambdaDs.createResolver({
+      typeName: 'Mutation',
+      fieldName: 'sendMessage',
+    })
+
     // CFN Outputs
     new cdk.CfnOutput(this, 'AppSyncAPIURL', {
       value: api.graphqlUrl,

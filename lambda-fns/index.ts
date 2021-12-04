@@ -34,20 +34,22 @@ import acceptFriendshipRequest from './controllers/friendships/acceptFriendshipR
 import getfriendshipsList from './controllers/friendships/getfriendshipsList'
 import deleteFriendship from './controllers/friendships/delete'
 
+import sendMessage from './controllers/messages/send'
 
 import updateSecret from './controllers/secrets/update'
 
 
 import AbuseReport from './models/abuseReport'
 import Photo from './models/photo'
+import Message from './models/message'
 
 type AppSyncEvent = {
   info: {
     fieldName: string
   },
   arguments: {
-    photo: Photo,
-    abuseReport: AbuseReport,
+    // photo: Photo,
+    // abuseReport: AbuseReport,
     photoId: bigint,
     uuid: string,
     lat: number,
@@ -67,6 +69,9 @@ type AppSyncEvent = {
     newSecret: string,
     friendshipUuid: string,
     invitedByUuid: string,
+    chatUuid: string,
+    messageUuid: string,
+    text: string,
   }
 }
 
@@ -206,6 +211,13 @@ exports.handler = async (event:AppSyncEvent) => {
         event.arguments.friendshipUuid,
       )
 
+    case 'sendMessage':
+      return await sendMessage(
+        event.arguments.chatUuid,
+        event.arguments.uuid,
+        event.arguments.messageUuid,
+        event.arguments.text,
+      )
 
     default:
       return null
