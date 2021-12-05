@@ -50,7 +50,7 @@ module.exports = {
           type: Sequelize.UUID,
           allowNull: false,
         },
-        message: {
+        text: {
           type: Sequelize.TEXT,
           allowNull: false,
         },
