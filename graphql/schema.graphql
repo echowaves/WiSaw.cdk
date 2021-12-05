@@ -168,7 +168,7 @@ type Query {
   #   uuid: String! # self
   # ): Friend! #every friendship has only 2 friends, this returns the other side of the friendship
   
-  getfriendshipsList(
+  getFriendshipsList(
       uuid: String! # self  
   ): [Friendship] #list of all friends by UUID, if uuid2 of a friend is null, the friendship is not confirmed
 

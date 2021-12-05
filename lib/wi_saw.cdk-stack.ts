@@ -325,6 +325,10 @@ export class WiSawCdkStack extends cdk.Stack {
       typeName: 'Query',
       fieldName: 'getFriendshipsList',
     })
+    lambdaDs.createResolver({
+      typeName: 'Query',
+      fieldName: 'getMessagesList',
+    })
 
     // ******************************************************
     //                       mutations
