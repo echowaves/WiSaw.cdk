@@ -1,6 +1,6 @@
 import * as moment from 'moment'
 
-import {validate as uuidValidate, v4 as uuidv4,} from 'uuid'
+import {validate as uuidValidate,} from 'uuid'
 
 import {plainToClass,} from 'class-transformer'
 
