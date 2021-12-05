@@ -27,7 +27,7 @@ export default async function main(
   }
 
   const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
-  const Message = await sql`
+  const message = (await sql`
                       INSERT INTO "Messages"
                       (
                           "chatUuid",
@@ -45,7 +45,9 @@ export default async function main(
                         ${createdAt}
                       )
                       returning *
-                      `
+                      `)[0]
 
-  return plainToClass(Message, Message[0])
+  // console.log({message,})
+
+  return plainToClass(Message, message)
 }
