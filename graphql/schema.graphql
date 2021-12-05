@@ -171,6 +171,11 @@ type Query {
   getfriendshipsList(
       uuid: String! # self  
   ): [Friendship] #list of all friends by UUID, if uuid2 of a friend is null, the friendship is not confirmed
+
+
+  getMessages(
+     chatUuid: String!
+  ): [Message]!
 }
 
 # ... ******************************************************

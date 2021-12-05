@@ -13,6 +13,11 @@ import getPhotoDetails from './controllers/photos/getPhotoDetails'
 import getPhotoAllCurr from './controllers/photos/getPhotoAllCurr'
 import getPhotoAllNext from './controllers/photos/getPhotoAllNext'
 import getPhotoAllPrev from './controllers/photos/getPhotoAllPrev'
+
+import getFriendshipsList from './controllers/friendships/getFriendshipsList'
+
+import getMessagesList from './controllers/messages/getMessagesList'
+
 // ******************************************************
 //                       mutations
 // ******************************************************
@@ -31,13 +36,11 @@ import registerSecret from './controllers/secrets/register'
 
 import createFriendship from './controllers/friendships/createFriendship'
 import acceptFriendshipRequest from './controllers/friendships/acceptFriendshipRequest'
-import getfriendshipsList from './controllers/friendships/getfriendshipsList'
 import deleteFriendship from './controllers/friendships/delete'
-
-import sendMessage from './controllers/messages/send'
 
 import updateSecret from './controllers/secrets/update'
 
+import sendMessage from './controllers/messages/send'
 
 import AbuseReport from './models/abuseReport'
 import Photo from './models/photo'
@@ -128,9 +131,14 @@ exports.handler = async (event:AppSyncEvent) => {
       return await getPhotoAllPrev(
         event.arguments.photoId,
       )
-    case 'getfriendshipsList':
-      return await getfriendshipsList(
+    case 'getFriendshipsList':
+      return await getFriendshipsList(
         event.arguments.uuid,
+      )
+
+    case 'getMessagesList':
+      return await getMessagesList(
+        event.arguments.chatUuid,
       )
 
       // ******************************************************
