@@ -6,9 +6,6 @@ import {plainToClass,} from 'class-transformer'
 
 import sql from '../../sql'
 
-import Friendship from '../../models/friendship'
-import Chat from '../../models/chat'
-import ChatUser from '../../models/chatUser'
 import Message from '../../models/message'
 
 export default async function main(
@@ -19,69 +16,36 @@ export default async function main(
 ) {
 
   // here validate values before inserting into DB
-  if(uuidValidate(uuid) === false) {
-    throw new Error(`Wrong UUID format`)
+  if(uuidValidate(chatUuid) === false ) {
+    throw new Error(`Wrong UUID format1`)
+  }
+  if(uuidValidate(uuid) === false ) {
+    throw new Error(`Wrong UUID format2`)
+  }
+  if(uuidValidate(messageUuid) === false ) {
+    throw new Error(`Wrong UUID format3`)
   }
 
   const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
-
-  const friendshipUuid = uuidv4()
-
-  const [friendship, chat, chatUser,] = await sql.begin(async (sql: any) => {
-
-    const [friendship,] = await sql`
-                      INSERT INTO "Friendships"
-                      (
-                        "friendshipUuid",
-                        "uuid1",
-                        "chatUuid",
-                        "createdAt"
-                      ) values (
-                      ${friendshipUuid},
-                      ${uuid},
-                      ${chatUuid},
-                      ${createdAt}
-                      ) 
-                      returning *
-                      `
-
-    const [chat,] = await sql`
-                      INSERT INTO "Chats"
-                      (
-                          "chatUuid",
-                          "createdAt"
-                      ) values (
-                        ${chatUuid},
-                        ${createdAt}
-                      )
-                      returning *
-                      `
-
-    const [chatUser,] = await sql`
-                      INSERT INTO "ChatUsers"
+  const Message = await sql`
+                      INSERT INTO "Messages"
                       (
                           "chatUuid",
                           "uuid",
-                          "invitedByUuid",
+                          "messageUuid",
+                          "text",
                           "createdAt",
-                          "lastReadAt"
+                          "updatedAt"
                       ) values (
                         ${chatUuid},
                         ${uuid},
-                        ${uuid},
+                        ${messageUuid},
+                        ${text},
                         ${createdAt},
                         ${createdAt}
                       )
                       returning *
                       `
 
-    // console.log({friendship, friend, chat, chatUser,})
-
-    return [friendship, chat, chatUser,]
-  })
-  // console.log('hohoho')
-  // console.log({friendship, friend, chat, chatUser,})
-
-
-  return 'OK'
+  return plainToClass(Message, Message[0])
 }
