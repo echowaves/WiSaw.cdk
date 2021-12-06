@@ -2,7 +2,7 @@ import sql from '../../sql'
 import {validate as uuidValidate,} from 'uuid'
 
 import {plainToClass,} from 'class-transformer'
-import Friendship from '../../models/friendship'
+import Message from '../../models/message'
 
 
 export default async function main(
@@ -12,10 +12,11 @@ export default async function main(
     throw new Error(`Wrong UUID format`)
   }
 
-  const friendships = (await sql`SELECT *
-      FROM "Friendships"
-      WHERE "uuid1" = ${chatUuid}
-      OR "uuid2" = ${chatUuid}
+  const messages = (await sql`SELECT *
+      FROM "Messages"
+      WHERE "chatUuid" = ${chatUuid}      
+      ORDER BY "createdAt" DESC
+      LIMIT 10
     `)
-  return friendships.map((friendship: Friendship) => plainToClass(Friendship, friendship))
+  return messages.map((message: Message) => plainToClass(Message, message))
 }
