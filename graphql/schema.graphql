@@ -175,7 +175,7 @@ type Query {
 
   getMessagesList(
      chatUuid: String!
-     lastRead: String!
+     lastRead: AWSDateTime!
   ): [Message]!
 }
 
