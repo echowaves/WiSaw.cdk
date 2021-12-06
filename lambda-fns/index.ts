@@ -75,7 +75,7 @@ type AppSyncEvent = {
     chatUuid: string,
     messageUuid: string,
     text: string,
-    lastRead: string,
+    lastLoaded: string,
   }
 }
 

@@ -7,7 +7,7 @@ import Message from '../../models/message'
 
 export default async function main(
   chatUuid: string,
-  lastRead: string,
+  lastLoaded: string,
 ) {
   const limit = 20
 
@@ -20,7 +20,7 @@ export default async function main(
       WHERE 
         "chatUuid" = ${chatUuid}      
       AND
-        "createdAt" < ${lastRead}
+        "createdAt" < ${lastLoaded}
       ORDER BY "createdAt" DESC
       LIMIT ${limit}
     `)
