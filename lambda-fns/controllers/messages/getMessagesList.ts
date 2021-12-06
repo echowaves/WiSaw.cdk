@@ -6,8 +6,11 @@ import Message from '../../models/message'
 
 
 export default async function main(
-  chatUuid: string
+  chatUuid: string,
+  pageNumber: number = 0,
 ) {
+  const limit = 20
+  const offset = pageNumber * limit
   if(uuidValidate(chatUuid) === false) {
     throw new Error(`Wrong UUID format`)
   }
@@ -16,7 +19,8 @@ export default async function main(
       FROM "Messages"
       WHERE "chatUuid" = ${chatUuid}      
       ORDER BY "createdAt" DESC
-      LIMIT 10
+      LIMIT ${limit}
+      OFFSET ${offset}
     `)
   return messages.map((message: Message) => plainToClass(Message, message))
 }

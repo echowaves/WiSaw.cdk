@@ -139,6 +139,7 @@ exports.handler = async (event:AppSyncEvent) => {
     case 'getMessagesList':
       return await getMessagesList(
         event.arguments.chatUuid,
+        event.arguments.pageNumber,
       )
 
       // ******************************************************

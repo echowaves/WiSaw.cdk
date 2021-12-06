@@ -175,6 +175,7 @@ type Query {
 
   getMessagesList(
      chatUuid: String!
+     pageNumber: Int!
   ): [Message]!
 }
 
