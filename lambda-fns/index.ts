@@ -75,6 +75,7 @@ type AppSyncEvent = {
     chatUuid: string,
     messageUuid: string,
     text: string,
+    lastRead: string,
   }
 }
 
@@ -139,7 +140,7 @@ exports.handler = async (event:AppSyncEvent) => {
     case 'getMessagesList':
       return await getMessagesList(
         event.arguments.chatUuid,
-        event.arguments.pageNumber,
+        event.arguments.lastRead,
       )
 
       // ******************************************************
