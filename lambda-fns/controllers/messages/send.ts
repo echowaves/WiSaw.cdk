@@ -13,7 +13,7 @@ export default async function main(
   uuid: string,
   messageUuid: string,
   text: string,
-) {
+): Promise<Message> {
 
   // here validate values before inserting into DB
   if(uuidValidate(chatUuid) === false ) {
