@@ -78,7 +78,7 @@ type AppSyncEvent = {
     messageUuid: string,
     text: string,
     lastLoaded: string,
-    // helloMessage: string,
+    helloMessage: string,
   }
 }
 
@@ -233,7 +233,9 @@ exports.handler = async (event:AppSyncEvent) => {
       )
 
     case 'helloWorld':
-      return await helloWorld()
+      return await helloWorld(
+        event.arguments.helloMessage
+      )
 
     default:
       return null

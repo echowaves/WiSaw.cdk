@@ -91,7 +91,13 @@ export class WiSawCdkStack extends cdk.Stack {
             },
           },
         },
+        xrayEnabled: true,
       })
+
+    // const prototypeDS = api.addNoneDataSource(`prototypeDataSource`, {
+    //   name: "Prototype",
+    //   description: "Prototype graphql responses",
+    // })
 
     // Create the Lambda function that will map GraphQL operations into Postgres
     const wisawFn = new lambda.Function(this,
@@ -392,6 +398,13 @@ export class WiSawCdkStack extends cdk.Stack {
       typeName: 'Mutation',
       fieldName: 'sendMessage',
     })
+
+    lambdaDs.createResolver({
+      typeName: 'Mutation',
+      fieldName: 'helloWorld',
+    })
+
+
 
     // CFN Outputs
     new cdk.CfnOutput(this, 'AppSyncAPIURL', {

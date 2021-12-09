@@ -50,3 +50,11 @@ Then right click and modify to change the master password
 
 
 To see your and others photos visit https://www.wisaw.com
+
+
+
+## subscription gotachas
+https://blog.purple-technology.com/lessons-learned-aws-appsync-subscriptions/
+https://adrianhesketh.com/2021/02/22/setting-up-appsync-graphql-subscriptions-with-typescript-and-cdk/
+https://dl.icdst.org/pdfs/files3/7a61b203e8ee68259bb622522417778a.pdf#page=144&zoom=100,96,170
+https://dev.to/aws-builders/lessons-learned-aws-appsync-subscriptions-jek

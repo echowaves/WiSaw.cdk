@@ -1,6 +1,7 @@
 schema {
   query: Query
   mutation: Mutation
+  subscription: Subscription
 }
 
 # ... ******************************************************
@@ -255,5 +256,26 @@ type Mutation {
     messageUuid: String!
     text: String! 
   ): Message!
+
+  helloWorld: String!
    
+}
+
+# ... ******************************************************
+# ...                    subscriptions
+# ... ******************************************************
+# onSendMessage(chatUuid: String!): Message!
+
+# only works with nullable return types, the return type must match corresponding mutation
+type Subscription {
+  onSendMessage(
+    chatUuid: String
+    uuid: String
+    messageUuid: String
+    text: String
+    ): Message    
+    @aws_subscribe(mutations: ["sendMessage"])
+
+  onHelloWorld: String
+    @aws_subscribe(mutations: ["helloWorld"])
 }
