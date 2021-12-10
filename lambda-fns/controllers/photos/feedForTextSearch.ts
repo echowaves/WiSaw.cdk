@@ -5,7 +5,7 @@ import Photo from '../../models/photo'
 export default async function main(
   searchTerm: string,
   pageNumber: number,
-  batch: number,
+  batch: string,
 ) {
   const limit = 100
   const offset = pageNumber * limit

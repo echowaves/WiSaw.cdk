@@ -1,6 +1,6 @@
 import * as moment from 'moment'
 import sql from '../../sql'
-import { plainToClass } from 'class-transformer';
+import {plainToClass,} from 'class-transformer'
 import Photo from '../../models/photo'
 
 const AWS = require('aws-sdk')
@@ -10,11 +10,11 @@ const AWS = require('aws-sdk')
 export default async function main(
   uuid: string,
   pageNumber: number,
-  batch: number,
+  batch: string,
 ) {
   const limit = 100
   const offset = pageNumber * limit
-console.log({uuid})
+  // console.log({uuid})
   const results =
   (await sql`
     SELECT

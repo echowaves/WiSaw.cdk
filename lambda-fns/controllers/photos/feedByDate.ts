@@ -11,7 +11,7 @@ export default async function main(
   daysAgo: number,
   lat: number,
   lon: number,
-  batch: number,
+  batch: string,
   whenToStop: string,
 ) {
   const currentDate = moment()

@@ -60,7 +60,7 @@ type AppSyncEvent = {
     lat: number,
     lon: number,
     daysAgo: number,
-    batch: number,
+    batch: string,
     whenToStop: string,
     pageNumber: number,
     searchTerm: string,

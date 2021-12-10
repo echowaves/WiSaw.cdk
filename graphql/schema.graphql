@@ -43,7 +43,7 @@ type AbuseReport {
 
 type PhotoFeed {
   photos: [Photo]
-  batch: Int!
+  batch: String!
   noMoreData: Boolean!
 }
 
@@ -143,18 +143,18 @@ type Query {
     daysAgo: Int!
     lat: Float!
     lon: Float!
-    batch: Int!
+    batch: String!
     whenToStop: AWSDateTime!
     ): PhotoFeed
   feedForWatcher(
     uuid: String!
     pageNumber: Int!
-    batch: Int!
+    batch: String!
     ): PhotoFeed
   feedForTextSearch(
       searchTerm: String!
       pageNumber: Int!
-      batch: Int!
+      batch: String!
     ): PhotoFeed
 
   getPhotoDetails(

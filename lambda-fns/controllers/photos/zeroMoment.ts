@@ -6,5 +6,7 @@ import Photo from '../../models/photo'
 const AWS = require('aws-sdk')
 
 export default async function main() {
-  return (await sql`select min("createdAt") from "Photos"`)[0].min
+  const returned = (await sql`select min("createdAt") from "Photos"`)
+  // console.log({returned,})
+  return returned[0].min
 }
