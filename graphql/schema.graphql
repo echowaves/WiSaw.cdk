@@ -258,7 +258,7 @@ type Mutation {
     uuid: String!
     messageUuid: String!
     text: String! 
-  ): Message
+  ): Message!
 
   helloWorld: String!
    
