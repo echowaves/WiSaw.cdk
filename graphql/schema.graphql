@@ -16,7 +16,7 @@ type ContactForm {
 }
 
 type Photo {
-  row_number: Long!
+  row_number: Int!
   id: ID!
   uuid: String!
   location: AWSJSON!
@@ -43,7 +43,7 @@ type AbuseReport {
 
 type PhotoFeed {
   photos: [Photo]
-  batch: Long!
+  batch: Int!
   noMoreData: Boolean!
 }
 
@@ -133,25 +133,28 @@ type Message{
 # ...                   queries
 # ... ******************************************************
 type Query {
-  generateUploadUrl(assetKey: String!, contentType: String!): String!
+  generateUploadUrl(
+    assetKey: String!
+    contentType: String!
+    ): String!
   zeroMoment: AWSDateTime!
 
   feedByDate(
     daysAgo: Int!
     lat: Float!
     lon: Float!
-    batch: Long!
+    batch: Int!
     whenToStop: AWSDateTime!
     ): PhotoFeed
   feedForWatcher(
     uuid: String!
     pageNumber: Int!
-    batch: Long!
+    batch: Int!
     ): PhotoFeed
   feedForTextSearch(
       searchTerm: String!
       pageNumber: Int!
-      batch: Long!
+      batch: Int!
     ): PhotoFeed
 
   getPhotoDetails(
@@ -171,7 +174,7 @@ type Query {
   
   getFriendshipsList(
       uuid: String! # self  
-  ): [Friendship] #list of all friends by UUID, if uuid2 of a friend is null, the friendship is not confirmed
+  ): [Friendship]! #list of all friends by UUID, if uuid2 of a friend is null, the friendship is not confirmed
 
 
   getMessagesList(
@@ -255,7 +258,7 @@ type Mutation {
     uuid: String!
     messageUuid: String!
     text: String! 
-  ): Message!
+  ): Message
 
   helloWorld: String!
    
@@ -270,9 +273,6 @@ type Mutation {
 type Subscription {
   onSendMessage(
     chatUuid: String
-    uuid: String
-    messageUuid: String
-    text: String
     ): Message    
     @aws_subscribe(mutations: ["sendMessage"])
 

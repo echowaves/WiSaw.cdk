@@ -91,7 +91,7 @@ export class WiSawCdkStack extends cdk.Stack {
             },
           },
         },
-        xrayEnabled: true,
+        // xrayEnabled: true,
       })
 
     // const prototypeDS = api.addNoneDataSource(`prototypeDataSource`, {
