@@ -399,12 +399,6 @@ export class WiSawCdkStack extends cdk.Stack {
       fieldName: 'sendMessage',
     })
 
-    lambdaDs.createResolver({
-      typeName: 'Mutation',
-      fieldName: 'helloWorld',
-    })
-
-
 
     // CFN Outputs
     new cdk.CfnOutput(this, 'AppSyncAPIURL', {

@@ -42,8 +42,6 @@ import updateSecret from './controllers/secrets/update'
 
 import sendMessage from './controllers/messages/send'
 
-import helloWorld from './controllers/messages/helloWorld'
-
 // import AbuseReport from './models/abuseReport'
 // import Photo from './models/photo'
 // import Message from './models/message'
@@ -78,7 +76,11 @@ type AppSyncEvent = {
     messageUuid: string,
     text: string,
     lastLoaded: string,
-    helloMessage: string,
+
+    chatUuidArg: string,
+    uuidArg: string,
+    messageUuidArg: string,
+    textArg: string,
   }
 }
 
@@ -226,15 +228,10 @@ exports.handler = async (event:AppSyncEvent) => {
 
     case 'sendMessage':
       return await sendMessage(
-        event.arguments.chatUuid,
-        event.arguments.uuid,
-        event.arguments.messageUuid,
-        event.arguments.text,
-      )
-
-    case 'helloWorld':
-      return await helloWorld(
-        event.arguments.helloMessage
+        event.arguments.chatUuidArg,
+        event.arguments.uuidArg,
+        event.arguments.messageUuidArg,
+        event.arguments.textArg,
       )
 
     default:

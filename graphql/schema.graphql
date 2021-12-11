@@ -254,13 +254,13 @@ type Mutation {
   
   # messages
   sendMessage(
-    chatUuid: String!
-    uuid: String!
-    messageUuid: String!
-    text: String! 
+    chatUuidArg: String!
+    uuidArg: String!
+    messageUuidArg: String!
+    textArg: String! 
   ): Message!
 
-  helloWorld: String!
+  # helloWorld(helloMessage: String!): String!
    
 }
 
@@ -273,9 +273,9 @@ type Mutation {
 type Subscription {
   onSendMessage(
     chatUuid: String
-    ): Message    
+  ): Message
     @aws_subscribe(mutations: ["sendMessage"])
 
-  onHelloWorld: String
-    @aws_subscribe(mutations: ["helloWorld"])
+  # onHelloWorld(helloMessage: String): String
+  #   @aws_subscribe(mutations: ["helloWorld"])
 }

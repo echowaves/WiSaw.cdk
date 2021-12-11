@@ -9,20 +9,20 @@ import sql from '../../sql'
 import Message from '../../models/message'
 
 export default async function main(
-  chatUuid: string,
-  uuid: string,
-  messageUuid: string,
-  text: string,
+  chatUuidArg: string,
+  uuidArg: string,
+  messageUuidArg: string,
+  textArg: string,
 ): Promise<Message> {
 
   // here validate values before inserting into DB
-  if(uuidValidate(chatUuid) === false ) {
+  if(uuidValidate(chatUuidArg) === false ) {
     throw new Error(`Wrong UUID format1`)
   }
-  if(uuidValidate(uuid) === false ) {
+  if(uuidValidate(uuidArg) === false ) {
     throw new Error(`Wrong UUID format2`)
   }
-  if(uuidValidate(messageUuid) === false ) {
+  if(uuidValidate(messageUuidArg) === false ) {
     throw new Error(`Wrong UUID format3`)
   }
 
@@ -37,10 +37,10 @@ export default async function main(
                           "createdAt",
                           "updatedAt"
                       ) values (
-                        ${chatUuid},
-                        ${uuid},
-                        ${messageUuid},
-                        ${text},
+                        ${chatUuidArg},
+                        ${uuidArg},
+                        ${messageUuidArg},
+                        ${textArg},
                         ${createdAt},
                         ${createdAt}
                       )
