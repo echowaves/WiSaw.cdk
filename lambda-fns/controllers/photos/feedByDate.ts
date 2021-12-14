@@ -1,6 +1,6 @@
 import * as moment from 'moment'
 import sql from '../../sql'
-import { plainToClass } from 'class-transformer';
+import {plainToClass,} from 'class-transformer'
 import Photo from '../../models/photo'
 
 const AWS = require('aws-sdk')
@@ -11,7 +11,7 @@ export default async function main(
   daysAgo: number,
   lat: number,
   lon: number,
-  batch: number,
+  batch: string,
   whenToStop: string,
 ) {
   const currentDate = moment()

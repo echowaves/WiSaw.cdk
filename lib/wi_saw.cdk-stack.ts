@@ -91,7 +91,13 @@ export class WiSawCdkStack extends cdk.Stack {
             },
           },
         },
+        xrayEnabled: true,
       })
+
+    // const prototypeDS = api.addNoneDataSource(`prototypeDataSource`, {
+    //   name: "Prototype",
+    //   description: "Prototype graphql responses",
+    // })
 
     // Create the Lambda function that will map GraphQL operations into Postgres
     const wisawFn = new lambda.Function(this,
@@ -319,6 +325,17 @@ export class WiSawCdkStack extends cdk.Stack {
       typeName: 'Query',
       fieldName: 'getPhotoAllPrev',
     })
+
+
+    lambdaDs.createResolver({
+      typeName: 'Query',
+      fieldName: 'getFriendshipsList',
+    })
+    lambdaDs.createResolver({
+      typeName: 'Query',
+      fieldName: 'getMessagesList',
+    })
+
     // ******************************************************
     //                       mutations
     // ******************************************************
@@ -361,6 +378,25 @@ export class WiSawCdkStack extends cdk.Stack {
     lambdaDs.createResolver({
       typeName: 'Mutation',
       fieldName: 'updateSecret',
+    })
+
+
+    lambdaDs.createResolver({
+      typeName: 'Mutation',
+      fieldName: 'createFriendship',
+    })
+    lambdaDs.createResolver({
+      typeName: 'Mutation',
+      fieldName: 'acceptFriendshipRequest',
+    })
+    lambdaDs.createResolver({
+      typeName: 'Mutation',
+      fieldName: 'deleteFriendship',
+    })
+
+    lambdaDs.createResolver({
+      typeName: 'Mutation',
+      fieldName: 'sendMessage',
     })
 
 

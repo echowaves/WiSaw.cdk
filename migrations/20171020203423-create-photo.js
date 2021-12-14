@@ -24,9 +24,9 @@ module.exports = {
         type: Sequelize.DATE,
       },
     })
-      .then(() => queryInterface.addIndex('Photos', ['uuid']))
-      .then(() => queryInterface.addIndex('Photos', ['location']))
-      .then(() => queryInterface.addIndex('Photos', ['createdAt'])),
+      .then(() => queryInterface.addIndex('Photos', ['uuid',]))
+      .then(() => queryInterface.addIndex('Photos', ['location',]))
+      .then(() => queryInterface.addIndex('Photos', ['createdAt',])),
   down: (queryInterface, Sequelize) => // eslint-disable-line no-unused-vars
     queryInterface.dropTable('Photos'),
 }

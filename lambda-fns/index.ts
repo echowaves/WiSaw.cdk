@@ -13,6 +13,11 @@ import getPhotoDetails from './controllers/photos/getPhotoDetails'
 import getPhotoAllCurr from './controllers/photos/getPhotoAllCurr'
 import getPhotoAllNext from './controllers/photos/getPhotoAllNext'
 import getPhotoAllPrev from './controllers/photos/getPhotoAllPrev'
+
+import getFriendshipsList from './controllers/friendships/getFriendshipsList'
+
+import getMessagesList from './controllers/messages/getMessagesList'
+
 // ******************************************************
 //                       mutations
 // ******************************************************
@@ -28,24 +33,32 @@ import createComment from './controllers/comments/create'
 import deleteComment from './controllers/comments/delete'
 
 import registerSecret from './controllers/secrets/register'
+
+import createFriendship from './controllers/friendships/createFriendship'
+import acceptFriendshipRequest from './controllers/friendships/acceptFriendshipRequest'
+import deleteFriendship from './controllers/friendships/delete'
+
 import updateSecret from './controllers/secrets/update'
 
-import AbuseReport from './models/abuseReport'
-import Photo from './models/photo'
+import sendMessage from './controllers/messages/send'
+
+// import AbuseReport from './models/abuseReport'
+// import Photo from './models/photo'
+// import Message from './models/message'
 
 type AppSyncEvent = {
   info: {
     fieldName: string
   },
   arguments: {
-    photo: Photo,
-    abuseReport: AbuseReport,
+    // photo: Photo,
+    // abuseReport: AbuseReport,
     photoId: bigint,
     uuid: string,
     lat: number,
     lon: number,
     daysAgo: number,
-    batch: number,
+    batch: string,
     whenToStop: string,
     pageNumber: number,
     searchTerm: string,
@@ -57,6 +70,17 @@ type AppSyncEvent = {
     nickName: string,
     secret: string,
     newSecret: string,
+    friendshipUuid: string,
+    invitedByUuid: string,
+    chatUuid: string,
+    messageUuid: string,
+    text: string,
+    lastLoaded: string,
+
+    chatUuidArg: string,
+    uuidArg: string,
+    messageUuidArg: string,
+    textArg: string,
   }
 }
 
@@ -112,6 +136,16 @@ exports.handler = async (event:AppSyncEvent) => {
     case 'getPhotoAllPrev':
       return await getPhotoAllPrev(
         event.arguments.photoId,
+      )
+    case 'getFriendshipsList':
+      return await getFriendshipsList(
+        event.arguments.uuid,
+      )
+
+    case 'getMessagesList':
+      return await getMessagesList(
+        event.arguments.chatUuid,
+        event.arguments.lastLoaded,
       )
 
       // ******************************************************
@@ -176,6 +210,28 @@ exports.handler = async (event:AppSyncEvent) => {
         event.arguments.nickName,
         event.arguments.secret,
         event.arguments.newSecret,
+      )
+
+    case 'createFriendship':
+      return await createFriendship(
+        event.arguments.uuid,
+      )
+    case 'acceptFriendshipRequest':
+      return await acceptFriendshipRequest(
+        event.arguments.friendshipUuid,
+        event.arguments.uuid,
+      )
+    case 'deleteFriendship':
+      return await deleteFriendship(
+        event.arguments.friendshipUuid,
+      )
+
+    case 'sendMessage':
+      return await sendMessage(
+        event.arguments.chatUuidArg,
+        event.arguments.uuidArg,
+        event.arguments.messageUuidArg,
+        event.arguments.textArg,
       )
 
     default:

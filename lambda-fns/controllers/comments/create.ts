@@ -2,10 +2,10 @@ import * as moment from 'moment'
 
 import sql from '../../sql'
 
-import {_updateCommentsCount} from './_updateCommentsCount'
-import {_updateLastComment} from './_updateLastComment'
+import {_updateCommentsCount,} from './_updateCommentsCount'
+import {_updateLastComment,} from './_updateLastComment'
 
-import {_notifyAllWatchers} from '../photos/_notifyAllWatchers'
+import {_notifyAllWatchers,} from '../photos/_notifyAllWatchers'
 import watch from '../photos/watch'
 
 export default async function main(photoId: bigint, uuid: string, description: string) {
@@ -13,7 +13,7 @@ export default async function main(photoId: bigint, uuid: string, description: s
   const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
 
   if(description.trim().length === 0) {
-      throw('Unable to save empty comment.')
+    throw('Unable to save empty comment.')
   }
   const comment = (await sql`
     INSERT INTO "Comments"
@@ -32,8 +32,8 @@ export default async function main(photoId: bigint, uuid: string, description: s
       )
       returning *
       `
-    )[0]
-// console.log({comment})
+  )[0]
+  // console.log({comment})
   await Promise.all([
     watch(photoId, uuid),
     _updateCommentsCount(photoId),

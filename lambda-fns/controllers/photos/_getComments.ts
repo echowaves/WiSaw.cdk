@@ -1,7 +1,7 @@
 import sql from '../../sql'
 
 export const _getComments = async( photoId: bigint) => {
-  const result =  (await sql`
+  const result = (await sql`
                     SELECT * FROM "Comments"
                     WHERE
                       "photoId" = ${photoId}
@@ -9,6 +9,6 @@ export const _getComments = async( photoId: bigint) => {
                       "active" = true
                     ORDER BY "createdAt"
                     `
-                  )
+  )
   return result
 }

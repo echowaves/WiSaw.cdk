@@ -1,6 +1,7 @@
 schema {
   query: Query
   mutation: Mutation
+  subscription: Subscription
 }
 
 # ... ******************************************************
@@ -15,7 +16,7 @@ type ContactForm {
 }
 
 type Photo {
-  row_number: Long!
+  row_number: Int!
   id: ID!
   uuid: String!
   location: AWSJSON!
@@ -42,7 +43,7 @@ type AbuseReport {
 
 type PhotoFeed {
   photos: [Photo]
-  batch: Long!
+  batch: String!
   noMoreData: Boolean!
 }
 
@@ -93,29 +94,67 @@ type Secret {
   updatedAt: AWSDateTime!
 }
 
+type Friendship {
+  friendshipUuid: String!
+  uuid1: String! 
+  uuid2: String # if uuid2 is null == friendship is not confirmed
+  chatUuid: String!
+  createdAt: AWSDateTime!  
+}
+
+type Chat {  
+  chatUuid: String!
+  createdAt: AWSDateTime!  
+}
+type ChatUser {  
+  uuid: String!
+  chatUuid: String!
+  invitedByUuid: String! 
+  createdAt: AWSDateTime!  
+  lastReadAt: AWSDateTime!  
+}
+
+type CreateFriendshipResult {
+  friendship: Friendship!
+  chat: Chat!
+  chatUser: ChatUser!
+}
+
+type Message{  
+  chatUuid: String!
+  uuid: String!
+  messageUuid: String!
+  text: String! 
+  createdAt: AWSDateTime!  
+  updatedAt: AWSDateTime!  
+}
+
 # ... ******************************************************
 # ...                   queries
 # ... ******************************************************
 type Query {
-  generateUploadUrl(assetKey: String!, contentType: String!): String!
+  generateUploadUrl(
+    assetKey: String!
+    contentType: String!
+    ): String!
   zeroMoment: AWSDateTime!
 
   feedByDate(
     daysAgo: Int!
     lat: Float!
     lon: Float!
-    batch: Long!
+    batch: String!
     whenToStop: AWSDateTime!
     ): PhotoFeed
   feedForWatcher(
     uuid: String!
     pageNumber: Int!
-    batch: Long!
+    batch: String!
     ): PhotoFeed
   feedForTextSearch(
       searchTerm: String!
       pageNumber: Int!
-      batch: Long!
+      batch: String!
     ): PhotoFeed
 
   getPhotoDetails(
@@ -127,10 +166,21 @@ type Query {
   getPhotoAllNext( photoId: ID!): PhotoAll!
   getPhotoAllPrev( photoId: ID!): PhotoAll!
 
-  # getSecret(
-  #   nickName: String!
-  #   secret: String!    
-  # ): Secret!
+  # freindship management 
+  # getFriendInFriendship(     
+  #   friendshipUuid: String!
+  #   uuid: String! # self
+  # ): Friend! #every friendship has only 2 friends, this returns the other side of the friendship
+  
+  getFriendshipsList(
+      uuid: String! # self  
+  ): [Friendship]! #list of all friends by UUID, if uuid2 of a friend is null, the friendship is not confirmed
+
+
+  getMessagesList(
+     chatUuid: String!
+     lastLoaded: AWSDateTime!
+  ): [Message]!
 }
 
 # ... ******************************************************
@@ -176,7 +226,7 @@ type Mutation {
   deleteComment(
       commentId: ID!
       uuid: String!
-    ): String!
+    ): String! # returns "OK"
 
   registerSecret(
     uuid: String!
@@ -190,4 +240,42 @@ type Mutation {
     newSecret: String!
   ): Secret!
 
+# freindship management 
+  createFriendship(
+      uuid: String!
+  ): CreateFriendshipResult!
+  acceptFriendshipRequest(
+    friendshipUuid: String!
+    uuid: String! # self
+  ): CreateFriendshipResult! # returns the ChatUser from the other side of the friendship
+  deleteFriendship(
+    friendshipUuid: String!
+  ): String! # returns "OK"
+  
+  # messages
+  sendMessage(
+    chatUuidArg: String!
+    uuidArg: String!
+    messageUuidArg: String!
+    textArg: String! 
+  ): Message!
+
+  # helloWorld(helloMessage: String!): String!
+   
+}
+
+# ... ******************************************************
+# ...                    subscriptions
+# ... ******************************************************
+# onSendMessage(chatUuid: String!): Message!
+
+# only works with nullable return types, the return type must match corresponding mutation
+type Subscription {
+  onSendMessage(
+    chatUuid: String
+  ): Message
+    @aws_subscribe(mutations: ["sendMessage"])
+
+  # onHelloWorld(helloMessage: String): String
+  #   @aws_subscribe(mutations: ["helloWorld"])
 }
