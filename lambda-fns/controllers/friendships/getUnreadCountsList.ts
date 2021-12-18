@@ -15,7 +15,7 @@ export default async function main(
   const unreadCounts = (await sql`
   SELECT
     cu."chatUuid",
-    COUNT(CASE WHEN m."createdAt" > cu."lastReadAt" THEN 1 ELSE 0 END) AS unread
+    COUNT(CASE WHEN m."createdAt" > cu."lastReadAt" THEN 1 END) AS unread
   FROM "ChatUsers" cu 
     INNER JOIN "Messages" m ON cu."chatUuid" = m."chatUuid"
   WHERE cu."uuid" =  ${uuid}

@@ -43,6 +43,8 @@ import updateSecret from './controllers/secrets/update'
 
 import sendMessage from './controllers/messages/send'
 
+import resetUnreadCount from './controllers/messages/resetUnreadCount'
+
 // import AbuseReport from './models/abuseReport'
 // import Photo from './models/photo'
 // import Message from './models/message'
@@ -237,6 +239,12 @@ exports.handler = async (event:AppSyncEvent) => {
         event.arguments.uuidArg,
         event.arguments.messageUuidArg,
         event.arguments.textArg,
+      )
+
+    case 'resetUnreadCount':
+      return await resetUnreadCount(
+        event.arguments.chatUuid,
+        event.arguments.uuid,
       )
 
     default:

@@ -403,6 +403,11 @@ export class WiSawCdkStack extends cdk.Stack {
       fieldName: 'sendMessage',
     })
 
+    lambdaDs.createResolver({
+      typeName: 'Mutation',
+      fieldName: 'resetUnreadCount',
+    })
+
 
     // CFN Outputs
     new cdk.CfnOutput(this, 'AppSyncAPIURL', {

@@ -269,6 +269,11 @@ type Mutation {
     messageUuidArg: String!
     textArg: String! 
   ): Message!
+  
+  resetUnreadCount(
+    chatUuid: String!
+    uuid: String!
+  ): String! #returns current date time
 
   # helloWorld(helloMessage: String!): String!
    
