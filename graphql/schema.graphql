@@ -114,6 +114,11 @@ type ChatUser {
   lastReadAt: AWSDateTime!  
 }
 
+type UnreadCount {  
+  chatUuid: String!
+  unread: Int!  
+}
+
 type CreateFriendshipResult {
   friendship: Friendship!
   chat: Chat!
@@ -175,6 +180,11 @@ type Query {
   getFriendshipsList(
       uuid: String! # self  
   ): [Friendship]! #list of all friends by UUID, if uuid2 of a friend is null, the friendship is not confirmed
+
+  getUnreadCountsList(
+      uuid: String! # self  
+  ): [UnreadCount]! #list of all underads counts for given uuid
+
 
 
   getMessagesList(

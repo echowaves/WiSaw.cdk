@@ -15,6 +15,7 @@ import getPhotoAllNext from './controllers/photos/getPhotoAllNext'
 import getPhotoAllPrev from './controllers/photos/getPhotoAllPrev'
 
 import getFriendshipsList from './controllers/friendships/getFriendshipsList'
+import getUnreadCountsList from './controllers/friendships/getUnreadCountsList'
 
 import getMessagesList from './controllers/messages/getMessagesList'
 
@@ -139,6 +140,10 @@ exports.handler = async (event:AppSyncEvent) => {
       )
     case 'getFriendshipsList':
       return await getFriendshipsList(
+        event.arguments.uuid,
+      )
+    case 'getUnreadCountsList':
+      return await getUnreadCountsList(
         event.arguments.uuid,
       )
 

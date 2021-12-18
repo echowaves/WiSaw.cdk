@@ -333,6 +333,10 @@ export class WiSawCdkStack extends cdk.Stack {
     })
     lambdaDs.createResolver({
       typeName: 'Query',
+      fieldName: 'getUnreadCountsList',
+    })
+    lambdaDs.createResolver({
+      typeName: 'Query',
       fieldName: 'getMessagesList',
     })
 
