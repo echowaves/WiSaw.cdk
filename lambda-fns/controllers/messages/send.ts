@@ -27,25 +27,33 @@ export default async function main(
   }
 
   const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
-  const message = (await sql`
-                      INSERT INTO "Messages"
-                      (
-                          "chatUuid",
-                          "uuid",
-                          "messageUuid",
-                          "text",
-                          "createdAt",
-                          "updatedAt"
-                      ) values (
-                        ${chatUuidArg},
-                        ${uuidArg},
-                        ${messageUuidArg},
-                        ${textArg},
-                        ${createdAt},
-                        ${createdAt}
-                      )
-                      returning *
-                      `)[0]
+  const message =
+   (await sql`
+              INSERT INTO "Messages"
+              (
+                  "chatUuid",
+                  "uuid",
+                  "messageUuid",
+                  "text",
+                  "createdAt",
+                  "updatedAt"
+              ) values (
+                ${chatUuidArg},
+                ${uuidArg},
+                ${messageUuidArg},
+                ${textArg},
+                ${createdAt},
+                ${createdAt}
+              )
+              returning *
+              `)[0]
+
+  await sql`
+            UPDFATE "ChatUsers"
+            SET
+              "updatedAt" = ${createdAt},
+        WHERE chatUuid = ${chatUuidArg}
+        returning *`
 
   // console.log({message,})
 
