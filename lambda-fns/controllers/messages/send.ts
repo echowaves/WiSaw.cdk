@@ -52,7 +52,7 @@ export default async function main(
             UPDATE "ChatUsers"
             SET
               "updatedAt" = ${createdAt}
-        WHERE chatUuid = ${chatUuidArg}
+        WHERE "chatUuid" = ${chatUuidArg}
         returning *`
 
   // console.log({message,})
