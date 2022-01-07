@@ -51,7 +51,7 @@ export default async function main(
   await sql`
             UPDATE "ChatUsers"
             SET
-              "updatedAt" = ${createdAt},
+              "updatedAt" = ${createdAt}
         WHERE chatUuid = ${chatUuidArg}
         returning *`
 
