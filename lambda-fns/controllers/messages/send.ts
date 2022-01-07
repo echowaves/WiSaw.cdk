@@ -49,7 +49,7 @@ export default async function main(
               `)[0]
 
   await sql`
-            UPDFATE "ChatUsers"
+            UPDATE "ChatUsers"
             SET
               "updatedAt" = ${createdAt},
         WHERE chatUuid = ${chatUuidArg}
