@@ -50,10 +50,9 @@ export default async function main(
 
   await sql`
             UPDATE "ChatUsers"
-            SET
-              "updatedAt" = ${createdAt}
-        WHERE "chatUuid" = ${chatUuidArg}
-        returning *`
+            SET "updatedAt" = ${createdAt}
+            WHERE "chatUuid" = ${chatUuidArg}
+            returning *`
 
   // console.log({message,})
 
