@@ -20,8 +20,7 @@ export default async function main(
   FROM "ChatUsers" cu 
     INNER JOIN "Messages" m ON cu."chatUuid" = m."chatUuid"
   WHERE cu."uuid" =  ${uuid}
-  GROUP BY cu."chatUuid"
-  ORDER BY cu."updatedAt"
+  GROUP BY cu."chatUuid", cu."updatedAt"
       `)
   return unreadCounts
 }

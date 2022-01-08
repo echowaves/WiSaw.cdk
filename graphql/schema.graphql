@@ -117,6 +117,7 @@ type ChatUser {
 type UnreadCount {  
   chatUuid: String!
   unread: Int!  
+  updatedAt: AWSDateTime!
 }
 
 type CreateFriendshipResult {
