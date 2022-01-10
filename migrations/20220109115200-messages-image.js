@@ -19,6 +19,7 @@ module.exports = {
           },
         )
       )
+      .then(() => queryInterface.addIndex('Messages', ['image',]))
   ,
 
   down: (queryInterface, Sequelize) => // eslint-disable-line no-unused-vars
