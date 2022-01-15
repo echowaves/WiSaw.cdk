@@ -131,6 +131,8 @@ type Message{
   uuid: String!
   messageUuid: String!
   text: String! 
+  pending: Boolean
+  chatPhotoUuid: String!
   createdAt: AWSDateTime!  
   updatedAt: AWSDateTime!  
 }
