@@ -35,6 +35,7 @@ export default async function main(
                   "uuid",
                   "messageUuid",
                   "text",
+                  "pending", 
                   "createdAt",
                   "updatedAt"
               ) values (
@@ -42,6 +43,7 @@ export default async function main(
                 ${uuidArg},
                 ${messageUuidArg},
                 ${textArg},
+                ${false}, 
                 ${createdAt},
                 ${createdAt}
               )
