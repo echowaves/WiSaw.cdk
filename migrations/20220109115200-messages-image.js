@@ -12,16 +12,16 @@ module.exports = {
       .then(() =>
         queryInterface.addColumn(
           'Messages',
-          'chatPhotoUuid',
+          'chatPhotoHash',
           {
-            type: Sequelize.UUID,
+            type: Sequelize.STRING,
             allowNull: true,
           },
         ))
 
       .then(() => queryInterface.createTable('ChatPhotos', {
-        chatPhotoUuid: {
-          type: Sequelize.UUID,
+        chatPhotoHash: {
+          type: Sequelize.STRING,
           primaryKey: true,
           allowNull: false,
         },
@@ -29,11 +29,6 @@ module.exports = {
           type: Sequelize.UUID,
           allowNull: false,
         },
-        contentHash: {
-          allowNull: false,
-          type: Sequelize.STRING,
-        },
-
         createdAt: {
           allowNull: false,
           type: Sequelize.DATE,
@@ -41,7 +36,6 @@ module.exports = {
         },
       }))
       .then(() => queryInterface.addIndex('ChatPhotos', ['uuid',]))
-      .then(() => queryInterface.addIndex('ChatPhotos', ['contentHash',]))
   ,
 
   down:(queryInterface, Sequelize) =>
@@ -50,7 +44,7 @@ module.exports = {
         queryInterface.removeColumn('Messages', 'pending')
       )
       .then(() =>
-        queryInterface.removeColumn('Messages', 'chatPhotoUuid')
+        queryInterface.removeColumn('Messages', 'chatPhotoHash')
       )
   ,
 }
