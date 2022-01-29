@@ -151,6 +151,7 @@ type Query {
     contentType: String!
     ): String!
   generateUploadUrlForMessage(
+    uuid: String!
     photoHash: String!
     contentType: String!
     ): UploadUrlForMessage!
