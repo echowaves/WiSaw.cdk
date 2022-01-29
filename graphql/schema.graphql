@@ -137,7 +137,6 @@ type Message{
   updatedAt: AWSDateTime!  
 }
 type UploadUrlForMessage{
-  uuid: String!
   newAsset: Boolean!
   uploadUrl: String
 }
