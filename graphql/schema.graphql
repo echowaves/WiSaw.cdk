@@ -136,6 +136,11 @@ type Message{
   createdAt: AWSDateTime!  
   updatedAt: AWSDateTime!  
 }
+type UploadUrlForMessage{
+  uuid: String!
+  newAsset: Boolean!
+  uploadUrl: String
+}
 
 # ... ******************************************************
 # ...                   queries
@@ -145,6 +150,11 @@ type Query {
     assetKey: String!
     contentType: String!
     ): String!
+  generateUploadUrlForMessage(
+    photoHash: String!
+    contentType: String!
+    ): UploadUrlForMessage!
+
   zeroMoment: AWSDateTime!
 
   feedByDate(

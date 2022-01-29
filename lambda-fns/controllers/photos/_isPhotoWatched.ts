@@ -7,5 +7,5 @@ export const _isPhotoWatched = async( photoId: bigint, uuid: string) => {
                 AND
                 "uuid" = ${uuid}`
 
-        return results.count > 0
+  return results.count > 0
 }
