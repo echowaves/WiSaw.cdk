@@ -29,6 +29,8 @@ export async function main(event: any = {}, context: any, cb: any) {
       Key: name,
     }).promise()
 
+  console.log({image,})
+
   await Promise.all([
     _genWebpThumb({image, Bucket, Key: `${photoHash}-thumb`,}),
     _genWebp({image, Bucket, Key: `${photoHash}`,}),
@@ -45,7 +47,7 @@ export async function main(event: any = {}, context: any, cb: any) {
 
 const _genWebpThumb = async({image, Bucket, Key,}: {image: any, Bucket: string, Key: string}) => {
 
-  const buffer = await sharp(image.Body).rotate().webp({lossless: false, quality: 80,}).resize({height: 300,}).toBuffer()
+  const buffer = await sharp(await image.Body.toBuffer()).rotate().webp({lossless: false, quality: 80,}).resize({height: 300,}).toBuffer()
   const s3 = new AWS.S3()
   await s3.putObject({
     Bucket,
