@@ -86,6 +86,8 @@ type AppSyncEvent = {
     messageUuidArg: string,
     textArg: string,
     photoHash: string,
+    pendingArg: boolean,
+    chatPhotoHashArg: string,
   }
 }
 
@@ -248,6 +250,8 @@ exports.handler = async (event:AppSyncEvent) => {
         event.arguments.uuidArg,
         event.arguments.messageUuidArg,
         event.arguments.textArg,
+        event.arguments.pendingArg,
+        event.arguments.chatPhotoHashArg,
       )
 
     case 'resetUnreadCount':

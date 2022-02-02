@@ -29,7 +29,7 @@ export async function main(event: any = {}, context: any, cb: any) {
       Key: name,
     }).promise()
 
-  console.log({image,})
+  // console.log({image,})
 
   await Promise.all([
     _genWebpThumb({image, Bucket, Key: `${photoHash}-thumb`,}),
@@ -46,8 +46,7 @@ export async function main(event: any = {}, context: any, cb: any) {
 }
 
 const _genWebpThumb = async({image, Bucket, Key,}: {image: any, Bucket: string, Key: string}) => {
-
-  const buffer = await sharp(await image.Body.toBuffer()).rotate().webp({lossless: false, quality: 80,}).resize({height: 300,}).toBuffer()
+  const buffer = await sharp(await image.Body).rotate().webp({lossless: false, quality: 80,}).resize({height: 300,}).toBuffer()
   const s3 = new AWS.S3()
   await s3.putObject({
     Bucket,
@@ -83,14 +82,17 @@ const _deleteUpload = async({Bucket, Key,}: {Bucket: string, Key: string}) => {
 }
 
 const _activatePhoto = async({photoHash,}: {photoHash: string}) => {
-  try {
+  console.log("_activatePhoto::", "start")
 
+  try {
     const result = (await sql`
     SELECT * FROM "Messages"
     WHERE
       "chatPhotoHash" = ${photoHash}
     `
     )
+    console.log("_activatePhoto::", {result,})
+
     if(result.count === 1) { // the photo with this hash already
       const chatPhoto = result[0]
       await sql`
@@ -110,5 +112,6 @@ const _activatePhoto = async({photoHash,}: {photoHash: string}) => {
     console.log('Error activating photo')
     console.log({err,})
   }
+  console.log("_activatePhoto::", "end")
 
 }
