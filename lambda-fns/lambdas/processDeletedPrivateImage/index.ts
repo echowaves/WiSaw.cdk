@@ -39,7 +39,7 @@ const _cleanupTables = async({photoHash,}: {photoHash: string}) => {
     const result = (await sql`
                     DELETE from "ChatPhotos"
                     WHERE
-                    chatPhotoHash = ${photoHash}
+                    "chatPhotoHash" = ${photoHash}
                     `
     )
     //
