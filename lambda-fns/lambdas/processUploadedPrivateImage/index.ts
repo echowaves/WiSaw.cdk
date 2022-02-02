@@ -99,7 +99,7 @@ const _activatePhoto = async({photoHash,}: {photoHash: string}) => {
                     INSERT INTO "ChatPhotos"
                     (
                         "uuid",
-                        "chatPhotoHash",
+                        "chatPhotoHash"
                     ) values (
                       ${chatPhoto.uuid},
                       ${photoHash}
