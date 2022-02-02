@@ -7,6 +7,7 @@ const AWS = require('aws-sdk')
 // import AbuseReport from '../../models/abuseReport'
 
 export default async function main(uuid: string, photoHash: string, contentType: string) {
+  console.log("generateUploadUrlForMessage:: started")
 
   const assetKey = `${photoHash}.upload`
 
@@ -14,9 +15,10 @@ export default async function main(uuid: string, photoHash: string, contentType:
     SELECT * FROM "ChatPhotos"
     WHERE
       "chatPhotoHash" = ${photoHash}
-    LIMIT 1
-    `
-  )
+    `)
+
+  console.log("ChatPhotos", {result,})
+
   if(result.count === 1) { // the photo with this hash already
     const chatPhoto = result[0]
     if(uuid !== chatPhoto.uuid) {
