@@ -65,14 +65,14 @@ export default async function main(
                    "messageUuid",
                    "text",
                    "pending", 
-                   "chatPhotoHash", 
+                   "chatPhotoHash"
                ) values (
                  ${chatUuidArg},
                  ${uuidArg},
                  ${messageUuidArg},
                  ${textArg},
                  ${pendingArg}, 
-                 ${chatPhotoHashArg}, 
+                 ${chatPhotoHashArg}
                )
                returning *
                `)[0]
@@ -84,11 +84,10 @@ export default async function main(
                UPDATE "Messages"
                SET
                    "text" = ${textArg}, 
-                   "pending" = ${pendingArg}
+                   "pending" = ${pendingArg},
                    "chatPhotoHash" = ${chatPhotoHashArg}
                WHERE
                     "messageUuid" = ${messageUuidArg}
-
                returning *
                `)[0]
 

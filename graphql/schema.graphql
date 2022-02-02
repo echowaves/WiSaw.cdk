@@ -131,8 +131,8 @@ type Message{
   uuid: String!
   messageUuid: String!
   text: String! 
-  pending: Boolean
-  chatPhotoUuid: String
+  pending: Boolean!  
+  chatPhotoHash: String!
   createdAt: AWSDateTime!  
   updatedAt: AWSDateTime!  
 }
@@ -281,6 +281,8 @@ type Mutation {
     uuidArg: String!
     messageUuidArg: String!
     textArg: String! 
+    pendingArg: Boolean! 
+    chatPhotoHashArg: String!
   ): Message!
   
   resetUnreadCount(

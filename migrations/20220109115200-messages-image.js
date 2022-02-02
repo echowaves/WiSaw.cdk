@@ -15,10 +15,27 @@ module.exports = {
           'chatPhotoHash',
           {
             type: Sequelize.STRING,
-            allowNull: true,
+            allowNull: false,
           },
         ))
-
+      .then(() =>
+        queryInterface.changeColumn(
+          'Messages', 'createdAt',
+          {
+            allowNull: false,
+            type: Sequelize.DATE,
+            defaultValue: Sequelize.fn('now'),
+          }
+        ))
+      .then(() =>
+        queryInterface.changeColumn(
+          'Messages', 'updatedAt',
+          {
+            allowNull: false,
+            type: Sequelize.DATE,
+            defaultValue: Sequelize.fn('now'),
+          }
+        ))
       .then(() => queryInterface.createTable('ChatPhotos', {
         chatPhotoHash: {
           type: Sequelize.STRING,
