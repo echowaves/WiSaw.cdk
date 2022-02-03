@@ -2,6 +2,7 @@
 //                       queries
 // ******************************************************
 import generateUploadUrl from './controllers/photos/generateUploadUrl'
+import generateUploadUrlForMessage from './controllers/messages/generateUploadUrlForMessage'
 import zeroMoment from './controllers/photos/zeroMoment'
 
 import feedByDate from './controllers/photos/feedByDate'
@@ -84,6 +85,9 @@ type AppSyncEvent = {
     uuidArg: string,
     messageUuidArg: string,
     textArg: string,
+    photoHash: string,
+    pendingArg: boolean,
+    chatPhotoHashArg: string,
   }
 }
 
@@ -98,6 +102,13 @@ exports.handler = async (event:AppSyncEvent) => {
         event.arguments.assetKey,
         event. arguments.contentType,
       )
+    case 'generateUploadUrlForMessage':
+      return await generateUploadUrlForMessage(
+        event.arguments.uuid,
+        event.arguments.photoHash,
+        event. arguments.contentType,
+      )
+
     case 'zeroMoment':
       return await zeroMoment()
 
@@ -239,6 +250,8 @@ exports.handler = async (event:AppSyncEvent) => {
         event.arguments.uuidArg,
         event.arguments.messageUuidArg,
         event.arguments.textArg,
+        event.arguments.pendingArg,
+        event.arguments.chatPhotoHashArg,
       )
 
     case 'resetUnreadCount':

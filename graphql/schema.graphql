@@ -131,8 +131,14 @@ type Message{
   uuid: String!
   messageUuid: String!
   text: String! 
+  pending: Boolean!  
+  chatPhotoHash: String!
   createdAt: AWSDateTime!  
   updatedAt: AWSDateTime!  
+}
+type UploadUrlForMessage{
+  newAsset: Boolean!
+  uploadUrl: String
 }
 
 # ... ******************************************************
@@ -143,6 +149,12 @@ type Query {
     assetKey: String!
     contentType: String!
     ): String!
+  generateUploadUrlForMessage(
+    uuid: String!
+    photoHash: String!
+    contentType: String!
+    ): UploadUrlForMessage!
+
   zeroMoment: AWSDateTime!
 
   feedByDate(
@@ -269,6 +281,8 @@ type Mutation {
     uuidArg: String!
     messageUuidArg: String!
     textArg: String! 
+    pendingArg: Boolean! 
+    chatPhotoHashArg: String!
   ): Message!
   
   resetUnreadCount(

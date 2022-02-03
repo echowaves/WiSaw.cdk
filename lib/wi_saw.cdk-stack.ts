@@ -160,6 +160,44 @@ export class WiSawCdkStack extends cdk.Stack {
             }
           )
 
+    // define lambda for thumbnails processing
+    const processUploadedPrivateImageLambdaFunction =
+    new lambda.Function(
+      this,
+      `${deployEnv()}_processUploadedPrivateImage`,
+      {
+        runtime: lambda.Runtime.NODEJS_14_X,
+        code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
+        // code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos')),
+        handler: 'lambdas/processUploadedPrivateImage.main',
+        memorySize: 3008,
+        timeout: cdk.Duration.seconds(300),
+        // layers: [ffmpegLayer],
+        environment: {
+          ...config,
+        },
+      }
+    )
+
+    // define lambda for thumbnails deletion processing
+    const processDeletedPrivateImageLambdaFunction =
+    new lambda.Function(
+      this,
+      `${deployEnv()}_processDeletedPrivateImage`,
+      {
+        runtime: lambda.Runtime.NODEJS_14_X,
+        code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
+        // code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos')),
+        handler: 'lambdas/processDeletedPrivateImage.main',
+        memorySize: 3008,
+        timeout: cdk.Duration.seconds(300),
+        environment: {
+          ...config,
+        },
+      }
+    )
+
+
     // cleanup older abuse reports
     const cleaupupAbuseReports_LambdaFunction =
       new lambda.Function(
@@ -225,7 +263,8 @@ export class WiSawCdkStack extends cdk.Stack {
       webAppBucket.grantPutAcl(generateSiteMap_LambdaFunction)
 
     }
-
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // imgBucket
     // Grant access to s3 bucket for lambda function
     const imgBucket =
           s3.Bucket.fromBucketName(
@@ -276,8 +315,45 @@ export class WiSawCdkStack extends cdk.Stack {
       {suffix: '-thumb',},
     )
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // imgPrivateBucket
+    // Grant access to s3 bucket for lambda function
+    const imgPrivateBucket =
+          s3.Bucket.fromBucketName(
+            this,
+            `wisaw-img-private-${deployEnv()}`,
+            `wisaw-img-private-${deployEnv()}`
+          )
+    imgPrivateBucket.grantPut(wisawFn)
+    imgPrivateBucket.grantPutAcl(wisawFn)
+    imgPrivateBucket.grantPut(processUploadedPrivateImageLambdaFunction)
+    imgPrivateBucket.grantPutAcl(processUploadedPrivateImageLambdaFunction)
+    imgPrivateBucket.grantDelete(processUploadedPrivateImageLambdaFunction)
+
+    imgPrivateBucket.grantDelete(processDeletedPrivateImageLambdaFunction)
 
 
+    // invoke lambda every time an object is created in the bucket
+    imgPrivateBucket.addEventNotification(
+      s3.EventType.OBJECT_CREATED,
+      new s3n.LambdaDestination(processUploadedPrivateImageLambdaFunction),
+      // only invoke lambda if object matches the filter
+      // {prefix: 'test/', suffix: '.yaml'},
+      {suffix: '.upload',},
+    )
+
+    // invoke lambda every time an object is deleted in the bucket
+    imgPrivateBucket.addEventNotification(
+      s3.EventType.OBJECT_REMOVED,
+      new s3n.LambdaDestination(processDeletedPrivateImageLambdaFunction),
+      // only invoke lambda if object matches the filter
+      // {prefix: 'test/', suffix: '.yaml'},
+      {suffix: '-thumb',},
+    )
+
+
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Grant access to the database from the Lambda function
     database.grantConnect(wisawFn)
     // Set the new Lambda function as a data source for the AppSync API
@@ -292,6 +368,11 @@ export class WiSawCdkStack extends cdk.Stack {
       typeName: 'Query',
       fieldName: 'generateUploadUrl',
     })
+    lambdaDs.createResolver({
+      typeName: 'Query',
+      fieldName: 'generateUploadUrlForMessage',
+    })
+
     lambdaDs.createResolver({
       typeName: 'Query',
       fieldName: 'zeroMoment',
