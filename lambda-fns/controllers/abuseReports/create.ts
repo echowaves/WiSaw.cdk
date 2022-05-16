@@ -1,10 +1,12 @@
 import * as moment from 'moment'
 
-import sql from '../../sql'
+import psql from '../../psql'
 
 export default async function main(photoId: bigint, uuid: string) {
   const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
-  const result = (await sql`
+  await psql.connect()
+  const result =
+  (await psql.query(`
                     insert into "AbuseReports"
                     (
                         "photoId",
@@ -13,12 +15,15 @@ export default async function main(photoId: bigint, uuid: string) {
                         "updatedAt"
                     ) values (
                       ${photoId},
-                      ${uuid},
-                      ${createdAt},
-                      ${createdAt}
+                      '${uuid}',
+                      '${createdAt}',
+                      '${createdAt}'
                     )
                     returning *
-                    `
-                  )
-  return result[0]
+                    `)
+  )
+    .rows[0]
+
+  await psql.clean()
+  return result
 }
