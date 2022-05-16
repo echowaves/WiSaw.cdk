@@ -4,7 +4,7 @@ import {validate as uuidValidate,} from 'uuid'
 
 import {plainToClass,} from 'class-transformer'
 
-import sql from '../../sql'
+import psql from '../../psql'
 
 import Message from '../../models/message'
 
@@ -44,21 +44,25 @@ export default async function main(
 
   // let's check if this message already exists, then we will update it
 
-  const existingMessage = (await sql`SELECT *
+  await psql.connect()
+  const existingMessages =
+  (await psql.query(`
+  SELECT *
     FROM "Messages"
-    WHERE "messageUuid" = ${messageUuidArg}
+    WHERE "messageUuid" = '${messageUuidArg}'
   `)
+  ).rows
 
-  if(existingMessage.count > 1) {
+  if(existingMessages.length > 1) {
     throw new Error(`Potentially duplicate messages --> messageUuid:${messageUuidArg}`)
   }
 
   let message = null
   // this is brand new message --> insert
-  if(existingMessage.count === 0) {
+  if(existingMessages.length === 0) {
     message =
-    (await sql`
-               INSERT INTO "Messages"
+    (await psql.query(`
+    INSERT INTO "Messages"
                (
                    "chatUuid",
                    "uuid",
@@ -67,39 +71,42 @@ export default async function main(
                    "pending", 
                    "chatPhotoHash"
                ) values (
-                 ${chatUuidArg},
-                 ${uuidArg},
-                 ${messageUuidArg},
-                 ${textArg},
+                 '${chatUuidArg}',
+                 '${uuidArg}',
+                 '${messageUuidArg}',
+                 '${textArg}',
                  ${pendingArg}, 
-                 ${chatPhotoHashArg}
+                 '${chatPhotoHashArg}'
                )
                returning *
-               `)[0]
+               `)
+    ).rows[0]
 
   } else { // this is not a new message --> update
     // "chatUuid", "uuid", "messageUuid" are nor going to be updated even if the different values passed in -- they will be ignored
     message =
-    (await sql`
+    (await psql.query(`
                UPDATE "Messages"
                SET
-                   "text" = ${textArg}, 
+                   "text" = '${textArg}', 
                    "pending" = ${pendingArg},
-                   "chatPhotoHash" = ${chatPhotoHashArg}
+                   "chatPhotoHash" = '${chatPhotoHashArg}'
                WHERE
-                    "messageUuid" = ${messageUuidArg}
+                    "messageUuid" = '${messageUuidArg}'
                returning *
-               `)[0]
-
+               `)
+    ).rows[0]
   }
 
-  await sql`
-            UPDATE "ChatUsers"
-            SET "updatedAt" = ${updatedAt}
-            WHERE "chatUuid" = ${chatUuidArg}
+  (await psql.query(`
+    UPDATE "ChatUsers"
+            SET "updatedAt" = '${updatedAt}'
+            WHERE "chatUuid" = '${chatUuidArg}'
             returning *`
-
+  )
+  )
   // console.log({message,})
+  await psql.clean()
 
   return plainToClass(Message, message)
 }
