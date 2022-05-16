@@ -1,4 +1,4 @@
-import sql from '../../sql'
+import psql from '../../psql'
 import {validate as uuidValidate,} from 'uuid'
 
 import {plainToClass,} from 'class-transformer'
@@ -15,14 +15,22 @@ export default async function main(
     throw new Error(`Wrong UUID format`)
   }
 
-  const messages = (await sql`SELECT *
+  await psql.connect()
+
+  const messages =
+  (await psql.query(`
+  SELECT *
       FROM "Messages"
       WHERE 
-        "chatUuid" = ${chatUuid}      
+        "chatUuid" = '${chatUuid}'
       AND
-        "createdAt" < ${lastLoaded}
+        "createdAt" < '${lastLoaded}'
       ORDER BY "createdAt" DESC
       LIMIT ${limit}
-    `)
+      `)
+  ).rows
+
+  await psql.clean()
+
   return messages.map((message: Message) => plainToClass(Message, message))
 }
