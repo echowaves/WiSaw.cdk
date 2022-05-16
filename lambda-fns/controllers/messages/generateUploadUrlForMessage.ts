@@ -1,25 +1,30 @@
 // import * as moment from 'moment'
 
-import sql from '../../sql'
+import psql from '../../psql'
 
 const AWS = require('aws-sdk')
 
 // import AbuseReport from '../../models/abuseReport'
 
 export default async function main(uuid: string, photoHash: string, contentType: string) {
-  console.log("generateUploadUrlForMessage:: started")
+  // console.log("generateUploadUrlForMessage:: started")
 
   const assetKey = `${photoHash}.upload`
 
-  const result = (await sql`
-    SELECT * FROM "ChatPhotos"
+  await psql.connect()
+  const result =
+  (await psql.query(`
+  SELECT * FROM "ChatPhotos"
     WHERE
-      "chatPhotoHash" = ${photoHash}
+      "chatPhotoHash" = '${photoHash}'
     `)
+  ).rows
 
-  console.log("ChatPhotos", {result,})
 
-  if(result.count === 1) { // the photo with this hash already
+
+  // console.log("ChatPhotos", {result,})
+
+  if(result.length === 1) { // the photo with this hash already
     const chatPhoto = result[0]
     if(uuid !== chatPhoto.uuid) {
       throw "The asset already uploaded from a different device"
