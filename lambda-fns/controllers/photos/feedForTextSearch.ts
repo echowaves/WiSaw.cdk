@@ -8,7 +8,7 @@ export default async function main(
   batch: string,
 ) {
 
-  const limit = 3000
+  const limit = 1000
   const offset = pageNumber * limit
 
   await psql.connect()

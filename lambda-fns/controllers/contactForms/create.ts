@@ -1,10 +1,12 @@
 import * as moment from 'moment'
 
-import sql from '../../sql'
+import psql from '../../psql'
 
 export default async function main(uuid: string, description: string) {
   const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
-  const result = (await sql`
+  await psql.connect()
+  const result =
+  (await psql.query(`
                     insert into "ContactForms"
                     (
                         "uuid",
@@ -12,13 +14,16 @@ export default async function main(uuid: string, description: string) {
                         "createdAt",
                         "updatedAt"
                     ) values (
-                      ${uuid},
-                      ${description},
-                      ${createdAt},
-                      ${createdAt}
+                      '${uuid}',
+                      '${description}',
+                      '${createdAt}',
+                      '${createdAt}'
                     )
                     returning *
                     `
-                  )
-  return result[0]
+  )
+  ).rows[0]
+  await psql.clean()
+
+  return result
 }
