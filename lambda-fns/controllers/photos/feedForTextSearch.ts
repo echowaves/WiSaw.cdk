@@ -1,4 +1,4 @@
-import sql from '../../sql'
+import psql from '../../psql'
 import {plainToClass,} from 'class-transformer'
 import Photo from '../../models/photo'
 
@@ -10,8 +10,9 @@ export default async function main(
   const limit = 100
   const offset = pageNumber * limit
 
+  await psql.connect()
   const results =
-  (await sql`
+  (await psql.query(`
     SELECT
       row_number() OVER (ORDER BY id desc) + ${offset} as row_number,
       p.*
@@ -21,17 +22,19 @@ export default async function main(
           SELECT "photoId"
           FROM "Recognitions"
           WHERE
-          to_tsvector('English', "metaData"::text) @@ plainto_tsquery('English', ${searchTerm})
+          to_tsvector('English', "metaData"::text) @@ plainto_tsquery('English', '${searchTerm}')
         UNION
           SELECT "photoId"
           FROM "Comments"
           WHERE
-            active = true AND to_tsvector('English', "comment"::text) @@ plainto_tsquery('English', ${searchTerm})
+            active = true AND to_tsvector('English', "comment"::text) @@ plainto_tsquery('English', '${searchTerm}')
         )
     ORDER BY id desc
     LIMIT ${limit}
     OFFSET ${offset}
   `)
+  ).rows
+  await psql.clean()
 
   // console.log({results})
   // console.log({slicedRezults: results.slice(0, -2) })// remove 2 last elements

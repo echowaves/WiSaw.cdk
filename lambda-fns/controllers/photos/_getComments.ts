@@ -1,14 +1,18 @@
-import sql from '../../sql'
+import psql from '../../psql'
 
 export const _getComments = async( photoId: bigint) => {
-  const result = (await sql`
+  await psql.connect()
+  const results =
+  (await psql.query(`
                     SELECT * FROM "Comments"
                     WHERE
                       "photoId" = ${photoId}
                       AND
                       "active" = true
                     ORDER BY "createdAt"
-                    `
-  )
-  return result
+                    `)
+  ).rows
+  await psql.clean()
+
+  return results
 }

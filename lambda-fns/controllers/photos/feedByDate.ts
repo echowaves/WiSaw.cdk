@@ -1,11 +1,8 @@
 import * as moment from 'moment'
-import sql from '../../sql'
+import psql from '../../psql'
+
 import {plainToClass,} from 'class-transformer'
 import Photo from '../../models/photo'
-
-const AWS = require('aws-sdk')
-
-// import AbuseReport from '../../models/abuseReport'
 
 export default async function main(
   daysAgo: number,
@@ -17,8 +14,9 @@ export default async function main(
   const currentDate = moment()
   const whenToStopDate = moment(whenToStop)
 
+  await psql.connect()
   const results =
-  (await sql`
+  (await psql.query(`
     SELECT
     *
     , ST_Distance(
@@ -29,14 +27,15 @@ export default async function main(
 
     FROM "Photos"
     WHERE
-        "createdAt" >= ${currentDate.clone().subtract(daysAgo, 'days').format("YYYY-MM-DD HH:mm:ss.SSS")}
-    AND "createdAt" <= ${currentDate.clone().add(1, 'days').subtract(daysAgo, 'days').format("YYYY-MM-DD HH:mm:ss.SSS")}
+        "createdAt" >= '${currentDate.clone().subtract(daysAgo, 'days').format("YYYY-MM-DD HH:mm:ss.SSS")}'
+    AND "createdAt" <= '${currentDate.clone().add(1, 'days').subtract(daysAgo, 'days').format("YYYY-MM-DD HH:mm:ss.SSS")}'
     AND active = true
     ORDER BY distance
     LIMIT 100
     OFFSET 0
   `)
-
+  ).rows
+  await psql.clean()
   // console.log({results})
   const photos = results.map((photo: any) => plainToClass(Photo, photo))
   // .sort((a: Photo, b: Photo) => moment(b.createdAt).diff(moment(a.createdAt)))

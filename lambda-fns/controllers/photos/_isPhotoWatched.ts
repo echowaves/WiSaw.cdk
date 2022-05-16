@@ -1,11 +1,18 @@
-import sql from '../../sql'
+import psql from '../../psql'
 
 export const _isPhotoWatched = async( photoId: bigint, uuid: string) => {
-  const results = await sql`SELECT * FROM "Watchers"
+  await psql.connect()
+  const results =
+  (await psql.query(`
+  SELECT * FROM "Watchers"
               WHERE
                 "photoId" = ${photoId}
                 AND
-                "uuid" = ${uuid}`
+                "uuid" = '${uuid}'
+                `)
+  ).rows
+  await psql.clean()
 
-  return results.count > 0
+  // console.log("_isPhotoWatched", {results,})
+  return results.length > 0
 }
