@@ -1,16 +1,23 @@
 import {plainToClass,} from 'class-transformer'
 
-import sql from '../../sql'
+import psql from '../../psql'
+
 import Photo from '../../models/photo'
 
 export const _getPhoto = async( photoId: bigint) => {
-  const result = (await sql`
+  await psql.connect()
+  const result =
+  (await psql.query(`
                     SELECT * FROM "Photos"
                     WHERE
                       "id" = ${photoId}
                     LIMIT 1
-                    `
-  )[0]
+                    `)
+  )
+    .rows[0]
+  await psql.clean()
+
+
   const photo = plainToClass(Photo, result)
   return photo
 }
