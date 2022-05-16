@@ -4,7 +4,7 @@ const {env,} = process
 const psql = new ServerlessClient({
   ...env,
   delayMs: 3000,
-  maxConnections: 5,
+  maxConnections: 10,
   maxRetries: 3,
 })
 

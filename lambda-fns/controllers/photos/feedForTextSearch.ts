@@ -7,11 +7,13 @@ export default async function main(
   pageNumber: number,
   batch: string,
 ) {
-  const limit = 100
+
+  const limit = 3000
   const offset = pageNumber * limit
 
   await psql.connect()
-  const results =
+  try {
+    const results =
   (await psql.query(`
     SELECT
       row_number() OVER (ORDER BY id desc) + ${offset} as row_number,
@@ -34,21 +36,29 @@ export default async function main(
     OFFSET ${offset}
   `)
   ).rows
-  await psql.clean()
+    await psql.clean()
 
-  // console.log({results})
-  // console.log({slicedRezults: results.slice(0, -2) })// remove 2 last elements
-  const photos = results.map((photo: any) => plainToClass(Photo, photo))
+    // console.log({results})
+    // console.log({slicedRezults: results.slice(0, -2) })// remove 2 last elements
+    const photos = results.map((photo: any) => plainToClass(Photo, photo))
 
-  let noMoreData = false
+    let noMoreData = false
 
-  if( photos.length < limit ) {
-    noMoreData = true
+    if( photos.length < limit ) {
+      noMoreData = true
+    }
+
+    return {
+      photos,
+      batch,
+      noMoreData: true, // for now limitind to 1 batch
+    }
+  } catch(err) {
+    await psql.clean()
   }
-
   return {
-    photos,
+    photos: {},
     batch,
-    noMoreData,
+    noMoreData: true,
   }
 }
