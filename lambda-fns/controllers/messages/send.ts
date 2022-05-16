@@ -54,6 +54,7 @@ export default async function main(
   ).rows
 
   if(existingMessages.length > 1) {
+    await psql.clean()
     throw new Error(`Potentially duplicate messages --> messageUuid:${messageUuidArg}`)
   }
 

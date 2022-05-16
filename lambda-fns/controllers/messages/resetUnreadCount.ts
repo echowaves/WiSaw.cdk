@@ -4,7 +4,7 @@ import {validate as uuidValidate,} from 'uuid'
 
 // import {plainToClass,} from 'class-transformer'
 
-import sql from '../../sql'
+import psql from '../../psql'
 
 // import Message from '../../models/message'
 
@@ -23,15 +23,21 @@ export default async function main(
 
   const lastReadAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
 
-  const [chatUsers,] = await sql`
+  await psql.connect()
+
+  const chatUsers =
+  (await psql.query(`
                       UPDATE "ChatUsers"
-                      SET "lastReadAt" = ${lastReadAt}       
+                      SET "lastReadAt" = '${lastReadAt}'       
                       WHERE 
-                        "chatUuid" = ${chatUuid}
+                        "chatUuid" = '${chatUuid}'
                       AND
-                        "uuid" = ${uuid} 
+                        "uuid" = '${uuid}' 
                       returning *
-                      `
+                      `)
+  ).rows[0]
+  await psql.clean()
+
   // console.log({message,})
 
   return lastReadAt
