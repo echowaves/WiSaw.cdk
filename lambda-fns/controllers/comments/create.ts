@@ -1,6 +1,6 @@
 import * as moment from 'moment'
 
-import sql from '../../sql'
+import psql from '../../psql'
 
 import {_updateCommentsCount,} from './_updateCommentsCount'
 import {_updateLastComment,} from './_updateLastComment'
@@ -15,7 +15,9 @@ export default async function main(photoId: bigint, uuid: string, description: s
   if(description.trim().length === 0) {
     throw('Unable to save empty comment.')
   }
-  const comment = (await sql`
+  await psql.connect()
+  const comment =
+  (await psql.query(`
     INSERT INTO "Comments"
       (
           "photoId",
@@ -25,14 +27,17 @@ export default async function main(photoId: bigint, uuid: string, description: s
           "updatedAt"
       ) values (
         ${photoId},
-        ${uuid},
-        ${description},
-        ${createdAt},
-        ${createdAt}
+        '${uuid}',
+        '${description}',
+        '${createdAt}',
+        '${createdAt}'
       )
       returning *
       `
-  )[0]
+  )
+  ).rows[0]
+  await psql.clean()
+
   // console.log({comment})
   await Promise.all([
     watch(photoId, uuid),

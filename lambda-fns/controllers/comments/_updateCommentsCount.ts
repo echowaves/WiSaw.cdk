@@ -1,9 +1,14 @@
-import sql from '../../sql'
+import psql from '../../psql'
 
 export const _updateCommentsCount = async( photoId: bigint) => {
-  const photo = (await sql`UPDATE "Photos" SET "commentsCount" =
+  await psql.connect()
+  const photo =
+  (await psql.query(
+    `UPDATE "Photos" SET "commentsCount" =
       (SELECT COUNT(*) from "Comments" where "Comments"."photoId" = ${photoId} and active = true)
       where id = ${photoId}
-      returning *`)[0]
+      returning *`)
+  ).rows[0]
+  await psql.clean()
   return photo.commentsCount
 }
