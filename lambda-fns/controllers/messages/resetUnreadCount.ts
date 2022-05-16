@@ -25,8 +25,8 @@ export default async function main(
 
   await psql.connect()
 
-  const chatUsers =
-  (await psql.query(`
+  // const chatUsers =
+  await psql.query(`
                       UPDATE "ChatUsers"
                       SET "lastReadAt" = '${lastReadAt}'       
                       WHERE 
@@ -35,7 +35,7 @@ export default async function main(
                         "uuid" = '${uuid}' 
                       returning *
                       `)
-  ).rows[0]
+  // ).rows[0]
   await psql.clean()
 
   // console.log({message,})
