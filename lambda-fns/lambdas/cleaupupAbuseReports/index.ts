@@ -1,17 +1,20 @@
-import * as moment from 'moment'
+// import * as moment from 'moment'
 
-import sql from '../../sql'
+import psql from '../../psql'
 
 // eslint-disable-next-line import/prefer-default-export
 export async function main(event: any = {}, context: any, cb: any) {
-  try {
-      (await sql`
-        DELETE FROM "AbuseReports" where "createdAt" < NOW() - INTERVAL \'7 days\'
-      `)
+  await psql.connect()
 
+  try {
+    await psql.query(`
+    DELETE FROM "AbuseReports" where "createdAt" < NOW() - INTERVAL '7 days'
+    `)
   } catch (err) {
-    console.log('Unable to cleanup', {err})
+    console.log('Unable to cleanup', {err,})
+    await psql.clean()
     return false
   }
+  await psql.clean()
   return true
 }
