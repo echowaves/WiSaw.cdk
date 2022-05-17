@@ -14,28 +14,28 @@ export default async function main(
   await psql.connect()
   try {
     const results =
-  (await psql.query(`
-    SELECT
-      row_number() OVER (ORDER BY id desc) + ${offset} as row_number,
-      p.*
-    FROM "Photos" p
-    WHERE active = true
-      AND "id" in (
-          SELECT "photoId"
-          FROM "Recognitions"
-          WHERE
-          to_tsvector('English', "metaData"::text) @@ plainto_tsquery('English', '${searchTerm}')
-        UNION
-          SELECT "photoId"
-          FROM "Comments"
-          WHERE
-            active = true AND to_tsvector('English', "comment"::text) @@ plainto_tsquery('English', '${searchTerm}')
-        )
-    ORDER BY id desc
-    LIMIT ${limit}
-    OFFSET ${offset}
-  `)
-  ).rows
+      (await psql.query(`
+          SELECT
+            row_number() OVER (ORDER BY id desc) + ${offset} as row_number,
+            p.*
+          FROM "Photos" p
+          WHERE active = true
+            AND "id" in (
+                SELECT "photoId"
+                FROM "Recognitions"
+                WHERE
+                to_tsvector('English', "metaData"::text) @@ plainto_tsquery('English', '${searchTerm}')
+              UNION
+                SELECT "photoId"
+                FROM "Comments"
+                WHERE
+                  active = true AND to_tsvector('English', "comment"::text) @@ plainto_tsquery('English', '${searchTerm}')
+              )
+          ORDER BY id desc
+          LIMIT ${limit}
+          OFFSET ${offset}
+        `)
+      ).rows
     await psql.clean()
 
     // console.log({results})
