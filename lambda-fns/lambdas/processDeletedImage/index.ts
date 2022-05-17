@@ -1,10 +1,10 @@
-import sql from '../../sql'
+import psql from '../../psql'
 
 const AWS = require('aws-sdk')
 
 // eslint-disable-next-line import/prefer-default-export
 export async function main(event: any = {}, context: any, cb: any) {
-  const record = event.Records[0];
+  const record = event.Records[0]
   const name = record.s3.object.key
 
   const photoId = name.replace('-thumb', '')
@@ -13,15 +13,15 @@ export async function main(event: any = {}, context: any, cb: any) {
   console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!       photoId: ${photoId}`)
 
   await Promise.all([
-    _deleteUpload({ Bucket: record.s3.bucket.name, Key: `${photoId}`}),
-    _cleanupTables({ photoId }),
+    _deleteUpload({Bucket: record.s3.bucket.name, Key: `${photoId}`,}),
+    _cleanupTables({photoId,}),
   ])
 
   cb(null, 'success everything')
   return true
 }
 
-const _deleteUpload = async({Bucket, Key}: {Bucket: string, Key: string}) => {
+const _deleteUpload = async({Bucket, Key,}: {Bucket: string, Key: string}) => {
   try {
     const s3 = new AWS.S3()
     await s3.deleteObject({
@@ -30,47 +30,50 @@ const _deleteUpload = async({Bucket, Key}: {Bucket: string, Key: string}) => {
     }).promise()
   } catch (err) {
     console.log('Error deleting object')
-    console.log({err})
+    console.log({err,})
   }
 }
 
-const _cleanupTables = async({photoId}: {photoId: string}) => {
+const _cleanupTables = async({photoId,}: {photoId: string}) => {
+  await psql.connect()
   try {
-    const result = (await sql`
+    await psql.query(`
                     DELETE from "Photos"
                     WHERE
                     id = ${photoId}
                     `
-                  )
+    )
     //
   } catch (err) {
     console.log('Error de-activating photo')
-    console.log({err})
+    console.log({err,})
   }
 
   try {
-    const result = (await sql`
-                    DELETE from "Watchers"
+    await psql.query(`
+        DELETE from "Watchers"
                     WHERE
                     "photoId" = ${photoId}
                     `
-                  )
+    )
     //
   } catch (err) {
     console.log('Error cleaning up Watchers')
-    console.log({err})
+    console.log({err,})
   }
 
   try {
-    const result = (await sql`
+    await psql.query(`
                     DELETE from "Recognitions"
                     WHERE
                     "photoId" = ${photoId}
                     `
-                  )
+    )
     //
   } catch (err) {
     console.log('Error cleaning up Recognitions')
-    console.log({err})
+    console.log({err,})
   }
+  await psql.clean()
+
 }
