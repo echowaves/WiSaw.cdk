@@ -1,20 +1,22 @@
 import * as moment from 'moment'
 
-import sql from '../../sql'
+import psql from '../../psql'
 
-import {_updateWatchers} from './_updateWatchers'
+import {_updateWatchers,} from './_updateWatchers'
 
 export default async function main(photoId: bigint, uuid: string) {
 
   const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
 
-    await sql`
-      DELETE FROM "Watchers"
+  await psql.connect()
+
+  await psql.query(`
+  DELETE FROM "Watchers"
       WHERE "photoId" = ${photoId}
         AND
-      "uuid" = ${uuid}`
+      "uuid" = '${uuid}'`)
 
-    await sql`
+  await psql.query(`
       INSERT INTO "Watchers"
         (
             "uuid",
@@ -23,12 +25,14 @@ export default async function main(photoId: bigint, uuid: string) {
             "updatedAt",
             "watchedAt"
         ) values (
-          ${uuid},
+          '${uuid}',
           ${photoId},
-          ${createdAt},
-          ${createdAt},
-          ${createdAt}
+          '${createdAt}',
+          '${createdAt}',
+          '${createdAt}'
         )`
+  )
+  await psql.clean()
 
   const watchersCount = await _updateWatchers(photoId, uuid)
   return watchersCount
