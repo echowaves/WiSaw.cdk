@@ -19,8 +19,7 @@ export default async function main(uuid: string, photoHash: string, contentType:
       "chatPhotoHash" = '${photoHash}'
     `)
   ).rows
-
-
+  await psql.clean()
 
   // console.log("ChatPhotos", {result,})
 

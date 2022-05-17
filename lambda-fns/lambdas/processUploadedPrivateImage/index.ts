@@ -1,4 +1,4 @@
-import * as moment from 'moment'
+// import * as moment from 'moment'
 
 import psql from '../../psql'
 
@@ -91,8 +91,7 @@ const _activatePhoto = async({photoHash,}: {photoHash: string}) => {
     SELECT * FROM "Messages"
     WHERE
       "chatPhotoHash" = '${photoHash}'
-    `
-    )
+    `)
     ).rows
     console.log("_activatePhoto::", {result,})
 
@@ -115,6 +114,8 @@ const _activatePhoto = async({photoHash,}: {photoHash: string}) => {
     console.log('Error activating photo')
     console.log({err,})
   }
+  await psql.clean()
+
   console.log("_activatePhoto::", "end")
 
 }

@@ -1,6 +1,6 @@
 import * as moment from 'moment'
 
-import sql from '../../sql'
+import psql from '../../psql'
 
 const AWS = require('aws-sdk')
 
@@ -128,27 +128,40 @@ const _recognizeImage = async({Bucket, Key,}: {Bucket: string, Key: string}) => 
 
   try {
     const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
-    const result = (await sql`
-                    insert into "Recognitions"
+
+    // console.log({metaData: JSON.stringify(metaData),})
+    await psql.connect()
+    // const result =
+    // (
+    await psql.query(`    
+                  insert into "Recognitions"
                     (
                         "photoId",
                         "metaData",
                         "createdAt",
                         "updatedAt"
                     ) values (
-                      ${Key.replace('.upload', '')},
-                      ${sql.json(metaData)},
-                      ${createdAt},
-                      ${createdAt}
+                      $1,
+                      $2,
+                      $3,
+                      $4
                     )
                     returning *
-                    `
-    )
+                    `,
+    [
+      Key.replace('.upload', ''),
+      metaData,
+      createdAt,
+      createdAt,
+    ])
+    // ).rows
     // console.log({result})
   } catch (err) {
     console.log('Error saving recognitions')
     console.log({err,})
   }
+  await psql.clean()
+
 }
 
 
@@ -156,17 +169,18 @@ const _activatePhoto = async({photoId,}: {photoId: string}) => {
   try {
     const updatedAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
 
-    const result = (await sql`
+    await psql.connect()
+    await psql.query(`    
                     UPDATE "Photos"
-                    set active = true, "updatedAt" = ${updatedAt}
+                    set active = true, "updatedAt" = '${updatedAt}'
                     WHERE
                     id = ${photoId}
-                    `
-    )
+                    `)
     // console.log({result})
   } catch (err) {
     console.log('Error activating photo')
     console.log({err,})
   }
-
+  await psql.clean()
 }
+
