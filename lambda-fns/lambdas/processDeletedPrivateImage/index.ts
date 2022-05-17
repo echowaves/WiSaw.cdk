@@ -1,4 +1,4 @@
-import sql from '../../sql'
+import psql from '../../psql'
 
 const AWS = require('aws-sdk')
 
@@ -35,11 +35,12 @@ const _deleteUpload = async({Bucket, Key,}: {Bucket: string, Key: string}) => {
 }
 
 const _cleanupTables = async({photoHash,}: {photoHash: string}) => {
+  await psql.connect()
   try {
-    const result = (await sql`
+    await psql.query(`
                     DELETE from "ChatPhotos"
                     WHERE
-                    "chatPhotoHash" = ${photoHash}
+                    "chatPhotoHash" = '${photoHash}'
                     `
     )
     //
@@ -49,10 +50,10 @@ const _cleanupTables = async({photoHash,}: {photoHash: string}) => {
   }
 
   try {
-    const result = (await sql`
+    await psql.query(`
                     DELETE from "Messages"
                     WHERE
-                    "chatPhotoHash" = ${photoHash}
+                    "chatPhotoHash" = '${photoHash}'
                     `
     )
     //
@@ -60,4 +61,6 @@ const _cleanupTables = async({photoHash,}: {photoHash: string}) => {
     console.log('Error Messages delete')
     console.log({err,})
   }
+  await psql.clean()
+
 }
