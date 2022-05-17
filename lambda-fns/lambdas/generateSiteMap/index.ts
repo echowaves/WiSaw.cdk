@@ -2,7 +2,7 @@ import * as moment from 'moment'
 
 const { SitemapStream, streamToPromise } = require('sitemap')
 
-import sql from '../../sql'
+import psql from '../../psql'
 
 const AWS = require('aws-sdk')
 
@@ -14,10 +14,12 @@ export async function main(event: any = {}, context: any, cb: any) {
 
 
   let photos
+  await psql.connect()
+
   // retrieve photos
   try {
-    photos =
-      (await sql`
+  photos =
+  (await psql.query(`  
         SELECT
         *
         FROM "Photos"
@@ -25,12 +27,14 @@ export async function main(event: any = {}, context: any, cb: any) {
             "commentsCount" > 0
         AND
             active = true
-      `)
+      `)).rows
 
   } catch (err) {
     console.log('Unable to retrieve Photos feed', {err})
     // return false
   }
+  await psql.clean()
+
   console.log('photos.length:', photos.length)
   photos?.forEach((photo: any) => {
     const jsonObj = JSON.parse(JSON.stringify(photo))
