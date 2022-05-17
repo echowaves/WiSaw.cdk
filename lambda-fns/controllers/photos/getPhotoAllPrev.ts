@@ -1,4 +1,4 @@
-import sql from '../../sql'
+import psql from '../../psql'
 
 import {_getPhoto} from './_getPhoto'
 import {_getComments} from './_getComments'
@@ -7,8 +7,11 @@ import {_getRecognitions} from './_getRecognitions'
 export default async function main(
   photoId: bigint,
 ) {
-  const result =  (await sql`
-                    SELECT "id" FROM "Photos"
+  await psql.connect()
+
+  const result =
+  (await psql.query(`
+                      SELECT "id" FROM "Photos"
                     WHERE
                       "id" < ${photoId}
                     AND
@@ -16,7 +19,8 @@ export default async function main(
                     ORDER BY id DESC
                     LIMIT 1
                     `
-                  )[0]?.id || 2147483640
+                  )).rows[0]?.id || 2147483640
+  await psql.clean()
 
   const [
     photo,
@@ -28,8 +32,6 @@ export default async function main(
       _getComments(result),
       _getRecognitions(result),
     ])
-
-
 
   return {
     photo,
