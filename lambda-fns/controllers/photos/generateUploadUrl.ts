@@ -1,7 +1,5 @@
 // import * as moment from 'moment'
 
-// import sql from '../../sql'
-
 const AWS = require('aws-sdk')
 
 // import AbuseReport from '../../models/abuseReport'

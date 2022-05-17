@@ -6,6 +6,7 @@ import psql from '../../psql'
 // select distinct "watchersCount" from "Photos" order by "watchersCount" DESC;
 
 export const _updateWatchers = async( photoId: bigint, uuid: string) => {
+  await psql.connect()
 
   const count =
   (await psql.query(`
@@ -15,5 +16,7 @@ export const _updateWatchers = async( photoId: bigint, uuid: string) => {
         AND "Watchers"."uuid" != "Photos"."uuid")
       WHERE id = ${photoId}
       returning *`)).rows[0]
+  await psql.clean()
+
   return count.watchersCount
 }
