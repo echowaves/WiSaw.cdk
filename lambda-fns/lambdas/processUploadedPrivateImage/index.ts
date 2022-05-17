@@ -1,6 +1,6 @@
 import * as moment from 'moment'
 
-import sql from '../../sql'
+import psql from '../../psql'
 
 const AWS = require('aws-sdk')
 
@@ -85,27 +85,30 @@ const _activatePhoto = async({photoHash,}: {photoHash: string}) => {
   console.log("_activatePhoto::", "start")
 
   try {
-    const result = (await sql`
+    await psql.connect()
+    const result =
+    (await psql.query(`  
     SELECT * FROM "Messages"
     WHERE
-      "chatPhotoHash" = ${photoHash}
+      "chatPhotoHash" = '${photoHash}'
     `
     )
+    ).rows
     console.log("_activatePhoto::", {result,})
 
-    if(result.count === 1) { // the photo with this hash already
+    if(result.length === 1) { // the photo with this hash already
       const chatPhoto = result[0]
-      await sql`
-                    INSERT INTO "ChatPhotos"
+      await psql.query(`  
+                      INSERT INTO "ChatPhotos"
                     (
                         "uuid",
                         "chatPhotoHash"
                     ) values (
-                      ${chatPhoto.uuid},
-                      ${photoHash}
+                      '${chatPhoto.uuid}',
+                      '${photoHash}'
                     )
                     returning *
-                    `
+                    `)
     }
     // console.log({result})
   } catch (err) {

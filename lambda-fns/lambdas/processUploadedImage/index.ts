@@ -13,7 +13,7 @@ export async function main(event: any = {}, context: any, cb: any) {
   //   300: '-thumbnail x300', // converting to the height of 300
   // }
   //
-  const record = event.Records[0];
+  const record = event.Records[0]
   const name = record.s3.object.key
   const photoId = name.replace('.upload', '')
   const Bucket = record.s3.bucket.name
@@ -30,50 +30,50 @@ export async function main(event: any = {}, context: any, cb: any) {
     }).promise()
 
   await Promise.all([
-     _genWebpThumb({image, Bucket, Key: `${photoId}-thumb`}),
-     _genWebp({image, Bucket, Key: `${photoId}`}),
-     _recognizeImage({Bucket, Key: `${name}`}),
+    _genWebpThumb({image, Bucket, Key: `${photoId}-thumb`,}),
+    _genWebp({image, Bucket, Key: `${photoId}`,}),
+    _recognizeImage({Bucket, Key: `${name}`,}),
   ])
 
   await Promise.all([
-    _deleteUpload({ Bucket, Key: name}),
-    _activatePhoto({ photoId }),
+    _deleteUpload({Bucket, Key: name,}),
+    _activatePhoto({photoId,}),
   ])
 
   cb(null, 'success everything')
   return true
 }
 
-const _genWebpThumb = async({image, Bucket, Key}: {image: any, Bucket: string, Key: string}) => {
+const _genWebpThumb = async({image, Bucket, Key,}: {image: any, Bucket: string, Key: string}) => {
 
-  const buffer = await sharp(image.Body).rotate().webp({ lossless: false, quality: 80 }).resize({height: 300}).toBuffer()
+  const buffer = await sharp(image.Body).rotate().webp({lossless: false, quality: 80,}).resize({height: 300,}).toBuffer()
   const s3 = new AWS.S3()
   await s3.putObject({
-      Bucket,
-      Key,
-      Body: buffer,
-      ContentType: 'image/webp',
-      ACL: 'public-read',
-      CacheControl: 'max-age=31536000',
-    }).promise()
+    Bucket,
+    Key,
+    Body: buffer,
+    ContentType: 'image/webp',
+    ACL: 'public-read',
+    CacheControl: 'max-age=31536000',
+  }).promise()
 }
 
-const _genWebp = async({image, Bucket, Key}: {image: any, Bucket: string, Key: string}) => {
+const _genWebp = async({image, Bucket, Key,}: {image: any, Bucket: string, Key: string}) => {
 
-  const buffer = await sharp(image.Body).rotate().webp({ lossless: false, quality: 90 }).toBuffer()
+  const buffer = await sharp(image.Body).rotate().webp({lossless: false, quality: 90,}).toBuffer()
   const s3 = new AWS.S3()
   await s3.putObject({
-      Bucket,
-      Key,
-      Body: buffer,
-      ContentType: 'image/webp',
-      ACL: 'public-read',
-      CacheControl: 'max-age=31536000',
-    }).promise()
+    Bucket,
+    Key,
+    Body: buffer,
+    ContentType: 'image/webp',
+    ACL: 'public-read',
+    CacheControl: 'max-age=31536000',
+  }).promise()
 
 }
 
-const _deleteUpload = async({Bucket, Key}: {Bucket: string, Key: string}) => {
+const _deleteUpload = async({Bucket, Key,}: {Bucket: string, Key: string}) => {
   const s3 = new AWS.S3()
   await s3.deleteObject({
     Bucket,
@@ -81,7 +81,7 @@ const _deleteUpload = async({Bucket, Key}: {Bucket: string, Key: string}) => {
   }).promise()
 }
 
-const _recognizeImage = async({Bucket, Key}: {Bucket: string, Key: string}) => {
+const _recognizeImage = async({Bucket, Key,}: {Bucket: string, Key: string}) => {
   // console.log({Bucket, Key})
   const rekognition = new AWS.Rekognition()
   const params = {
@@ -123,7 +123,7 @@ const _recognizeImage = async({Bucket, Key}: {Bucket: string, Key: string}) => {
     // console.log(JSON.stringify(metaData))
   } catch (err) {
     console.log('Error parsing image')
-    console.log({err})
+    console.log({err,})
   }
 
   try {
@@ -143,16 +143,16 @@ const _recognizeImage = async({Bucket, Key}: {Bucket: string, Key: string}) => {
                     )
                     returning *
                     `
-                  )
+    )
     // console.log({result})
   } catch (err) {
     console.log('Error saving recognitions')
-    console.log({err})
+    console.log({err,})
   }
 }
 
 
-const _activatePhoto = async({photoId}: {photoId: string}) => {
+const _activatePhoto = async({photoId,}: {photoId: string}) => {
   try {
     const updatedAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
 
@@ -162,11 +162,11 @@ const _activatePhoto = async({photoId}: {photoId: string}) => {
                     WHERE
                     id = ${photoId}
                     `
-                  )
+    )
     // console.log({result})
   } catch (err) {
     console.log('Error activating photo')
-    console.log({err})
+    console.log({err,})
   }
 
 }
