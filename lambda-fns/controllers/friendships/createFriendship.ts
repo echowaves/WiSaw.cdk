@@ -4,7 +4,7 @@ import {validate as uuidValidate, v4 as uuidv4,} from 'uuid'
 
 import {plainToClass,} from 'class-transformer'
 
-import sql from '../../sql'
+import psql from '../../psql'
 
 import Friendship from '../../models/friendship'
 import Chat from '../../models/chat'
@@ -22,9 +22,12 @@ export default async function main(uuid: string) {
   const friendshipUuid = uuidv4()
   const chatUuid = uuidv4()
 
-  const [friendship, chat, chatUser,] = await sql.begin(async (sql: any) => {
+  await psql.connect()
 
-    const [friendship,] = await sql`
+  try {
+    await psql.query('BEGIN')
+
+    const friendship = (await psql.query(`      
                       INSERT INTO "Friendships"
                       (
                         "friendshipUuid",
@@ -32,27 +35,27 @@ export default async function main(uuid: string) {
                         "chatUuid",
                         "createdAt"
                       ) values (
-                      ${friendshipUuid},
-                      ${uuid},
-                      ${chatUuid},
-                      ${createdAt}
+                      '${friendshipUuid}',
+                      '${uuid}',
+                      '${chatUuid}',
+                      '${createdAt}'
                       ) 
                       returning *
-                      `
+                      `)).rows[0]
 
-    const [chat,] = await sql`
+    const chat = (await psql.query(`      
                       INSERT INTO "Chats"
                       (
                           "chatUuid",
                           "createdAt"
                       ) values (
-                        ${chatUuid},
-                        ${createdAt}
+                        '${chatUuid}',
+                        '${createdAt}'
                       )
                       returning *
-                      `
+                      `)).rows[0]
 
-    const [chatUser,] = await sql`
+    const chatUser = (await psql.query(`      
                       INSERT INTO "ChatUsers"
                       (
                           "chatUuid",
@@ -61,26 +64,27 @@ export default async function main(uuid: string) {
                           "createdAt",
                           "lastReadAt"
                       ) values (
-                        ${chatUuid},
-                        ${uuid},
-                        ${uuid},
-                        ${createdAt},
-                        ${createdAt}
+                        '${chatUuid}',
+                        '${uuid}',
+                        '${uuid}',
+                        '${createdAt}',
+                        '${createdAt}'
                       )
                       returning *
-                      `
+                      `)).rows[0]
 
+    await psql.query('COMMIT')
+    await psql.clean()
     // console.log({friendship, friend, chat, chatUser,})
-
-    return [friendship, chat, chatUser,]
-  })
-  // console.log('hohoho')
-  // console.log({friendship, friend, chat, chatUser,})
-
-
-  return {
-    friendship:plainToClass(Friendship, friendship),
-    chat: plainToClass(Chat, chat),
-    chatUser:plainToClass(ChatUser, chatUser),
+    return {
+      friendship:plainToClass(Friendship, friendship),
+      chat: plainToClass(Chat, chat),
+      chatUser:plainToClass(ChatUser, chatUser),
+    }
+  } catch (e) {
+    console.error(e)
+    await psql.query('ROLLBACK')
+    await psql.clean()
+    throw('unable to create friendship')
   }
 }

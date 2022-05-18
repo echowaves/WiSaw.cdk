@@ -47,7 +47,7 @@ export default async function main( friendshipUuid: string) {
   } catch (e) {
     console.error(e)
     await psql.query('ROLLBACK')
-    throw('unable to accept friendship request')
+    throw('unable to delete friendship request')
   }
 
 
