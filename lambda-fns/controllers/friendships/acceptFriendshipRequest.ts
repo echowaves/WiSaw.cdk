@@ -4,7 +4,7 @@ import {validate as uuidValidate,} from 'uuid'
 
 import {plainToClass,} from 'class-transformer'
 
-import sql from '../../sql'
+import psql from '../../psql'
 
 import Friendship from '../../models/friendship'
 import Chat from '../../models/chat'
@@ -26,65 +26,85 @@ export default async function main(
   }
 
   console.log({friendshipUuid, uuid,})
+  await psql.connect()
 
-  const [friendship,chat,chatUser,] = await sql.begin(async (sql: any) => {
+  const [friendship,chat,chatUser,] = await (async (): Promise<any> => {
 
-    // check how many friends are in the friendship already, can't be more than 1 for the add function to work correctly
-    const friendship1 = (await sql`SELECT *
-      FROM "Friendships"
-      WHERE "friendshipUuid" = ${friendshipUuid}
-    `)
+    try {
+      await psql.query('BEGIN')
 
-    // console.log({friendship1,})
+      // check how many friends are in the friendship already, can't be more than 1 for the add function to work correctly
+      const friendship1 =
+        (await psql.query(`
+          SELECT *
+          FROM "Friendships"
+          WHERE "friendshipUuid" = '${friendshipUuid}'
+        `)).rows
 
-    if(friendship1.count === 0) {
-      throw new Error(`Friendship not found`)
-    }
+      // console.log({friendship1,})
 
-    console.log({friendship1:friendship1[0] ,})
+      if(friendship1.length === 0) {
+        throw new Error(`Friendship not found`)
+      }
 
-    if(friendship1[0].uuid2 !== null) {
-      throw new Error(`Friendship already confirmed`)
-    }
+      console.log({friendship1:friendship1[0] ,})
 
-    const [friendship,] = await sql`
-                      UPDATE "Friendships"
-                      SET "uuid2" = ${uuid}
-                      WHERE "friendshipUuid" = ${friendshipUuid}
-                      returning *
-                      `
-    console.log({friendship,})
+      if(friendship1[0].uuid2 !== null) {
+        throw new Error(`Friendship already confirmed`)
+      }
 
-    const [chatUser,] =
-    await sql`
-                      INSERT INTO "ChatUsers"
-                      (
-                          "chatUuid",
-                          "uuid",
-                          "invitedByUuid",
-                          "createdAt",
-                          "lastReadAt"
-                      ) values (    
-                        ${friendship.chatUuid},
-                        ${uuid},
-                        ${friendship.uuid1},
-                        ${createdAt},
-                        ${createdAt}
-                      )
-                      returning *
-                      `
-    console.log({chatUser,})
+      const friendship =
+          (await psql.query(`
+                            UPDATE "Friendships"
+                            SET "uuid2" = '${uuid}'
+                            WHERE "friendshipUuid" = '${friendshipUuid}'
+                            returning *
+                            `)).rows[0]
 
-    const [chat,] = await sql`
+      console.log({friendship,})
+
+      const chatUser=
+          (await psql.query(`
+                            INSERT INTO "ChatUsers"
+                            (
+                                "chatUuid",
+                                "uuid",
+                                "invitedByUuid",
+                                "createdAt",
+                                "lastReadAt"
+                            ) values (    
+                              '${friendship.chatUuid}',
+                              '${uuid}',
+                              '${friendship.uuid1}',
+                              '${createdAt}',
+                              '${createdAt}'
+                            )
+                            returning *
+                            `)).rows[0]
+
+      console.log({chatUser,})
+
+      const chat =
+        (await psql.query(`
                       SELECT * FROM "Chats"
                       WHERE                   
-                          "chatUuid" = ${friendship.chatUuid}
-                      `
+                          "chatUuid" = '${friendship.chatUuid}'
+                      `)).rows[0]
 
-    console.log({chat,})
+      console.log({chat,})
 
-    return [friendship,chat,chatUser,]
-  })
+      await psql.query('COMMIT')
+      return [friendship,chat,chatUser,]
+
+    } catch (e) {
+      console.error(e)
+      await psql.query('ROLLBACK')
+      throw('unable to accept friendship request')
+    }
+  })()
+
+
+  await psql.clean()
 
   return {
     friendship:plainToClass(Friendship, friendship),
