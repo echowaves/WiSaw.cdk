@@ -5,7 +5,7 @@ import {validate as uuidValidate,} from 'uuid'
 
 import {plainToClass,} from 'class-transformer'
 
-import sql from '../../sql'
+import psql from '../../psql'
 
 import Secret from '../../models/secret'
 
@@ -27,13 +27,17 @@ uuid       nickName       secret            outcome
 */
 
 export default async function main(uuid: string, nickName: string, secret: string) {
-  const existingSecret = (await sql`SELECT *
+  await psql.connect()
+
+  const existingSecret =
+  (await psql.query(
+    `SELECT *
               FROM "Secrets"
-              WHERE "nickName" = ${nickName}
-  `)
+              WHERE "nickName" = '${nickName}'
+  `)).rows
 
   // no records with this nickName found -- create new secret record
-  if(existingSecret.count === 0) {
+  if(existingSecret.length === 0) {
     const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
     const updatedAt = createdAt
 
@@ -52,7 +56,8 @@ export default async function main(uuid: string, nickName: string, secret: strin
     }
 
 
-    const newSecret = (await sql`
+    const newSecret =
+    (await psql.query(`
                     INSERT INTO "Secrets"
                     (
                         "uuid",
@@ -61,15 +66,17 @@ export default async function main(uuid: string, nickName: string, secret: strin
                         "createdAt",
                         "updatedAt"
                     ) values (
-                      ${uuid},
-                      ${nickName.toLowerCase()},   
-                      ${_hash(secret)},
-                      ${createdAt},
-                      ${updatedAt}
+                      '${uuid}',
+                      '${nickName.toLowerCase()}',   
+                      '${_hash(secret)}',
+                      '${createdAt}',
+                      '${updatedAt}'
                     )
                     returning *
                     `
-    )
+    )).rows
+    await psql.clean()
+
     return plainToClass(Secret, newSecret[0])
   }
 
@@ -77,7 +84,6 @@ export default async function main(uuid: string, nickName: string, secret: strin
   if(existingSecret[0].secret !== _hash(secret)) {
     throw new Error('try different combination of nickName/secret')
   }
-
 
   return plainToClass(Secret, existingSecret[0])
 }

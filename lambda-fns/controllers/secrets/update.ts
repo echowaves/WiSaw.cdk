@@ -3,7 +3,7 @@ import * as moment from 'moment'
 
 import {plainToClass,} from 'class-transformer'
 
-import sql from '../../sql'
+import psql from '../../psql'
 
 import Secret from '../../models/secret'
 
@@ -28,23 +28,24 @@ export default async function main(uuid: string, nickName: string, secret: strin
   if(!secretValid) {
     throw new Error(`Invalid new Secret`)
   }
+  await psql.connect()
 
-  const updatedSecret = (await sql`
-                  UPDATE "Secrets"
+  const updatedSecret =
+  (await psql.query(`
+    UPDATE "Secrets"
                   SET
-                    "secret" = ${_hash(newSecret)},
-                    "updatedAt" =  ${updatedAt}
-                  
+                    "secret" = '${_hash(newSecret)}',
+                    "updatedAt" =  '${updatedAt}'                
                   WHERE
-                    "uuid" = ${uuid}
+                    "uuid" = '${uuid}'
                     AND
-                    "nickName" = ${nickName.toLowerCase()}
+                    "nickName" = '${nickName.toLowerCase()}'
                     AND
-                    "secret" = ${_hash(secret)}
+                    "secret" = '${_hash(secret)}'
                   returning *
                   `
-  )
-  if(updatedSecret.count !== 1) {
+  )).rows
+  if(updatedSecret.length !== 1) {
     throw new Error(`Failed to update secret`)
   }
 
