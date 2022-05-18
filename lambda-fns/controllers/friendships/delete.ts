@@ -1,42 +1,57 @@
-import sql from '../../sql'
+import psql from '../../psql'
+
 import {validate as uuidValidate,} from 'uuid'
 
-import {_deleteChatByChatUuid,} from './_deleteChatByChatUuid'
-import {_deleteChatUsersByChatUuid,} from './_deleteChatUsersByChatUuid'
-import {_deleteFriendshipByFrienshipUuid,} from './_deleteFriendshipByFrienshipUuid'
-import {_deleteMessagesByChatUuid,} from './_deleteMessagesByChatUuid'
-
-
-
 export default async function main( friendshipUuid: string) {
-
-
+  // console.log({friendshipUuid,})
   // here validate values before inserting into DB
   if(uuidValidate(friendshipUuid) === false) {
     throw new Error(`Wrong UUID format`)
   }
-  // console.log({friendshipUuid,})
 
+  await psql.connect()
 
-  const [chatUuid,] = (await sql`
+  const chatUuid =
+        (await psql.query(`      
       SELECT * from "Friendships"
-      WHERE "friendshipUuid" = ${friendshipUuid}
-  `)
+      WHERE "friendshipUuid" = '${friendshipUuid}'
+  `)).rows[0].chatUuid
 
-  // console.log({chatUuid,})
+  console.log({chatUuid,})
 
-  const [status,] = await sql.begin(async (sql: any) => {
+  try {
+    await psql.query('BEGIN')
 
-    await Promise.all([
-      _deleteFriendshipByFrienshipUuid(friendshipUuid, sql),
+    await psql.query(`      
+      DELETE from "Friendships"
+        WHERE "friendshipUuid" = '${friendshipUuid}'
+    `)
 
-      _deleteChatByChatUuid(chatUuid.chatUuid, sql ),
-      _deleteChatUsersByChatUuid(chatUuid.chatUuid, sql ),
-      _deleteMessagesByChatUuid(chatUuid.chatUuid, sql ),
-    ])
+    await psql.query(`      
+      DELETE from "Chats"
+        WHERE "chatUuid" = '${chatUuid}'
+    `)
+
+    await psql.query(`      
+      DELETE from "ChatUsers"
+        WHERE "chatUuid" = '${chatUuid}'
+    `)
+
+    await psql.query(`      
+      DELETE from "Messages"
+        WHERE "chatUuid" = '${chatUuid}'
+    `)
     // console.log("OK")
-    return ["OK",]
-  })
+    await psql.query('COMMIT')
+
+  } catch (e) {
+    console.error(e)
+    await psql.query('ROLLBACK')
+    throw('unable to accept friendship request')
+  }
+
+
+  await psql.clean()
 
   // console.log({status,})
   return "OK"

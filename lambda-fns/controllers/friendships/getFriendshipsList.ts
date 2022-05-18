@@ -13,6 +13,8 @@ export default async function main(
     throw new Error(`Wrong UUID format`)
   }
 
+  await psql.connect()
+
   const friendships =
   (await psql.query(`
   
