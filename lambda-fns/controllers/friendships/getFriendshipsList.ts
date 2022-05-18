@@ -1,4 +1,5 @@
-import sql from '../../sql'
+import psql from '../../psql'
+
 import {validate as uuidValidate,} from 'uuid'
 
 import {plainToClass,} from 'class-transformer'
@@ -12,10 +13,16 @@ export default async function main(
     throw new Error(`Wrong UUID format`)
   }
 
-  const friendships = (await sql`SELECT *
+  const friendships =
+  (await psql.query(`
+  
+  SELECT *
       FROM "Friendships"
-      WHERE "uuid1" = ${uuid}
-      OR "uuid2" = ${uuid}
+      WHERE "uuid1" = '${uuid}'
+      OR "uuid2" = '${uuid}'
     `)
+  ).rows
+  await psql.clean()
+
   return friendships.map((friendship: Friendship) => plainToClass(Friendship, friendship))
 }
