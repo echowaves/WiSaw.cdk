@@ -99,12 +99,15 @@ export class WiSawCdkStack extends cdk.Stack {
     //   description: "Prototype graphql responses",
     // })
 
+    const layerArn = 'arn:aws:lambda:us-east-1:580247275435:layer:LambdaInsightsExtension:14';
+
     // Create the Lambda function that will map GraphQL operations into Postgres
     const wisawFn = new lambda.Function(this,
       `${deployEnv()}-WiSaw-GraphQlMapFunction-cdk`,
       {
         runtime: lambda.Runtime.NODEJS_14_X,
         code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
+        insightsVersion: lambda.LambdaInsightsVersion.fromInsightVersionArn(layerArn),
         // code: new lambda.AssetCode('lambda-fns'),
         handler: 'index.handler',
         // memorySize: 10240,
@@ -131,6 +134,7 @@ export class WiSawCdkStack extends cdk.Stack {
             {
               runtime: lambda.Runtime.NODEJS_14_X,
               code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
+              insightsVersion: lambda.LambdaInsightsVersion.fromInsightVersionArn(layerArn),
               // code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos')),
               handler: 'lambdas/processUploadedImage.main',
               memorySize: 3008,
@@ -150,6 +154,7 @@ export class WiSawCdkStack extends cdk.Stack {
             {
               runtime: lambda.Runtime.NODEJS_14_X,
               code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
+              insightsVersion: lambda.LambdaInsightsVersion.fromInsightVersionArn(layerArn),
               // code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos')),
               handler: 'lambdas/processDeletedImage.main',
               memorySize: 3008,
@@ -168,6 +173,7 @@ export class WiSawCdkStack extends cdk.Stack {
       {
         runtime: lambda.Runtime.NODEJS_14_X,
         code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
+        insightsVersion: lambda.LambdaInsightsVersion.fromInsightVersionArn(layerArn),
         // code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos')),
         handler: 'lambdas/processUploadedPrivateImage.main',
         memorySize: 3008,
@@ -187,6 +193,7 @@ export class WiSawCdkStack extends cdk.Stack {
       {
         runtime: lambda.Runtime.NODEJS_14_X,
         code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
+        insightsVersion: lambda.LambdaInsightsVersion.fromInsightVersionArn(layerArn),
         // code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos')),
         handler: 'lambdas/processDeletedPrivateImage.main',
         memorySize: 3008,
@@ -206,6 +213,7 @@ export class WiSawCdkStack extends cdk.Stack {
         {
           runtime: lambda.Runtime.NODEJS_14_X,
           code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
+          insightsVersion: lambda.LambdaInsightsVersion.fromInsightVersionArn(layerArn),
           handler: 'lambdas/cleaupupAbuseReports.main',
           memorySize: 3008,
           timeout: cdk.Duration.seconds(300),
@@ -235,6 +243,7 @@ export class WiSawCdkStack extends cdk.Stack {
                 {
                   runtime: lambda.Runtime.NODEJS_14_X,
                   code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
+                  insightsVersion: lambda.LambdaInsightsVersion.fromInsightVersionArn(layerArn),
                   // code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos')),
                   handler: 'lambdas/generateSiteMap.main',
                   memorySize: 3008,
