@@ -3,7 +3,7 @@
 import psql from '../../psql'
 
 // eslint-disable-next-line import/prefer-default-export
-export async function main(event: any = {}, context: any, cb: any) {
+export async function main(event: any = {}, context: any/*, cb: any*/) {
   await psql.connect()
 
   try {

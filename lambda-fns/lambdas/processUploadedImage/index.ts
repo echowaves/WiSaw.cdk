@@ -7,7 +7,7 @@ const AWS = require('aws-sdk')
 const sharp = require('sharp')
 
 // eslint-disable-next-line import/prefer-default-export
-export async function main(event: any = {}, context: any, cb: any) {
+export async function main(event: any = {}, context: any) {
   // // define all the thumbnails that we want
   // const widths = {
   //   300: '-thumbnail x300', // converting to the height of 300
@@ -18,16 +18,18 @@ export async function main(event: any = {}, context: any, cb: any) {
   const photoId = name.replace('.upload', '')
   const Bucket = record.s3.bucket.name
   // we only want to deal with originals
-  console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!received image: ${name}`)
-  console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!       photoId: ${photoId}`)
+  // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!received image: ${name}`)
+  // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!       photoId: ${photoId}`)
 
   const s3 = new AWS.S3()
+  // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!   ended 1    photoId: ${photoId}`)
 
   let image =
     await s3.getObject({
       Bucket,
       Key: name,
     }).promise()
+    // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!   ended 2    photoId: ${photoId}`)
 
   await Promise.all([
     _genWebpThumb({image, Bucket, Key: `${photoId}-thumb`,}),
@@ -35,17 +37,21 @@ export async function main(event: any = {}, context: any, cb: any) {
     _recognizeImage({Bucket, Key: `${name}`,}),
   ])
 
+  // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!   ended 3    photoId: ${photoId}`)
+
   await Promise.all([
     _deleteUpload({Bucket, Key: name,}),
     _activatePhoto({photoId,}),
   ])
 
-  cb(null, 'success everything')
+  // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!   ended 4   photoId: ${photoId}`)
+
+  // cb(null, 'success everything')
   return true
 }
 
 const _genWebpThumb = async({image, Bucket, Key,}: {image: any, Bucket: string, Key: string}) => {
-
+// console.log(`_genWebpThumb started  ${Key}`)
   const buffer = await sharp(image.Body).rotate().webp({lossless: false, quality: 80,}).resize({height: 300,}).toBuffer()
   const s3 = new AWS.S3()
   await s3.putObject({
@@ -56,9 +62,12 @@ const _genWebpThumb = async({image, Bucket, Key,}: {image: any, Bucket: string, 
     ACL: 'public-read',
     CacheControl: 'max-age=31536000',
   }).promise()
+
+  // console.log(`_genWebpThumb ended  ${Key}`)
 }
 
 const _genWebp = async({image, Bucket, Key,}: {image: any, Bucket: string, Key: string}) => {
+  // console.log(`_genWebp started  ${Key}`)
 
   const buffer = await sharp(image.Body).rotate().webp({lossless: false, quality: 90,}).toBuffer()
   const s3 = new AWS.S3()
@@ -70,18 +79,23 @@ const _genWebp = async({image, Bucket, Key,}: {image: any, Bucket: string, Key: 
     ACL: 'public-read',
     CacheControl: 'max-age=31536000',
   }).promise()
-
+  // console.log(`_genWebp ended  ${Key}`)
 }
 
 const _deleteUpload = async({Bucket, Key,}: {Bucket: string, Key: string}) => {
+  // console.log(`_deleteUpload started  ${Key}`)
+
   const s3 = new AWS.S3()
   await s3.deleteObject({
     Bucket,
     Key,
   }).promise()
+  // console.log(`_deleteUpload ended  ${Key}`)
 }
 
 const _recognizeImage = async({Bucket, Key,}: {Bucket: string, Key: string}) => {
+  // console.log(`_recognizeImage started  ${Key}`)
+
   // console.log({Bucket, Key})
   const rekognition = new AWS.Rekognition()
   const params = {
@@ -92,6 +106,7 @@ const _recognizeImage = async({Bucket, Key,}: {Bucket: string, Key: string}) => 
       },
     },
   }
+  // console.log(`_recognizeImage ended 1  ${Key}`)
 
   const metaData = {
     Labels: null,
@@ -110,6 +125,7 @@ const _recognizeImage = async({Bucket, Key,}: {Bucket: string, Key: string}) => 
         rekognition.detectText(params).promise(),
       ])
 
+      // console.log(`_recognizeImage ended 2  ${Key}`)
 
     metaData.Labels = labelsData.Labels
     // console.log(JSON.stringify(labelsData))
@@ -125,6 +141,7 @@ const _recognizeImage = async({Bucket, Key,}: {Bucket: string, Key: string}) => 
     console.log('Error parsing image')
     console.log({err,})
   }
+  // console.log(`_recognizeImage ended 3  ${Key}`)
 
   try {
     const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
@@ -161,11 +178,14 @@ const _recognizeImage = async({Bucket, Key,}: {Bucket: string, Key: string}) => 
     console.log({err,})
   }
   await psql.clean()
+  // console.log(`_recognizeImage ended 4  ${Key}`)
 
 }
 
 
 const _activatePhoto = async({photoId,}: {photoId: string}) => {
+  // console.log(`_activatePhoto started  ${photoId}`)
+
   try {
     const updatedAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
 
@@ -182,5 +202,7 @@ const _activatePhoto = async({photoId,}: {photoId: string}) => {
     console.log({err,})
   }
   await psql.clean()
+  // console.log(`_activatePhoto ended  ${photoId}`)
+
 }
 

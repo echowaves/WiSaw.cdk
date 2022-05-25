@@ -3,21 +3,21 @@ import psql from '../../psql'
 const AWS = require('aws-sdk')
 
 // eslint-disable-next-line import/prefer-default-export
-export async function main(event: any = {}, context: any, cb: any) {
+export async function main(event: any = {}, context: any) {
   const record = event.Records[0]
   const name = record.s3.object.key
 
   const photoHash = name.replace('-thumb', '')
   // we only want to deal with originals
-  console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!deleting image: ${name}`)
-  console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!       photoHash: ${photoHash}`)
+  // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!deleting image: ${name}`)
+  // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!       photoHash: ${photoHash}`)
 
   await Promise.all([
     _deleteUpload({Bucket: record.s3.bucket.name, Key: `${photoHash}`,}),
     _cleanupTables({photoHash,}),
   ])
 
-  cb(null, 'success everything')
+  // cb(null, 'success everything')
   return true
 }
 

@@ -7,7 +7,7 @@ import psql from '../../psql'
 const AWS = require('aws-sdk')
 
 // eslint-disable-next-line import/prefer-default-export
-export async function main(event: any = {}, context: any, cb: any) {
+export async function main(event: any = {}, context: any /*, cb: any*/) {
 
   const smStream = new SitemapStream({ hostname: 'https://www.wisaw.com'})
   smStream.write({ url: '/',  changefreq: 'daily'})
@@ -35,7 +35,7 @@ export async function main(event: any = {}, context: any, cb: any) {
   }
   await psql.clean()
 
-  console.log('photos.length:', photos.length)
+  // console.log('photos.length:', photos.length)
   photos?.forEach((photo: any) => {
     const jsonObj = JSON.parse(JSON.stringify(photo))
     smStream.write({ url: `/photos/${photo.id}` })
@@ -47,7 +47,7 @@ export async function main(event: any = {}, context: any, cb: any) {
   const s3 = new AWS.S3()
 
   try {
-    console.log('uploading sitemap.xml')
+    // console.log('uploading sitemap.xml')
 
     await s3.putObject({
       ACL: 'public-read',
@@ -56,12 +56,12 @@ export async function main(event: any = {}, context: any, cb: any) {
       Bucket: 'wisaw-client',
     }).promise()
 
-    console.log('finished uploading')
+    // console.log('finished uploading')
   } catch (err) {
     console.log('Unable to upload sitemap.xml', {err})
   }
 
-  console.log('done')
+  // console.log('done')
 
   return true
 }

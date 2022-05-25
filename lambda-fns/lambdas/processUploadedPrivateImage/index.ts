@@ -7,7 +7,7 @@ const AWS = require('aws-sdk')
 const sharp = require('sharp')
 
 // eslint-disable-next-line import/prefer-default-export
-export async function main(event: any = {}, context: any, cb: any) {
+export async function main(event: any = {}, context: any) {
   // // define all the thumbnails that we want
   // const widths = {
   //   300: '-thumbnail x300', // converting to the height of 300
@@ -18,8 +18,8 @@ export async function main(event: any = {}, context: any, cb: any) {
   const photoHash = name.replace('.upload', '')
   const Bucket = record.s3.bucket.name
   // we only want to deal with originals
-  console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!received image: ${name}`)
-  console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!       photoHash: ${photoHash}`)
+  // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!received image: ${name}`)
+  // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!       photoHash: ${photoHash}`)
 
   const s3 = new AWS.S3()
 
@@ -41,7 +41,7 @@ export async function main(event: any = {}, context: any, cb: any) {
     _activatePhoto({photoHash,}),
   ])
 
-  cb(null, 'success everything')
+  // cb(null, 'success everything')
   return true
 }
 
@@ -82,7 +82,7 @@ const _deleteUpload = async({Bucket, Key,}: {Bucket: string, Key: string}) => {
 }
 
 const _activatePhoto = async({photoHash,}: {photoHash: string}) => {
-  console.log("_activatePhoto::", "start")
+  // console.log("_activatePhoto::", "start")
 
   try {
     await psql.connect()
@@ -93,7 +93,7 @@ const _activatePhoto = async({photoHash,}: {photoHash: string}) => {
       "chatPhotoHash" = '${photoHash}'
     `)
     ).rows
-    console.log("_activatePhoto::", {result,})
+    // console.log("_activatePhoto::", {result,})
 
     if(result.length === 1) { // the photo with this hash already
       const chatPhoto = result[0]
@@ -116,6 +116,6 @@ const _activatePhoto = async({photoHash,}: {photoHash: string}) => {
   }
   await psql.clean()
 
-  console.log("_activatePhoto::", "end")
+  // console.log("_activatePhoto::", "end")
 
 }
