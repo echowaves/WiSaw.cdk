@@ -3,6 +3,9 @@ import * as s3 from "@aws-cdk/aws-s3"
 import * as s3n from '@aws-cdk/aws-s3-notifications'
 import * as ec2 from '@aws-cdk/aws-ec2'
 import * as lambda from '@aws-cdk/aws-lambda'
+import * as cloudfront from "@aws-cdk/aws-cloudfront";
+import * as origins from "@aws-cdk/aws-cloudfront-origins"
+
 
 import {LambdaFunction,} from '@aws-cdk/aws-events-targets'
 import {Rule, Schedule,} from '@aws-cdk/aws-events'
@@ -202,8 +205,7 @@ export class WiSawCdkStack extends cdk.Stack {
           ...config,
         },
       }
-    )
-
+    )    
 
     // cleanup older abuse reports
     const cleaupupAbuseReports_LambdaFunction =
@@ -271,7 +273,135 @@ export class WiSawCdkStack extends cdk.Stack {
       webAppBucket.grantPut(generateSiteMap_LambdaFunction)
       webAppBucket.grantPutAcl(generateSiteMap_LambdaFunction)
 
+
+      // const myFunc = new cloudfront.experimental.EdgeFunction(this, 'MyFunction', {
+      //   runtime: lambda.Runtime.NODEJS_12_X,
+      //   handler: 'index.handler',
+      //   code: lambda.Code.fromAsset(path.join(__dirname, 'lambda-handler')),
+      // });
+      
+      // lambda@edge function for ingecting OG meta tags on the fly
+      const injectMetaTagsLambdaFunction =
+      // new lambda.Function( // trying to define it as an Lambda@Edge function
+      new cloudfront.experimental.EdgeFunction(
+        this,
+        `${deployEnv()}_injectMetaTagsLambdaFunction`,
+        {
+                  runtime: lambda.Runtime.NODEJS_14_X,
+                  code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
+                  insightsVersion: lambda.LambdaInsightsVersion.fromInsightVersionArn(layerArn),
+                  // code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos')),
+                  handler: 'lambdas/injectMetaTagsLambdaFunction.main',
+                  memorySize: 3008,
+                  timeout: cdk.Duration.seconds(300),
+                  // environment: {
+                  //   ...config,
+                  // },
+        }
+      )
+
+      // const version = injectMetaTagsLambdaFunction.addVersion(':sha256:' + sha256('./lambda/index.js'));
+      // const version = injectMetaTagsLambdaFunction.currentVersion
+      // // A numbered version to give to cloudfront
+      // const myOriginRequestHandlerVersion = new lambda.Version(this, "OriginRequestHandlerVersion", {
+      //   lambda: injectMetaTagsLambdaFunction,
+      // });
+
+      // Origin access identity for cloudfront to access the bucket
+      // const distribution = new cloudfront.OriginAccessIdentity(this, `${config.CLOUD_FRONT_DISTRIBUTION}`) // CloudFront distribution
+      
+      // const distribution = cloudfront.CloudFrontWebDistribution.fromDistributionAttributes(this, `${config.CLOUD_FRONT_DISTRIBUTION}`, {
+      //   domainName: 'www.wisaw.com',
+      //   distributionId: `${config.CLOUD_FRONT_DISTRIBUTION}`,
+      // })
+
+
+      // const distribution = new cloudfront.Distribution(this, `${config.CLOUD_FRONT_DISTRIBUTION}`, {
+      //   defaultBehavior: { origin: new origins.S3Origin(webAppBucket) },
+      //   additionalBehaviors: {
+      //     'images/*': {
+      //       origin: new origins.S3Origin(webAppBucket),
+      //       edgeLambdas: [
+      //         {
+      //           functionVersion: injectMetaTagsLambdaFunction.currentVersion,
+      //           eventType: cloudfront.LambdaEdgeEventType.ORIGIN_REQUEST,
+      //           includeBody: true, // Optional - defaults to false
+      //         },
+      //       ],
+      //     },
+      //   },
+      // });
+
+
+      // const distribution = new cloudfront.Distribution.fromDistributionAttributes(this, `${config.CLOUD_FRONT_DISTRIBUTION}`, {
+      //   defaultBehavior: { origin: new origins.S3Origin(webAppBucket) },
+      //   additionalBehaviors: {
+      //     'images/*': {
+      //       origin: new origins.S3Origin(webAppBucket),
+      //       edgeLambdas: [
+      //         {
+      //           functionVersion: injectMetaTagsLambdaFunction.currentVersion,
+      //           eventType: cloudfront.LambdaEdgeEventType.ORIGIN_REQUEST,
+      //           includeBody: true, // Optional - defaults to false
+      //         },
+      //       ],
+      //     },
+      //   },
+      // });
+
+
+      // distribution.addBehavior('/images/*.jpg', new origins.S3Origin(myBucket), {
+      //   viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+      // });
+
+    
+      // const distribution = new cloudfront.CloudFrontWebDistribution(
+      //   this,
+      //   `${config.CLOUD_FRONT_DISTRIBUTION}`)
+      //   // {
+        //   domainName: 'www.wisaw.com',
+        //   distributionId: `${config.CLOUD_FRONT_DISTRIBUTION}`,
+        // });
+      //   {
+      //     originConfigs: [
+      //       {
+      //         s3OriginSource: {
+      //           s3BucketSource: webAppBucket,
+      //         },
+      //         behaviors: [
+      //           {
+      //             isDefaultBehavior: true,
+      //             lambdaFunctionAssociations: [
+      //               {
+      //                 eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
+      //                 lambdaFunction: injectMetaTagsLambdaFunction,
+      //               },
+      //             ],
+      //           },
+      //         ],
+      //       },
+      //     ],
+      //     loggingConfig: {},
+      //     // viewerCertificate: cloudfront.ViewerCertificate.fromAcmCertificate(
+      //     //   acmCertificate,
+      //     //   {
+      //     //     aliases: [DOMAIN],
+      //     //   }
+      //     // ),
+      //   }
+      // );
+
+
+      // webAppBucket.grantRead(distribution)
+
+
+      // const injectMetaTagsLambdaFunctionUrl = injectMetaTagsLambdaFunction.addFunctionUrl();
+      // injectMetaTagsLambdaFunctionUrl.grantInvokeUrl(myRole);
+
     }
+
+    
+
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // imgBucket
     // Grant access to s3 bucket for lambda function
