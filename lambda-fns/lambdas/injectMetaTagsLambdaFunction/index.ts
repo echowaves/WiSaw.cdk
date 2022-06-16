@@ -30,6 +30,7 @@ export async function main(event: any = {}, context: any, callback: any) {
         <link rel="mask-icon" href="%PUBLIC_URL%/safari-pinned-tab.svg" color="#5bbad5" />
     
         <meta name="theme-color" content="#ffffff" />
+        <meta name="hohoho" content="hohoho" />
         <link
         rel="preload"
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"

@@ -3,8 +3,10 @@ import * as s3 from "@aws-cdk/aws-s3"
 import * as s3n from '@aws-cdk/aws-s3-notifications'
 import * as ec2 from '@aws-cdk/aws-ec2'
 import * as lambda from '@aws-cdk/aws-lambda'
-import * as cloudfront from "@aws-cdk/aws-cloudfront";
+import * as cloudfront from "@aws-cdk/aws-cloudfront"
 import * as origins from "@aws-cdk/aws-cloudfront-origins"
+import * as acm from '@aws-cdk/aws-certificatemanager'
+import * as route53 from '@aws-cdk/aws-route53'
 
 
 import {LambdaFunction,} from '@aws-cdk/aws-events-targets'
@@ -15,7 +17,9 @@ import * as iam from '@aws-cdk/aws-iam'
 // import {ISecret, Secret,} from "@aws-cdk/aws-secretsmanager"
 // import * as path from 'path'
 
+// const hostedZone =  route53.HostedZone
 
+var path = require('path')
 
 export function deployEnv() {
   return process.env.DEPLOY_ENV || "test"
@@ -288,18 +292,154 @@ export class WiSawCdkStack extends cdk.Stack {
         `${deployEnv()}_injectMetaTagsLambdaFunction`,
         {
                   runtime: lambda.Runtime.NODEJS_14_X,
-                  code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
-                  insightsVersion: lambda.LambdaInsightsVersion.fromInsightVersionArn(layerArn),
-                  // code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos')),
-                  handler: 'lambdas/injectMetaTagsLambdaFunction.main',
-                  memorySize: 3008,
-                  timeout: cdk.Duration.seconds(300),
+                  code: lambda.Code.fromAsset(path.join(__dirname, '../lambda-fns/lambdas/injectMetaTagsLambdaFunction')),
+                  // insightsVersion: lambda.LambdaInsightsVersion.fromInsightVersionArn(layerArn),                  
+                  handler: 'index.main',
+                  memorySize: 128,
+                  timeout: cdk.Duration.seconds(5),
                   // environment: {
                   //   ...config,
                   // },
         }
       )
 
+      // Origin access identity for cloudfront to access the bucket
+      const myCdnOai = new cloudfront.OriginAccessIdentity(this, "CdnOai");
+      webAppBucket.grantRead(myCdnOai);
+      
+      // const wisawCert = acm.Certificate.fromCertificateArn(this, 'wisawCert', "arn:aws:acm:us-east-1:963958500685:certificate/538e85e0-39f4-4d34-8580-86e8729e2c3c")
+
+      new cloudfront.CloudFrontWebDistribution(this, "Cdn", {        
+        originConfigs: [
+          {
+            s3OriginSource: {
+              s3BucketSource: webAppBucket,
+              originAccessIdentity: myCdnOai,
+            },
+            behaviors: [
+              {
+                isDefaultBehavior: true,
+                compress: true,
+              },
+              {
+                pathPattern: 'photos/23286',
+                compress: true,
+                allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
+                minTtl: cdk.Duration.days(10),
+                maxTtl: cdk.Duration.days(10),
+                defaultTtl: cdk.Duration.days(10),
+                forwardedValues: {
+                  queryString: true,
+                  cookies: {
+                    forward: 'all'
+                  }
+                },
+                lambdaFunctionAssociations: [
+                  {
+                  eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
+                  lambdaFunction: injectMetaTagsLambdaFunction,                    
+                  }, 
+                  {
+                    eventType: cloudfront.LambdaEdgeEventType.VIEWER_RESPONSE,
+                    lambdaFunction: injectMetaTagsLambdaFunction,                    
+                  },
+
+                  {
+                    eventType: cloudfront.LambdaEdgeEventType.ORIGIN_REQUEST,
+                    lambdaFunction: injectMetaTagsLambdaFunction,                    
+                  },
+                  {
+                    eventType: cloudfront.LambdaEdgeEventType.ORIGIN_RESPONSE,
+                    lambdaFunction: injectMetaTagsLambdaFunction,                    
+                  }
+
+                ]
+              }
+            ],            
+          }, 
+        ],
+        aliasConfiguration: {
+          acmCertRef: "arn:aws:acm:us-east-1:963958500685:certificate/538e85e0-39f4-4d34-8580-86e8729e2c3c", //wisawCert.certificateArn,
+          names: ["*.wisaw.com"]
+        },
+        errorConfigurations: [ 
+          {
+            errorCode: 403, 
+            responseCode: 200,
+            errorCachingMinTtl: 31536000,
+            responsePagePath: "/index.html"
+          },
+          {
+            errorCode: 404, 
+            responseCode: 200,
+            errorCachingMinTtl: 31536000,
+            responsePagePath: "/index.html"
+          }
+
+        ],
+      });
+
+
+
+      // const distribution = cloudfront.CloudFrontWebDistribution.fromDistributionAttributes(this, 'ImportedDist', {
+      //   domainName: 'dqaq70qqy8lyk.cloudfront.net',
+      //   distributionId: 'E275CUZVESLWC7',
+      //   originConfigs: []        
+      // }
+      // );
+
+      
+      // distribution.
+      // addBehavior('photos/23288', wisawClientS3Origin, {
+      //   edgeLambdas: [
+      //     {
+      //       functionVersion: injectMetaTagsLambdaFunction.currentVersion,
+      //       eventType: cloudfront.LambdaEdgeEventType.VIEWER_RESPONSE,
+      //     },
+      //   ],
+      // })
+      
+
+      
+      // const hostedZone = route53.HostedZone.fromHostedZoneAttributes(this, "Zone", {
+      //   hostedZoneId: "E275CUZVESLWC7",
+      //   zoneName: "*.wisaw.com"
+      // })
+
+      // Certificate.fromCertificateArn(this, "Cert", "...arn...")
+      // const wisawCertificate = new acm.DnsValidatedCertificate(this, '538e85e0-39f4-4d34-8580-86e8729e2c3c', {
+      //   domainName: '*.wisaw.com',
+      //   // hostedZone,
+      // })
+
+      // const wisawClientS3Origin = new origins.S3Origin(webAppBucket)
+      // const wisawDistribution = new cloudfront.Distribution(this, 'wisaw-distribution', 
+      // {
+      //   defaultBehavior: {
+      //     origin: wisawClientS3Origin,
+      //     // edgeLambdas: [
+      //     //   {
+      //     //     functionVersion: injectMetaTagsLambdaFunction.currentVersion,
+      //     //     eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
+      //     //   }
+      //     // ],
+      //   },
+      //   domainNames: ['www.wisaw.com'],
+      //   certificate:wisawCertificate,        
+      // })
+
+      // wisawDistribution.addBehavior('photos/23288', wisawClientS3Origin, {
+      //   edgeLambdas: [
+      //     {
+      //       functionVersion: injectMetaTagsLambdaFunction.currentVersion,
+      //       eventType: cloudfront.LambdaEdgeEventType.VIEWER_RESPONSE,
+      //     },
+      //   ],
+      // })
+      
+
+
+      
       // const version = injectMetaTagsLambdaFunction.addVersion(':sha256:' + sha256('./lambda/index.js'));
       // const version = injectMetaTagsLambdaFunction.currentVersion
       // // A numbered version to give to cloudfront
