@@ -1,18 +1,17 @@
 const AWS = require('aws-sdk')
+const path = require('path')
+const https = require('https')
+const zlib = require('zlib')
+
+const querystring = require('querystring')
 
 export async function main(event: any = {}, context: any, callback: any) {
-  const {request} = event
-  console.log({event})
+  console.log({event: JSON.stringify(event)})
   // var response = event.response
 
-  var response = { 
-    status: '200',
-    statusDescription: 'OK',
-    headers: {
-        'cloudfront-functions': { value: 'generated-by-CloudFront-Functions' },
-        'location': { value: 'https://aws.amazon.com/cloudfront/' }
-    },
-    body: 
+  const { request, config } = event.Records[0].cf
+
+  const buffer = zlib.gzipSync(
     `
     <\!DOCTYPE html>
     <html lang="en" prefix="og: http://ogp.me/ns#" xmlns="http://www.w3.org/1999/xhtml" xmlns:fb="http://ogp.me/ns/fb#">
@@ -46,6 +45,21 @@ export async function main(event: any = {}, context: any, callback: any) {
       </body>
     </html>    
     `
+  )
+  
+  const base64EncodedBody = buffer.toString('base64');
+
+
+
+  var response = { 
+    status: '200',
+    statusDescription: 'OK',
+    headers: {
+      'content-type': [{key:'Content-Type', value: 'text/html'}],
+      'content-encoding' : [{key:'Content-Encoding', value: 'gzip'}],
+      'accept-ranges': [{key:'Accept-Ranges', value: 'bytes'}]
+    },
+    body: base64EncodedBody
   }
 
   // let originalUri = request.uri;
@@ -53,9 +67,15 @@ export async function main(event: any = {}, context: any, callback: any) {
   
   // console.log({originalUri})
   // console.log({parsedPath})
-  
-  console.log({request})
-  console.log({response})
+  console.log({request: JSON.stringify(request)})
+
+  // const body = Buffer.from(request.body.data, 'base64').toString();
+
+  // console.log({body})
+
+  callback(true, response)
+
+  // console.log({response: JSON.stringify(response)})
   return callback(null, request)
 
 }

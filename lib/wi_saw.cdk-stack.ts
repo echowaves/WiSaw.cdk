@@ -309,7 +309,7 @@ export class WiSawCdkStack extends cdk.Stack {
       
       // const wisawCert = acm.Certificate.fromCertificateArn(this, 'wisawCert', "arn:aws:acm:us-east-1:963958500685:certificate/538e85e0-39f4-4d34-8580-86e8729e2c3c")
 
-      new cloudfront.CloudFrontWebDistribution(this, "Cdn", {        
+      new cloudfront.CloudFrontWebDistribution(this, "wisaw-distro", {        
         originConfigs: [
           {
             s3OriginSource: {
@@ -335,23 +335,24 @@ export class WiSawCdkStack extends cdk.Stack {
                   }
                 },
                 lambdaFunctionAssociations: [
-                  {
-                  eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
-                  lambdaFunction: injectMetaTagsLambdaFunction,                    
-                  }, 
-                  {
-                    eventType: cloudfront.LambdaEdgeEventType.VIEWER_RESPONSE,
-                    lambdaFunction: injectMetaTagsLambdaFunction,                    
-                  },
-
+                  // {
+                  // eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
+                  // lambdaFunction: injectMetaTagsLambdaFunction,       
+                  // includeBody: true,             
+                  // }, 
+                  // {
+                  //   eventType: cloudfront.LambdaEdgeEventType.VIEWER_RESPONSE,
+                  //   lambdaFunction: injectMetaTagsLambdaFunction,                    
+                  // },
                   {
                     eventType: cloudfront.LambdaEdgeEventType.ORIGIN_REQUEST,
                     lambdaFunction: injectMetaTagsLambdaFunction,                    
+                    includeBody: true,             
                   },
-                  {
-                    eventType: cloudfront.LambdaEdgeEventType.ORIGIN_RESPONSE,
-                    lambdaFunction: injectMetaTagsLambdaFunction,                    
-                  }
+                  // {
+                  //   eventType: cloudfront.LambdaEdgeEventType.ORIGIN_RESPONSE,
+                  //   lambdaFunction: injectMetaTagsLambdaFunction,                    
+                  // },
 
                 ]
               }
@@ -360,7 +361,7 @@ export class WiSawCdkStack extends cdk.Stack {
         ],
         aliasConfiguration: {
           acmCertRef: "arn:aws:acm:us-east-1:963958500685:certificate/538e85e0-39f4-4d34-8580-86e8729e2c3c", //wisawCert.certificateArn,
-          names: ["*.wisaw.com"]
+          names: ["www.wisaw.com"]
         },
         errorConfigurations: [ 
           {
