@@ -21,7 +21,7 @@ export async function main(event: any = {}, context: any, callback: any) {
 
   const body =  index.replace('<head>', 
   `<head>
-    <meta name="image" property="og:image" content="https://s3.amazonaws.com/wisaw-img-prod/${imageId}"} />
+    <meta property="og:image" content="https://s3.amazonaws.com/wisaw-img-prod/${imageId}"} />
     <meta property="og:title" content="wisaw photo ${imageId}" />
     <meta property="og:url" content="https://www.wisaw.com/photos/${imageId}" />
     <link rel="canonical" href="https://www.wisaw.com/photos/${imageId}"/>
