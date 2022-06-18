@@ -291,11 +291,11 @@ export class WiSawCdkStack extends cdk.Stack {
         this,
         `${deployEnv()}_injectMetaTagsLambdaFunction`,
         {
-                  runtime: lambda.Runtime.NODEJS_14_X,
+                  runtime: lambda.Runtime.NODEJS_16_X,
                   code: lambda.Code.fromAsset(path.join(__dirname, '../lambda-fns/lambdas/injectMetaTagsLambdaFunction')),
-                  // insightsVersion: lambda.LambdaInsightsVersion.fromInsightVersionArn(layerArn),                  
+                  // code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
                   handler: 'index.main',
-                  memorySize: 128,
+                  memorySize: 128,                  
                   timeout: cdk.Duration.seconds(5),
                   // environment: {
                   //   ...config,
@@ -335,20 +335,20 @@ export class WiSawCdkStack extends cdk.Stack {
                   }
                 },
                 lambdaFunctionAssociations: [
-                  // {
-                  // eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
-                  // lambdaFunction: injectMetaTagsLambdaFunction,       
-                  // includeBody: true,             
-                  // }, 
+                  {
+                  eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
+                  lambdaFunction: injectMetaTagsLambdaFunction,       
+                  includeBody: true,             
+                  }, 
                   // {
                   //   eventType: cloudfront.LambdaEdgeEventType.VIEWER_RESPONSE,
                   //   lambdaFunction: injectMetaTagsLambdaFunction,                    
                   // },
-                  {
-                    eventType: cloudfront.LambdaEdgeEventType.ORIGIN_REQUEST,
-                    lambdaFunction: injectMetaTagsLambdaFunction,                    
-                    includeBody: true,             
-                  },
+                  // {
+                  //   eventType: cloudfront.LambdaEdgeEventType.ORIGIN_REQUEST,
+                  //   lambdaFunction: injectMetaTagsLambdaFunction,                    
+                  //   includeBody: true,             
+                  // },
                   // {
                   //   eventType: cloudfront.LambdaEdgeEventType.ORIGIN_RESPONSE,
                   //   lambdaFunction: injectMetaTagsLambdaFunction,                    
