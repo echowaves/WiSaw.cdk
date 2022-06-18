@@ -6,21 +6,7 @@ const zlib = require('zlib')
 const querystring = require('querystring')
 
 export async function main(event: any = {}, context: any, callback: any) {
-  console.log({event: JSON.stringify(event)})
-  // var response = event.response
-  // const { request, config } = event.Records[0].cf
-// const body = `
-// <\!DOCTYPE html>
-// <html lang="en">
-//   <head>
-//     <meta charset="utf-8">
-//     <title>Simple Lambda@Edge Static Content Response</title>
-//   </head>
-//   <body>
-//     <p>Hello from Lambda@Edge!</p>
-//   </body>
-// </html>
-// `;
+  // console.log({event: JSON.stringify(event)})
 
   const { request} = event.Records[0].cf
   const imageId = request.uri.replace('/photos/', '')
@@ -70,7 +56,7 @@ export async function main(event: any = {}, context: any, callback: any) {
 
   // const body = Buffer.from(request.body.data, 'base64').toString();
 
-  console.log({body})
+  // console.log({body})
 
   callback(null, response)
 
