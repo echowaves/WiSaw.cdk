@@ -25,9 +25,9 @@ export async function main(event: any = {}, context: any, callback: any) {
     <meta name="description" property="og:description" content="Check out What I saw Today" />
     <meta property="og:title" content="wisaw photo ${imageId}" />
     <meta property="og:url" content="https://www.wisaw.com/photos/${imageId}" />
-    <link rel="canonical" href="https://www.wisaw.com/photos/${imageId}"/>
+    <link rel="canonical" href="https://www.wisaw.com/photos/${imageId}" />
     <meta name="twitter:title" content="wisaw (What I Saw) photo ${imageId}" />
-    <meta name="twitter:card" content="summary_large_image"/>
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content="https://s3.amazonaws.com/wisaw-img-prod/${imageId}" />
 `
   )
