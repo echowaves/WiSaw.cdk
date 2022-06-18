@@ -322,7 +322,7 @@ export class WiSawCdkStack extends cdk.Stack {
                 compress: true,
               },
               {
-                pathPattern: 'photos/23286',
+                pathPattern: 'photos/*',
                 compress: true,
                 allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
                 minTtl: cdk.Duration.days(10),
