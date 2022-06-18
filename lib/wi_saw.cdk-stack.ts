@@ -112,7 +112,7 @@ export class WiSawCdkStack extends cdk.Stack {
     const wisawFn = new lambda.Function(this,
       `${deployEnv()}-WiSaw-GraphQlMapFunction-cdk`,
       {
-        runtime: lambda.Runtime.NODEJS_14_X,
+        runtime: lambda.Runtime.NODEJS_16_X,
         code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
         insightsVersion: lambda.LambdaInsightsVersion.fromInsightVersionArn(layerArn),
         // code: new lambda.AssetCode('lambda-fns'),
@@ -139,7 +139,7 @@ export class WiSawCdkStack extends cdk.Stack {
             this,
             `${deployEnv()}_processUploadedImage`,
             {
-              runtime: lambda.Runtime.NODEJS_14_X,
+              runtime: lambda.Runtime.NODEJS_16_X,
               code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
               insightsVersion: lambda.LambdaInsightsVersion.fromInsightVersionArn(layerArn),
               // code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos')),
@@ -159,7 +159,7 @@ export class WiSawCdkStack extends cdk.Stack {
             this,
             `${deployEnv()}_processDeletedImage`,
             {
-              runtime: lambda.Runtime.NODEJS_14_X,
+              runtime: lambda.Runtime.NODEJS_16_X,
               code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
               insightsVersion: lambda.LambdaInsightsVersion.fromInsightVersionArn(layerArn),
               // code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos')),
@@ -178,7 +178,7 @@ export class WiSawCdkStack extends cdk.Stack {
       this,
       `${deployEnv()}_processUploadedPrivateImage`,
       {
-        runtime: lambda.Runtime.NODEJS_14_X,
+        runtime: lambda.Runtime.NODEJS_16_X,
         code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
         insightsVersion: lambda.LambdaInsightsVersion.fromInsightVersionArn(layerArn),
         // code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos')),
@@ -198,7 +198,7 @@ export class WiSawCdkStack extends cdk.Stack {
       this,
       `${deployEnv()}_processDeletedPrivateImage`,
       {
-        runtime: lambda.Runtime.NODEJS_14_X,
+        runtime: lambda.Runtime.NODEJS_16_X,
         code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
         insightsVersion: lambda.LambdaInsightsVersion.fromInsightVersionArn(layerArn),
         // code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos')),
@@ -217,7 +217,7 @@ export class WiSawCdkStack extends cdk.Stack {
         this,
         `${deployEnv()}_cleaupupAbuseReports`,
         {
-          runtime: lambda.Runtime.NODEJS_14_X,
+          runtime: lambda.Runtime.NODEJS_16_X,
           code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
           insightsVersion: lambda.LambdaInsightsVersion.fromInsightVersionArn(layerArn),
           handler: 'lambdas/cleaupupAbuseReports.main',
@@ -247,7 +247,7 @@ export class WiSawCdkStack extends cdk.Stack {
                 this,
                 `${deployEnv()}_generateSiteMap`,
                 {
-                  runtime: lambda.Runtime.NODEJS_14_X,
+                  runtime: lambda.Runtime.NODEJS_16_X,
                   code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
                   insightsVersion: lambda.LambdaInsightsVersion.fromInsightVersionArn(layerArn),
                   // code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos')),
