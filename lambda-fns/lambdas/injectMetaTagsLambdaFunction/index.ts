@@ -1,18 +1,9 @@
-const AWS = require('aws-sdk')
-const path = require('path')
-const https = require('https')
-const zlib = require('zlib')
-
-const querystring = require('querystring')
-
 export async function main(event: any = {}, context: any, callback: any) {
   // console.log({event: JSON.stringify(event)})
-
   const { request} = event.Records[0].cf
   const imageId = request.uri.replace('/photos/', '')
-  console.log({imageId})
 
-  
+  console.log({imageId})
 
   const index = 
 `
@@ -46,22 +37,7 @@ export async function main(event: any = {}, context: any, callback: any) {
         }]
     },
     body,
-};
-
-  // let originalUri = request.uri;
-  // const parsedPath = path.parse(originalUri);
-  
-  // console.log({originalUri})
-  // console.log({parsedPath})
-  // console.log({request: JSON.stringify(request)})
-
-  // const body = Buffer.from(request.body.data, 'base64').toString();
-
-  // console.log({body})
+  }
 
   callback(null, response)
-
-  // console.log({response: JSON.stringify(response)})
-  // return callback(null, request)
-
 }
