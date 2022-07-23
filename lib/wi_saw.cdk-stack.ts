@@ -286,7 +286,7 @@ export class WiSawCdkStack extends cdk.Stack {
                   )
       webAppBucket.grantPut(generateSiteMap_LambdaFunction)
       webAppBucket.grantPutAcl(generateSiteMap_LambdaFunction)
-
+      
 
       // const myFunc = new cloudfront.experimental.EdgeFunction(this, 'MyFunction', {
       //   runtime: lambda.Runtime.NODEJS_12_X,
@@ -315,6 +315,7 @@ export class WiSawCdkStack extends cdk.Stack {
                   // },
         }
       )
+      webAppBucket.grantRead(injectMetaTagsLambdaFunction)
 
       // Origin access identity for cloudfront to access the bucket
       const myCdnOai = new cloudfront.OriginAccessIdentity(this, "CdnOai");
