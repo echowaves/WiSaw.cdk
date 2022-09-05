@@ -681,6 +681,10 @@ export class WiSawCdkStack extends cdk.Stack {
     })
     lambdaDs.createResolver({
       typeName: 'Query',
+      fieldName: 'feedRecent',
+    })
+    lambdaDs.createResolver({
+      typeName: 'Query',
       fieldName: 'feedForTextSearch',
     })
     lambdaDs.createResolver({

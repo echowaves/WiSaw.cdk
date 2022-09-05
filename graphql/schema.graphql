@@ -156,7 +156,7 @@ type Query {
     ): UploadUrlForMessage!
 
   zeroMoment: AWSDateTime!
-
+    
   feedByDate(
     daysAgo: Int!
     lat: Float!
@@ -166,6 +166,10 @@ type Query {
     ): PhotoFeed
   feedForWatcher(
     uuid: String!
+    pageNumber: Int!
+    batch: String!
+    ): PhotoFeed
+  feedRecent(    
     pageNumber: Int!
     batch: String!
     ): PhotoFeed

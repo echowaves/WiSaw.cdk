@@ -7,6 +7,7 @@ import zeroMoment from './controllers/photos/zeroMoment'
 
 import feedByDate from './controllers/photos/feedByDate'
 import feedForWatcher from './controllers/photos/feedForWatcher'
+import feedRecent from './controllers/photos/feedRecent'
 import feedForTextSearch from './controllers/photos/feedForTextSearch'
 
 import getPhotoDetails from './controllers/photos/getPhotoDetails'
@@ -127,12 +128,17 @@ exports.handler = async (event:AppSyncEvent) => {
         event.arguments.pageNumber,
         event.arguments.batch,
       )
-    case 'feedForTextSearch':
-      return await feedForTextSearch(
-        event.arguments.searchTerm,
+    case 'feedRecent':
+      return await feedRecent(
         event.arguments.pageNumber,
         event.arguments.batch,
       )
+    case 'feedForTextSearch':
+    return await feedForTextSearch(
+      event.arguments.searchTerm,
+      event.arguments.pageNumber,
+      event.arguments.batch,
+    )
     case 'getPhotoDetails':
       return await getPhotoDetails(
         event.arguments.photoId,
