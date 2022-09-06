@@ -8,7 +8,7 @@ export default async function main(
   pageNumber: number,
   batch: string,
 ) {
-  const limit = 100
+  const limit = 10
   const offset = pageNumber * limit
   // console.log({uuid})
   await psql.connect()
@@ -19,7 +19,7 @@ export default async function main(
     FROM "Photos" 
     WHERE
       active = true
-    ORDER BY "id" DESC
+    ORDER BY "updatedAt" DESC
     LIMIT ${limit}
     OFFSET ${offset}
     `)
