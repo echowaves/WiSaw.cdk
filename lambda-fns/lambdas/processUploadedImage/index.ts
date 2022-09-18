@@ -52,7 +52,7 @@ export async function main(event: any = {}, context: any) {
 
 const _genWebpThumb = async({image, Bucket, Key,}: {image: any, Bucket: string, Key: string}) => {
 // console.log(`_genWebpThumb started  ${Key}`)
-  const buffer = await sharp(image.Body).rotate().webp({lossless: false, quality: 80,}).resize({height: 300,}).toBuffer()
+  const buffer = await sharp(image.Body).rotate().webp({lossless: false, quality: 90,}).resize({height: 300,}).toBuffer()
   const s3 = new AWS.S3()
   await s3.putObject({
     Bucket,
