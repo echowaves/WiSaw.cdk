@@ -7,9 +7,11 @@
     "build": "echo 'buiding sharp!!!!!!!!!!!!!!!!!!!!!!!' && yarn && rm -rf node_modules/sharp && SHARP_IGNORE_GLOBAL_LIBVIPS=1 npm_config_arch=x64 npm_config_platform=linux yarn add sharp@0.30.1"
   },
   "dependencies": {
-    "@aws-cdk/aws-lambda-nodejs": "1.181.1",
-    "aws-sdk": "2.1265.0",
+    "@aws-cdk/aws-codestar-alpha": "2.80.0-alpha.0",
+    "aws-cdk-lib": "^2.80.0",
+    "aws-sdk": "2.1383.0",
     "class-transformer": "0.5.1",
+    "constructs": "^10.2.31",
     "moment": "2.29.4",
     "serverless-postgres": "2.0.0",
     "sharp": "0.30.1",

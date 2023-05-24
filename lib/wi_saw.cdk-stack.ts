@@ -1,19 +1,23 @@
-import * as cdk from "@aws-cdk/core"
-import * as s3 from "@aws-cdk/aws-s3"
-import * as s3n from "@aws-cdk/aws-s3-notifications"
-import * as ec2 from "@aws-cdk/aws-ec2"
-import * as lambda from "@aws-cdk/aws-lambda"
-import * as cloudfront from "@aws-cdk/aws-cloudfront"
-import * as origins from "@aws-cdk/aws-cloudfront-origins"
-import * as acm from "@aws-cdk/aws-certificatemanager"
-import * as route53 from "@aws-cdk/aws-route53"
-import * as logs from "@aws-cdk/aws-logs"
+import * as cdk from "aws-cdk-lib"
 
-import { LambdaFunction } from "@aws-cdk/aws-events-targets"
-import { Rule, Schedule } from "@aws-cdk/aws-events"
-import * as rds from "@aws-cdk/aws-rds"
-import * as appsync from "@aws-cdk/aws-appsync"
-import * as iam from "@aws-cdk/aws-iam"
+import * as ec2 from "aws-cdk-lib/aws-ec2"
+import * as s3 from "aws-cdk-lib/aws-s3"
+
+import * as s3n from "aws-cdk-lib/aws-s3-notifications"
+
+import * as lambda from "aws-cdk-lib/aws-lambda"
+import * as cloudfront from "aws-cdk-lib/aws-cloudfront"
+
+import * as logs from "aws-cdk-lib/aws-logs"
+
+import { LambdaFunction } from "aws-cdk-lib/aws-events-targets"
+import { Rule, Schedule } from "aws-cdk-lib/aws-events"
+import * as rds from "aws-cdk-lib/aws-rds"
+import * as appsync from "aws-cdk-lib/aws-appsync"
+import * as iam from "aws-cdk-lib/aws-iam"
+
+import { Construct } from "constructs"
+
 // import {ISecret, Secret,} from "@aws-cdk/aws-secretsmanager"
 // import * as path from 'path'
 
@@ -37,7 +41,7 @@ const config = require(`../.env.${deployEnv()}`).config()
 // }
 
 export class WiSawCdkStack extends cdk.Stack {
-  constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
+  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props)
 
     // The code that defines your stack goes here
@@ -80,6 +84,7 @@ export class WiSawCdkStack extends cdk.Stack {
       `wisaw-${deployEnv()}`,
       {
         instanceIdentifier: `wisaw-${deployEnv()}`,
+        instanceResourceId: config.DB_RESOURCE_ID,
         instanceEndpointAddress: `wisaw-${deployEnv()}.cbaw0b5dcxjh.us-east-1.rds.amazonaws.com`,
         port: 5432,
         securityGroups: [],
@@ -95,7 +100,7 @@ export class WiSawCdkStack extends cdk.Stack {
       `${deployEnv()}-WiSaw-appsyncApi-cdk`,
       {
         name: `${deployEnv()}-cdk-wisaw-appsync-api`,
-        schema: appsync.Schema.fromAsset("graphql/schema.graphql"),
+        schema: appsync.SchemaFile.fromAsset("graphql/schema.graphql"),
         authorizationConfig: {
           defaultAuthorization: {
             authorizationType: appsync.AuthorizationType.API_KEY,
@@ -328,6 +333,13 @@ export class WiSawCdkStack extends cdk.Stack {
 
       // const wisawCert = acm.Certificate.fromCertificateArn(this, 'wisawCert', "arn:aws:acm:us-east-1:963958500685:certificate/538e85e0-39f4-4d34-8580-86e8729e2c3c")
 
+      const viewerCertificate = cloudfront.ViewerCertificate.fromIamCertificate(
+        "arn:aws:acm:us-east-1:963958500685:certificate/538e85e0-39f4-4d34-8580-86e8729e2c3c",
+        {
+          aliases: ["www.wisaw.com"],
+        },
+      )
+
       new cloudfront.CloudFrontWebDistribution(this, "wisaw-distro", {
         originConfigs: [
           {
@@ -377,11 +389,12 @@ export class WiSawCdkStack extends cdk.Stack {
             ],
           },
         ],
-        aliasConfiguration: {
-          acmCertRef:
-            "arn:aws:acm:us-east-1:963958500685:certificate/538e85e0-39f4-4d34-8580-86e8729e2c3c", //wisawCert.certificateArn,
-          names: ["www.wisaw.com"],
-        },
+        viewerCertificate: viewerCertificate,
+        // aliasConfiguration: {
+        //   acmCertRef:
+        //     "arn:aws:acm:us-east-1:963958500685:certificate/538e85e0-39f4-4d34-8580-86e8729e2c3c", //wisawCert.certificateArn,
+        //   names: ["www.wisaw.com"],
+        // },
         errorConfigurations: [
           {
             errorCode: 403,
@@ -632,7 +645,8 @@ export class WiSawCdkStack extends cdk.Stack {
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Grant access to the database from the Lambda function
-    database.grantConnect(wisawFn)
+    database.grantConnect(wisawFn, config.username)
+
     // Set the new Lambda function as a data source for the AppSync API
     const lambdaDs = api.addLambdaDataSource(`lambdaDatasource`, wisawFn)
 
@@ -641,62 +655,62 @@ export class WiSawCdkStack extends cdk.Stack {
     // ******************************************************
     //                       queries
     // ******************************************************
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Query",
       fieldName: "generateUploadUrl",
     })
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Query",
       fieldName: "generateUploadUrlForMessage",
     })
 
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Query",
       fieldName: "zeroMoment",
     })
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Query",
       fieldName: "feedByDate",
     })
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Query",
       fieldName: "feedForWatcher",
     })
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Query",
       fieldName: "feedRecent",
     })
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Query",
       fieldName: "feedForTextSearch",
     })
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Query",
       fieldName: "getPhotoDetails",
     })
 
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolve", {
       typeName: "Query",
       fieldName: "getPhotoAllCurr",
     })
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Query",
       fieldName: "getPhotoAllNext",
     })
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Query",
       fieldName: "getPhotoAllPrev",
     })
 
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Query",
       fieldName: "getFriendshipsList",
     })
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Query",
       fieldName: "getUnreadCountsList",
     })
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Query",
       fieldName: "getMessagesList",
     })
@@ -704,66 +718,66 @@ export class WiSawCdkStack extends cdk.Stack {
     // ******************************************************
     //                       mutations
     // ******************************************************
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Mutation",
       fieldName: "createContactForm",
     })
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Mutation",
       fieldName: "createAbuseReport",
     })
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Mutation",
       fieldName: "createPhoto",
     })
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Mutation",
       fieldName: "watchPhoto",
     })
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Mutation",
       fieldName: "unwatchPhoto",
     })
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Mutation",
       fieldName: "deletePhoto",
     })
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Mutation",
       fieldName: "createComment",
     })
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Mutation",
       fieldName: "deleteComment",
     })
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Mutation",
       fieldName: "registerSecret",
     })
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Mutation",
       fieldName: "updateSecret",
     })
 
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Mutation",
       fieldName: "createFriendship",
     })
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Mutation",
       fieldName: "acceptFriendshipRequest",
     })
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Mutation",
       fieldName: "deleteFriendship",
     })
 
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Mutation",
       fieldName: "sendMessage",
     })
 
-    lambdaDs.createResolver({
+    lambdaDs.createResolver("graphqlResolver", {
       typeName: "Mutation",
       fieldName: "resetUnreadCount",
     })
