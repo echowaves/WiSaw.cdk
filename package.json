@@ -5,15 +5,10 @@
     "wi_saw.cdk": "bin/wi_saw.cdk.js"
   },
   "scripts": {
-    "build": "tsc",
-    "watch": "tsc -w",
     "test": "./node_modules/nyc/bin/nyc.js --reporter=html ./node_modules/mocha/bin/mocha --exit --require @babel/register ./tests/*.js --timeout 30000",
-    "cdk": "cdk",
-    "bootstrap": "cdk bootstrap",
-    "build-lambdas": "pushd lambda-fns; rm lambdas.zip; yarn build; zip -q -r lambdas.zip *; popd",
     "test:deploy": "DEPLOY_ENV=test npx cdk deploy",
     "test:destroy": "DEPLOY_ENV=test cdk destroy test-WiSawCdkStack",
-    "prod:deploy": "DEPLOY_ENV=prod yarn build && yarn build-lambdas && DEPLOY_ENV=prod npx cdk deploy -O cdk-exports.json",
+    "prod:deploy": "DEPLOY_ENV=prod npx cdk deploy",
     "prod:destroy": "DEPLOY_ENV=prod cdk destroy prod-WiSawCdkStack",
     "migrate": "./node_modules/.bin/sequelize db:migrate --env",
     "migrate-undo": "./node_modules/.bin/sequelize db:migrate:undo --env"
