@@ -90,7 +90,7 @@ export class WiSawCdkStack extends cdk.Stack {
         // handler: "index.handler",
         entry: `${__dirname}/../lambda-fns/index.ts`,
         bundling: {
-          target: "node16",
+          target: "node18",
           sourceMap: true,
           sourceMapMode: SourceMapMode.INLINE,
           sourcesContent: false,
@@ -114,7 +114,7 @@ export class WiSawCdkStack extends cdk.Stack {
         // handler: "index.handler",
         entry: `${__dirname}/../lambda-fns/lambdas/processUploadedImage/index.ts`,
         bundling: {
-          target: "node16",
+          target: "node18",
           sourceMap: true,
           sourceMapMode: SourceMapMode.INLINE,
           sourcesContent: false,
@@ -138,7 +138,7 @@ export class WiSawCdkStack extends cdk.Stack {
         // handler: "index.handler",
         entry: `${__dirname}/../lambda-fns/lambdas/processDeletedImage/index.ts`,
         bundling: {
-          target: "node16",
+          target: "node18",
           sourceMap: true,
           sourceMapMode: SourceMapMode.INLINE,
           sourcesContent: false,
@@ -163,7 +163,7 @@ export class WiSawCdkStack extends cdk.Stack {
         // handler: "index.handler",
         entry: `${__dirname}/../lambda-fns/lambdas/processUploadedPrivateImage/index.ts`,
         bundling: {
-          target: "node16",
+          target: "node18",
           sourceMap: true,
           sourceMapMode: SourceMapMode.INLINE,
           sourcesContent: false,
@@ -188,7 +188,7 @@ export class WiSawCdkStack extends cdk.Stack {
         // handler: "index.handler",
         entry: `${__dirname}/../lambda-fns/lambdas/processDeletedPrivateImage/index.ts`,
         bundling: {
-          target: "node16",
+          target: "node18",
           sourceMap: true,
           sourceMapMode: SourceMapMode.INLINE,
           sourcesContent: false,
@@ -213,7 +213,7 @@ export class WiSawCdkStack extends cdk.Stack {
         // handler: "index.handler",
         entry: `${__dirname}/../lambda-fns/lambdas/cleaupupAbuseReports/index.ts`,
         bundling: {
-          target: "node16",
+          target: "node18",
           sourceMap: true,
           sourceMapMode: SourceMapMode.INLINE,
           sourcesContent: false,
@@ -250,7 +250,7 @@ export class WiSawCdkStack extends cdk.Stack {
           // handler: "index.handler",
           entry: `${__dirname}/../lambda-fns/lambdas/generateSiteMap/index.ts`,
           bundling: {
-            target: "node16",
+            target: "node18",
             sourceMap: true,
             sourceMapMode: SourceMapMode.INLINE,
             sourcesContent: false,
