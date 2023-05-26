@@ -112,7 +112,7 @@ export class WiSawCdkStack extends cdk.Stack {
       {
         runtime: lambda.Runtime.NODEJS_18_X,
         // handler: "index.handler",
-        entry: `${__dirname}/../lambda-fns/lambdas/processUploadedImage.ts`,
+        entry: `${__dirname}/../lambda-fns/lambdas/processUploadedImage/index.ts`,
         bundling: {
           target: "node16",
           sourceMap: true,
@@ -136,7 +136,7 @@ export class WiSawCdkStack extends cdk.Stack {
       {
         runtime: lambda.Runtime.NODEJS_18_X,
         // handler: "index.handler",
-        entry: `${__dirname}/../lambda-fns/lambdas/processDeletedImage`,
+        entry: `${__dirname}/../lambda-fns/lambdas/processDeletedImage/index.ts`,
         bundling: {
           target: "node16",
           sourceMap: true,
@@ -161,7 +161,7 @@ export class WiSawCdkStack extends cdk.Stack {
       {
         runtime: lambda.Runtime.NODEJS_18_X,
         // handler: "index.handler",
-        entry: `${__dirname}/../lambda-fns/lambdas/processUploadedPrivateImage`,
+        entry: `${__dirname}/../lambda-fns/lambdas/processUploadedPrivateImage/index.ts`,
         bundling: {
           target: "node16",
           sourceMap: true,
@@ -186,7 +186,7 @@ export class WiSawCdkStack extends cdk.Stack {
       {
         runtime: lambda.Runtime.NODEJS_18_X,
         // handler: "index.handler",
-        entry: `${__dirname}/../lambda-fns/lambdas/processDeletedPrivateImage`,
+        entry: `${__dirname}/../lambda-fns/lambdas/processDeletedPrivateImage/index.ts`,
         bundling: {
           target: "node16",
           sourceMap: true,
@@ -211,7 +211,7 @@ export class WiSawCdkStack extends cdk.Stack {
       {
         runtime: lambda.Runtime.NODEJS_18_X,
         // handler: "index.handler",
-        entry: `${__dirname}/../lambda-fns/lambdas/cleaupupAbuseReports`,
+        entry: `${__dirname}/../lambda-fns/lambdas/cleaupupAbuseReports/index.ts`,
         bundling: {
           target: "node16",
           sourceMap: true,
@@ -248,7 +248,7 @@ export class WiSawCdkStack extends cdk.Stack {
         {
           runtime: lambda.Runtime.NODEJS_18_X,
           // handler: "index.handler",
-          entry: `${__dirname}/../lambda-fns/lambdas/generateSiteMap`,
+          entry: `${__dirname}/../lambda-fns/lambdas/generateSiteMap/index.ts`,
           bundling: {
             target: "node16",
             sourceMap: true,
@@ -297,7 +297,7 @@ export class WiSawCdkStack extends cdk.Stack {
             code: lambda.Code.fromAsset(
               path.join(
                 __dirname,
-                "../lambda-fns/lambdas/injectMetaTagsLambdaFunction",
+                "../lambda-fns/lambdas/injectMetaTagsLambdaFunction/index.ts",
               ),
             ),
             // code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
