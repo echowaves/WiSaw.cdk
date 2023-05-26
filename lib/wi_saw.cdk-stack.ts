@@ -297,7 +297,7 @@ export class WiSawCdkStack extends cdk.Stack {
             code: lambda.Code.fromAsset(
               path.join(
                 __dirname,
-                "../lambda-fns/lambdas/injectMetaTagsLambdaFunction/index.ts",
+                "../lambda-fns/lambdas/injectMetaTagsLambdaFunction",
               ),
             ),
             // code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
