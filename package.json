@@ -11,7 +11,7 @@
     "cdk": "cdk",
     "bootstrap": "cdk bootstrap",
     "build-lambdas": "pushd lambda-fns; rm lambdas.zip; yarn build; zip -q -r lambdas.zip *; popd",
-    "test:deploy": "DEPLOY_ENV=test yarn build && yarn build-lambdas && DEPLOY_ENV=test npx cdk deploy -O cdk-exports.json",
+    "test:deploy": "DEPLOY_ENV=test npx cdk deploy -O cdk-exports.json",
     "test:destroy": "DEPLOY_ENV=test cdk destroy test-WiSawCdkStack",
     "prod:deploy": "DEPLOY_ENV=prod yarn build && yarn build-lambdas && DEPLOY_ENV=prod npx cdk deploy -O cdk-exports.json",
     "prod:destroy": "DEPLOY_ENV=prod cdk destroy prod-WiSawCdkStack",
