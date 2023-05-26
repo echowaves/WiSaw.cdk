@@ -494,6 +494,7 @@ export class WiSawCdkStack extends cdk.Stack {
 
       { typeName: "Mutation", fieldName: "createContactForm" },
       { typeName: "Mutation", fieldName: "createAbuseReport" },
+      { typeName: "Mutation", fieldName: "createPhoto" },
       { typeName: "Mutation", fieldName: "watchPhoto" },
       { typeName: "Mutation", fieldName: "unwatchPhoto" },
       { typeName: "Mutation", fieldName: "deletePhoto" },
@@ -506,10 +507,9 @@ export class WiSawCdkStack extends cdk.Stack {
       { typeName: "Mutation", fieldName: "deleteFriendship" },
       { typeName: "Mutation", fieldName: "sendMessage" },
       { typeName: "Mutation", fieldName: "resetUnreadCount" },
-      { typeName: "Mutation", fieldName: "deleteTodo" },
     ]
     fields.forEach(({ typeName, fieldName }) =>
-      lambdaDs.createResolver(`${typeName}${fieldName}Resolver`, {
+      lambdaDs.createResolver(`${typeName}-${fieldName}-Resolver`, {
         typeName,
         fieldName,
       }),
