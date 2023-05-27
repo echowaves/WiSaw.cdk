@@ -1,25 +1,23 @@
-import * as moment from 'moment'
+import moment from "moment"
 
-const { SitemapStream, streamToPromise } = require('sitemap')
+const { SitemapStream, streamToPromise } = require("sitemap")
 
-import psql from '../../psql'
+import psql from "../../psql"
 
-const AWS = require('aws-sdk')
+import AWS from "aws-sdk"
 
 // eslint-disable-next-line import/prefer-default-export
 export async function main(event: any = {}, context: any /*, cb: any*/) {
-
-  const smStream = new SitemapStream({ hostname: 'https://www.wisaw.com'})
-  smStream.write({ url: '/',  changefreq: 'daily'})
-
+  const smStream = new SitemapStream({ hostname: "https://www.wisaw.com" })
+  smStream.write({ url: "/", changefreq: "daily" })
 
   let photos
   await psql.connect()
 
   // retrieve photos
   try {
-  photos =
-  (await psql.query(`  
+    photos = (
+      await psql.query(`  
         SELECT
         *
         FROM "Photos"
@@ -27,10 +25,10 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
             "commentsCount" > 0
         AND
             active = true
-      `)).rows
-
+      `)
+    ).rows
   } catch (err) {
-    console.log('Unable to retrieve Photos feed', {err})
+    console.log("Unable to retrieve Photos feed", { err })
     // return false
   }
   await psql.clean()
@@ -49,16 +47,18 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
   try {
     // console.log('uploading sitemap.xml')
 
-    await s3.putObject({
-      ACL: 'public-read',
-      Key: 'sitemap.xml',
-      Body: buffer.toString(),
-      Bucket: 'wisaw-client',
-    }).promise()
+    await s3
+      .putObject({
+        ACL: "public-read",
+        Key: "sitemap.xml",
+        Body: buffer.toString(),
+        Bucket: "wisaw-client",
+      })
+      .promise()
 
     // console.log('finished uploading')
   } catch (err) {
-    console.log('Unable to upload sitemap.xml', {err})
+    console.log("Unable to upload sitemap.xml", { err })
   }
 
   // console.log('done')

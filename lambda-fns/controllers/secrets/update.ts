@@ -1,13 +1,12 @@
-import * as moment from 'moment'
+import moment from "moment"
 
+import { plainToClass } from "class-transformer"
 
-import {plainToClass,} from 'class-transformer'
+import psql from "../../psql"
 
-import psql from '../../psql'
+import Secret from "../../models/secret"
 
-import Secret from '../../models/secret'
-
-import {_hash,} from './_hash'
+import { _hash } from "./_hash"
 
 /*
 
@@ -21,17 +20,22 @@ uuid       nickName       secret            outcome
 
 */
 
-export default async function main(uuid: string, nickName: string, secret: string, newSecret: string) {
+export default async function main(
+  uuid: string,
+  nickName: string,
+  secret: string,
+  newSecret: string,
+) {
   const updatedAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
   const secretValid = newSecret.length >= 5 && newSecret.length <= 512
 
-  if(!secretValid) {
+  if (!secretValid) {
     throw new Error(`Invalid new Secret`)
   }
   await psql.connect()
 
-  const updatedSecret =
-  (await psql.query(`
+  const updatedSecret = (
+    await psql.query(`
     UPDATE "Secrets"
                   SET
                     "secret" = '${_hash(newSecret)}',
@@ -43,9 +47,9 @@ export default async function main(uuid: string, nickName: string, secret: strin
                     AND
                     "secret" = '${_hash(secret)}'
                   returning *
-                  `
-  )).rows
-  if(updatedSecret.length !== 1) {
+                  `)
+  ).rows
+  if (updatedSecret.length !== 1) {
     throw new Error(`Failed to update secret`)
   }
 

@@ -1,8 +1,8 @@
-import * as moment from 'moment'
-import psql from '../../psql'
+import moment from "moment"
+import psql from "../../psql"
 
-import {plainToClass,} from 'class-transformer'
-import Photo from '../../models/photo'
+import { plainToClass } from "class-transformer"
+import Photo from "../../models/photo"
 
 export default async function main(
   daysAgo: number,
@@ -15,8 +15,8 @@ export default async function main(
   const whenToStopDate = moment(whenToStop)
 
   await psql.connect()
-  const results =
-  (await psql.query(`
+  const results = (
+    await psql.query(`
     SELECT
     *
     , ST_Distance(
@@ -27,8 +27,15 @@ export default async function main(
 
     FROM "Photos"
     WHERE
-        "createdAt" >= '${currentDate.clone().subtract(daysAgo, 'days').format("YYYY-MM-DD HH:mm:ss.SSS")}'
-    AND "createdAt" <= '${currentDate.clone().add(1, 'days').subtract(daysAgo, 'days').format("YYYY-MM-DD HH:mm:ss.SSS")}'
+        "createdAt" >= '${currentDate
+          .clone()
+          .subtract(daysAgo, "days")
+          .format("YYYY-MM-DD HH:mm:ss.SSS")}'
+    AND "createdAt" <= '${currentDate
+      .clone()
+      .add(1, "days")
+      .subtract(daysAgo, "days")
+      .format("YYYY-MM-DD HH:mm:ss.SSS")}'
     AND active = true
     ORDER BY distance
     LIMIT 100
@@ -42,7 +49,7 @@ export default async function main(
 
   let noMoreData = false
 
-  if(currentDate.clone().subtract(daysAgo, 'days').diff(whenToStopDate) < 0 ) {
+  if (currentDate.clone().subtract(daysAgo, "days").diff(whenToStopDate) < 0) {
     noMoreData = true
   }
 

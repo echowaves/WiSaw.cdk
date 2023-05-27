@@ -1,52 +1,59 @@
-import psql from '../../psql'
+import psql from "../../psql"
 
-const AWS = require('aws-sdk')
+import AWS from "aws-sdk"
 
 // eslint-disable-next-line import/prefer-default-export
 export async function main(event: any = {}, context: any) {
   const record = event.Records[0]
   const name = record.s3.object.key
 
-  const photoHash = name.replace('-thumb', '')
+  const photoHash = name.replace("-thumb", "")
   // we only want to deal with originals
   // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!deleting image: ${name}`)
   // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!       photoHash: ${photoHash}`)
 
   await Promise.all([
-    _deleteUpload({Bucket: record.s3.bucket.name, Key: `${photoHash}`,}),
-    _cleanupTables({photoHash,}),
+    _deleteUpload({ Bucket: record.s3.bucket.name, Key: `${photoHash}` }),
+    _cleanupTables({ photoHash }),
   ])
 
   // cb(null, 'success everything')
   return true
 }
 
-const _deleteUpload = async({Bucket, Key,}: {Bucket: string, Key: string}) => {
+const _deleteUpload = async ({
+  Bucket,
+  Key,
+}: {
+  Bucket: string
+  Key: string
+}) => {
   try {
     const s3 = new AWS.S3()
-    await s3.deleteObject({
-      Bucket,
-      Key,
-    }).promise()
+    await s3
+      .deleteObject({
+        Bucket,
+        Key,
+      })
+      .promise()
   } catch (err) {
-    console.log('Error deleting object')
-    console.log({err,})
+    console.log("Error deleting object")
+    console.log({ err })
   }
 }
 
-const _cleanupTables = async({photoHash,}: {photoHash: string}) => {
+const _cleanupTables = async ({ photoHash }: { photoHash: string }) => {
   await psql.connect()
   try {
     await psql.query(`
                     DELETE from "ChatPhotos"
                     WHERE
                     "chatPhotoHash" = '${photoHash}'
-                    `
-    )
+                    `)
     //
   } catch (err) {
-    console.log('Error ChatPhotos delete')
-    console.log({err,})
+    console.log("Error ChatPhotos delete")
+    console.log({ err })
   }
 
   try {
@@ -54,13 +61,11 @@ const _cleanupTables = async({photoHash,}: {photoHash: string}) => {
                     DELETE from "Messages"
                     WHERE
                     "chatPhotoHash" = '${photoHash}'
-                    `
-    )
+                    `)
     //
   } catch (err) {
-    console.log('Error Messages delete')
-    console.log({err,})
+    console.log("Error Messages delete")
+    console.log({ err })
   }
   await psql.clean()
-
 }

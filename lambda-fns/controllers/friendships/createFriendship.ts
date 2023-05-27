@@ -1,19 +1,18 @@
-import * as moment from 'moment'
+import moment from "moment"
 
-import {validate as uuidValidate, v4 as uuidv4,} from 'uuid'
+import { validate as uuidValidate, v4 as uuidv4 } from "uuid"
 
-import {plainToClass,} from 'class-transformer'
+import { plainToClass } from "class-transformer"
 
-import psql from '../../psql'
+import psql from "../../psql"
 
-import Friendship from '../../models/friendship'
-import Chat from '../../models/chat'
-import ChatUser from '../../models/chatUser'
+import Friendship from "../../models/friendship"
+import Chat from "../../models/chat"
+import ChatUser from "../../models/chatUser"
 
 export default async function main(uuid: string) {
-
   // here validate values before inserting into DB
-  if(uuidValidate(uuid) === false) {
+  if (uuidValidate(uuid) === false) {
     throw new Error(`Wrong UUID format`)
   }
 
@@ -25,9 +24,10 @@ export default async function main(uuid: string) {
   await psql.connect()
 
   try {
-    await psql.query('BEGIN')
+    await psql.query("BEGIN")
 
-    const friendship = (await psql.query(`      
+    const friendship = (
+      await psql.query(`      
                       INSERT INTO "Friendships"
                       (
                         "friendshipUuid",
@@ -41,9 +41,11 @@ export default async function main(uuid: string) {
                       '${createdAt}'
                       ) 
                       returning *
-                      `)).rows[0]
+                      `)
+    ).rows[0]
 
-    const chat = (await psql.query(`      
+    const chat = (
+      await psql.query(`      
                       INSERT INTO "Chats"
                       (
                           "chatUuid",
@@ -53,9 +55,11 @@ export default async function main(uuid: string) {
                         '${createdAt}'
                       )
                       returning *
-                      `)).rows[0]
+                      `)
+    ).rows[0]
 
-    const chatUser = (await psql.query(`      
+    const chatUser = (
+      await psql.query(`      
                       INSERT INTO "ChatUsers"
                       (
                           "chatUuid",
@@ -71,20 +75,21 @@ export default async function main(uuid: string) {
                         '${createdAt}'
                       )
                       returning *
-                      `)).rows[0]
+                      `)
+    ).rows[0]
 
-    await psql.query('COMMIT')
+    await psql.query("COMMIT")
     await psql.clean()
     // console.log({friendship, friend, chat, chatUser,})
     return {
-      friendship:plainToClass(Friendship, friendship),
+      friendship: plainToClass(Friendship, friendship),
       chat: plainToClass(Chat, chat),
-      chatUser:plainToClass(ChatUser, chatUser),
+      chatUser: plainToClass(ChatUser, chatUser),
     }
   } catch (e) {
     console.error(e)
-    await psql.query('ROLLBACK')
+    await psql.query("ROLLBACK")
     await psql.clean()
-    throw('unable to create friendship')
+    throw "unable to create friendship"
   }
 }

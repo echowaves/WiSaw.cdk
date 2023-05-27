@@ -1,19 +1,21 @@
-// import * as moment from 'moment'
+import psql from "../../psql"
 
-import psql from '../../psql'
-
-const AWS = require('aws-sdk')
+import AWS from "aws-sdk"
 
 // import AbuseReport from '../../models/abuseReport'
 
-export default async function main(uuid: string, photoHash: string, contentType: string) {
+export default async function main(
+  uuid: string,
+  photoHash: string,
+  contentType: string,
+) {
   // console.log("generateUploadUrlForMessage:: started")
 
   const assetKey = `${photoHash}.upload`
 
   await psql.connect()
-  const result =
-  (await psql.query(`
+  const result = (
+    await psql.query(`
   SELECT * FROM "ChatPhotos"
     WHERE
       "chatPhotoHash" = '${photoHash}'
@@ -23,9 +25,10 @@ export default async function main(uuid: string, photoHash: string, contentType:
 
   // console.log("ChatPhotos", {result,})
 
-  if(result.length === 1) { // the photo with this hash already
+  if (result.length === 1) {
+    // the photo with this hash already
     const chatPhoto = result[0]
-    if(uuid !== chatPhoto.uuid) {
+    if (uuid !== chatPhoto.uuid) {
       throw "The asset already uploaded from a different device"
     }
     return {
@@ -48,17 +51,16 @@ export default async function main(uuid: string, photoHash: string, contentType:
   //                   `
   // )[0]
 
-
   const s3 = new AWS.S3()
   const s3Params = {
     Bucket: process.env.S3_BUCKET_PRIVATE,
     Key: `${assetKey}`,
     ContentType: contentType,
     Expires: 60 * 60, // expires in 1 minute * 60 minutes, after that request a new URL
-    ACL: 'public-read',
+    ACL: "public-read",
   }
 
-  const uploadUrl = s3.getSignedUrl('putObject', s3Params)
+  const uploadUrl = s3.getSignedUrl("putObject", s3Params)
 
   return {
     newAsset: true,

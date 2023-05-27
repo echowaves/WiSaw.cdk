@@ -118,6 +118,8 @@ export class WiSawCdkStack extends cdk.Stack {
           sourceMap: true,
           sourceMapMode: SourceMapMode.INLINE,
           sourcesContent: false,
+          nodeModules: ["sharp"],
+          // forceDockerBundling: true,
         },
         insightsVersion,
         logRetention,
@@ -320,12 +322,10 @@ export class WiSawCdkStack extends cdk.Stack {
 
       // const wisawCert = acm.Certificate.fromCertificateArn(this, 'wisawCert', "arn:aws:acm:us-east-1:963958500685:certificate/538e85e0-39f4-4d34-8580-86e8729e2c3c")
 
-      const viewerCertificate = cloudfront.ViewerCertificate.fromIamCertificate(
-        "arn:aws:acm:us-east-1:963958500685:certificate/538e85e0-39f4-4d34-8580-86e8729e2c3c",
-        {
-          aliases: ["www.wisaw.com"],
-        },
-      )
+      const viewerCertificate =
+        cloudfront.ViewerCertificate.fromCloudFrontDefaultCertificate(
+          "www.wisaw.com",
+        )
 
       new cloudfront.CloudFrontWebDistribution(this, "wisaw-distro", {
         originConfigs: [
@@ -363,7 +363,7 @@ export class WiSawCdkStack extends cdk.Stack {
             ],
           },
         ],
-        viewerCertificate: viewerCertificate,
+        viewerCertificate,
         errorConfigurations: [
           {
             errorCode: 403,

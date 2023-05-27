@@ -6,6 +6,8 @@
       "es2018",
       "dom"
     ],
+    "esModuleInterop": true,
+    "moduleResolution": "node",
     "declaration": true,
     "strict": true,
     "noImplicitAny": true,

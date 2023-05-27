@@ -1,22 +1,28 @@
-import * as moment from 'moment'
+import moment from "moment"
 
-import {plainToClass,} from 'class-transformer'
+import { plainToClass } from "class-transformer"
 
-import psql from '../../psql'
+import psql from "../../psql"
 
-import Photo from '../../models/photo'
-import watch from './watch'
+import Photo from "../../models/photo"
+import watch from "./watch"
 
-export default async function main(uuid: string, lat: number, lon: number, video: boolean) {
+export default async function main(
+  uuid: string,
+  lat: number,
+  lon: number,
+  video: boolean,
+) {
   await psql.connect()
   // first count how many times photos from this device were reported
-  const abuseCount =
-    (await psql.query(`
+  const abuseCount = (
+    await psql.query(`
       SELECT COUNT(*)
               FROM "AbuseReports"
               INNER JOIN "Photos" on "AbuseReports"."photoId" = "Photos"."id"
               WHERE "Photos"."uuid" = '${uuid}'
-  `)).rows[0].count
+  `)
+  ).rows[0].count
 
   // console.log({abuseCount})
 
@@ -27,8 +33,8 @@ export default async function main(uuid: string, lat: number, lon: number, video
   const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
   const updatedAt = createdAt
 
-  const photo =
-  (await psql.query(`
+  const photo = (
+    await psql.query(`
                     INSERT INTO "Photos"
                     (
                         "uuid",
@@ -39,13 +45,13 @@ export default async function main(uuid: string, lat: number, lon: number, video
                     ) values (
                       '${uuid}',
                       ST_MakePoint(${lat}, ${lon}),
-                      ${video ? true: false}, 
+                      ${video ? true : false}, 
                       '${createdAt}',
                       '${updatedAt}'
                     )
                     returning *
-                    `
-  )).rows[0]
+                    `)
+  ).rows[0]
   await psql.clean()
 
   await watch(photo.id, uuid)
