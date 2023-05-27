@@ -112,12 +112,11 @@ export class WiSawCdkStack extends cdk.Stack {
       `${deployEnv()}_processUploadedImage`,
       {
         runtime: lambda.Runtime.NODEJS_18_X,
-        // handler: "index.handler",
         entry: `${__dirname}/../lambda-fns/lambdas/processUploadedImage/index.ts`,
         handler: "main",
         bundling: {
-          // minify: true,
-          // target: "es2020",
+          minify: true,
+          target: "es2020",
           sourceMap: true,
           sourceMapMode: SourceMapMode.INLINE,
           sourcesContent: false,
@@ -133,7 +132,40 @@ export class WiSawCdkStack extends cdk.Stack {
         insightsVersion,
         logRetention,
         // memorySize: 10240,
-        memorySize: 3008,
+        memorySize: 10000,
+        timeout: cdk.Duration.seconds(30),
+        environment: {
+          ...config,
+        },
+      },
+    )
+
+    const processUploadedPrivateImageLambdaFunction = new NodejsFunction(
+      this,
+      `${deployEnv()}_processUploadedPrivateImage`,
+      {
+        runtime: lambda.Runtime.NODEJS_18_X,
+        entry: `${__dirname}/../lambda-fns/lambdas/processUploadedPrivateImage/index.ts`,
+        handler: "main",
+        bundling: {
+          minify: true,
+          target: "es2020",
+          sourceMap: true,
+          sourceMapMode: SourceMapMode.INLINE,
+          sourcesContent: false,
+          externalModules: ["sharp"],
+        },
+        layers: [
+          lambda.LayerVersion.fromLayerVersionArn(
+            this,
+            "layer:sharp-layer:processUploadedPrivateImage",
+            "arn:aws:lambda:us-east-1:963958500685:layer:sharp-layer:2",
+          ),
+        ],
+        insightsVersion,
+        logRetention,
+        memorySize: 10240,
+        // memorySize: 3008,
         timeout: cdk.Duration.seconds(30),
         environment: {
           ...config,
@@ -155,40 +187,6 @@ export class WiSawCdkStack extends cdk.Stack {
           sourcesContent: false,
         },
         handler: "index.main",
-        insightsVersion,
-        logRetention,
-        // memorySize: 10240,
-        memorySize: 3008,
-        timeout: cdk.Duration.seconds(30),
-        environment: {
-          ...config,
-        },
-      },
-    )
-
-    const processUploadedPrivateImageLambdaFunction = new NodejsFunction(
-      this,
-      `${deployEnv()}_processUploadedPrivateImage`,
-      {
-        runtime: lambda.Runtime.NODEJS_18_X,
-        // handler: "index.handler",
-        entry: `${__dirname}/../lambda-fns/lambdas/processUploadedPrivateImage/index.ts`,
-        handler: "main",
-        bundling: {
-          // minify: true,
-          // target: "es2020",
-          sourceMap: true,
-          sourceMapMode: SourceMapMode.INLINE,
-          sourcesContent: false,
-          externalModules: ["sharp"],
-        },
-        layers: [
-          lambda.LayerVersion.fromLayerVersionArn(
-            this,
-            "layer:sharp-layer:processUploadedPrivateImage",
-            "arn:aws:lambda:us-east-1:963958500685:layer:sharp-layer:2",
-          ),
-        ],
         insightsVersion,
         logRetention,
         // memorySize: 10240,
