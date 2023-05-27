@@ -13,6 +13,7 @@ import * as logs from "aws-cdk-lib/aws-logs"
 import { LambdaFunction } from "aws-cdk-lib/aws-events-targets"
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs"
 import { SourceMapMode } from "aws-cdk-lib/aws-lambda-nodejs"
+import { Architecture } from "aws-cdk-lib/aws-lambda"
 
 import { Rule, Schedule } from "aws-cdk-lib/aws-events"
 import * as rds from "aws-cdk-lib/aws-rds"
@@ -118,8 +119,9 @@ export class WiSawCdkStack extends cdk.Stack {
           sourceMap: true,
           sourceMapMode: SourceMapMode.INLINE,
           sourcesContent: false,
-          nodeModules: ["sharp"],
-          // forceDockerBundling: true,
+          externalModules: ["sharp"],
+          // nodeModules: ["sharp"],
+          // command: ["npm rebuild sharp --arch=x64 --platform=linux sharp"],
         },
         insightsVersion,
         logRetention,

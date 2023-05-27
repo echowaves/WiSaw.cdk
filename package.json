@@ -5,10 +5,11 @@
     "wi_saw.cdk": "bin/wi_saw.cdk.js"
   },
   "scripts": {
+    "build": "echo 'buiding sharp!!!!!!!!!!!!!!!!!!!!!!!' && rm -rf node_modules/sharp && SHARP_IGNORE_GLOBAL_LIBVIPS=1 npm_config_arch=x64 npm_config_platform=linux yarn add sharp@0.30.1",
     "test": "./node_modules/nyc/bin/nyc.js --reporter=html ./node_modules/mocha/bin/mocha --exit --require @babel/register ./tests/*.js --timeout 30000",
-    "test:deploy": "DEPLOY_ENV=test npx cdk deploy",
+    "test:deploy": "yarn build && DEPLOY_ENV=test npx cdk deploy",
     "test:destroy": "DEPLOY_ENV=test npx cdk destroy test-WiSawCdkStack",
-    "prod:deploy": "DEPLOY_ENV=prod npx cdk deploy",
+    "prod:deploy": "yarn build && DEPLOY_ENV=prod npx cdk deploy",
     "prod:destroy": "DEPLOY_ENV=prod npx cdk destroy prod-WiSawCdkStack",
     "migrate": "./node_modules/.bin/sequelize db:migrate --env",
     "migrate-undo": "./node_modules/.bin/sequelize db:migrate:undo --env"
@@ -40,16 +41,16 @@
     "typescript": "5.0.4"
   },
   "dependencies": {
-    "aws-sdk": "2.1386.0",
-    "sitemap": "7.1.1",
-    "class-transformer": "0.5.1",
     "aws-cdk-lib": "^2.81.0",
+    "aws-sdk": "2.1386.0",
+    "class-transformer": "0.5.1",
     "constructs": "^10.2.31",
     "global": "4.4.0",
     "moment": "2.29.4",
     "node-fetch": "^3.3.1",
     "serverless-postgres": "2.0.2",
     "sharp": "0.30.1",
+    "sitemap": "7.1.1",
     "source-map-support": "0.5.21",
     "uuid": "9.0.0"
   }
