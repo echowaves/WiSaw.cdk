@@ -126,7 +126,7 @@ export class WiSawCdkStack extends cdk.Stack {
         layers: [
           lambda.LayerVersion.fromLayerVersionArn(
             this,
-            "layer:sharp-layer",
+            "layer:sharp-layer:processUploadedImage",
             "arn:aws:lambda:us-east-1:963958500685:layer:sharp-layer:2",
           ),
         ],
@@ -173,13 +173,22 @@ export class WiSawCdkStack extends cdk.Stack {
         runtime: lambda.Runtime.NODEJS_18_X,
         // handler: "index.handler",
         entry: `${__dirname}/../lambda-fns/lambdas/processUploadedPrivateImage/index.ts`,
+        handler: "main",
         bundling: {
-          target: "node18",
+          // minify: true,
+          // target: "es2020",
           sourceMap: true,
           sourceMapMode: SourceMapMode.INLINE,
           sourcesContent: false,
+          externalModules: ["sharp"],
         },
-        handler: "index.main",
+        layers: [
+          lambda.LayerVersion.fromLayerVersionArn(
+            this,
+            "layer:sharp-layer:processUploadedPrivateImage",
+            "arn:aws:lambda:us-east-1:963958500685:layer:sharp-layer:2",
+          ),
+        ],
         insightsVersion,
         logRetention,
         // memorySize: 10240,
