@@ -1,5 +1,3 @@
-import moment from "moment"
-
 const { SitemapStream, streamToPromise } = require("sitemap")
 
 import psql from "../../psql"
