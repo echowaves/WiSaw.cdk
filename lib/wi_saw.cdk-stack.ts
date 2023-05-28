@@ -362,7 +362,7 @@ export class WiSawCdkStack extends cdk.Stack {
           this,
           `${deployEnv()}_injectMetaTagsLambdaFunction`,
           {
-            runtime: lambda.Runtime.NODEJS_18_X,
+            runtime: lambda.Runtime.NODEJS_14_X,
             code: lambda.Code.fromAsset(
               path.join(
                 __dirname,
@@ -402,6 +402,7 @@ export class WiSawCdkStack extends cdk.Stack {
       )
 
       new cloudfront.CloudFrontWebDistribution(this, "wisaw-distro", {
+        priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
         originConfigs: [
           {
             s3OriginSource: {
