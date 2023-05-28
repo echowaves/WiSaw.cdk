@@ -22,6 +22,7 @@ import * as appsync from "aws-cdk-lib/aws-appsync"
 import * as iam from "aws-cdk-lib/aws-iam"
 
 import { Construct } from "constructs"
+import { TagOptions } from "aws-cdk-lib/aws-servicecatalog"
 
 // import {ISecret, Secret,} from "@aws-cdk/aws-secretsmanager"
 // import * as path from 'path'
@@ -83,6 +84,9 @@ export class WiSawCdkStack extends cdk.Stack {
       lambda.LambdaInsightsVersion.fromInsightVersionArn(layerArn)
     const logRetention = logs.RetentionDays.TWO_WEEKS
 
+    const sharpLayerArn =
+      "arn:aws:lambda:us-east-1:963958500685:layer:sharp-layer:2"
+
     // Create the Lambda function that will map GraphQL operations into Postgres
     const wisawFn = new NodejsFunction(
       this,
@@ -91,16 +95,26 @@ export class WiSawCdkStack extends cdk.Stack {
         runtime: lambda.Runtime.NODEJS_18_X,
         // handler: "index.handler",
         entry: `${__dirname}/../lambda-fns/index.ts`,
+        handler: "main",
         bundling: {
-          target: "node18",
+          minify: true,
+          target: "es2020",
           sourceMap: true,
           sourceMapMode: SourceMapMode.INLINE,
           sourcesContent: false,
+          externalModules: ["sharp"],
         },
+        layers: [
+          lambda.LayerVersion.fromLayerVersionArn(
+            this,
+            `${deployEnv()}-GraphQlMapFunction`,
+            sharpLayerArn,
+          ),
+        ],
         insightsVersion,
         logRetention,
-        // memorySize: 10240,
-        memorySize: 3008,
+        memorySize: 10240,
+        // memorySize: 3008,
         timeout: cdk.Duration.seconds(30),
         environment: {
           ...config,
@@ -121,19 +135,19 @@ export class WiSawCdkStack extends cdk.Stack {
           sourceMap: true,
           sourceMapMode: SourceMapMode.INLINE,
           sourcesContent: false,
-          externalModules: ["sharp", "aws-sdk"],
+          externalModules: ["sharp"],
         },
         layers: [
           lambda.LayerVersion.fromLayerVersionArn(
             this,
-            "layer:sharp-layer:processUploadedImage",
-            "arn:aws:lambda:us-east-1:963958500685:layer:sharp-layer:2",
+            `${deployEnv()}-processUploadedImage`,
+            sharpLayerArn,
           ),
         ],
         insightsVersion,
         logRetention,
-        // memorySize: 10240,
-        memorySize: 10000,
+        memorySize: 10240,
+        // memorySize: 3008,
         timeout: cdk.Duration.seconds(30),
         environment: {
           ...config,
@@ -154,13 +168,13 @@ export class WiSawCdkStack extends cdk.Stack {
           sourceMap: true,
           sourceMapMode: SourceMapMode.INLINE,
           sourcesContent: false,
-          externalModules: ["sharp", "aws-sdk"],
+          externalModules: ["sharp"],
         },
         layers: [
           lambda.LayerVersion.fromLayerVersionArn(
             this,
-            "layer:sharp-layer:processUploadedPrivateImage",
-            "arn:aws:lambda:us-east-1:963958500685:layer:sharp-layer:2",
+            `${deployEnv()}-processUploadedPrivateImage`,
+            sharpLayerArn,
           ),
         ],
         insightsVersion,
@@ -181,17 +195,26 @@ export class WiSawCdkStack extends cdk.Stack {
         runtime: lambda.Runtime.NODEJS_18_X,
         // handler: "index.handler",
         entry: `${__dirname}/../lambda-fns/lambdas/processDeletedImage/index.ts`,
+        handler: "main",
         bundling: {
-          target: "node18",
+          minify: true,
+          target: "es2020",
           sourceMap: true,
           sourceMapMode: SourceMapMode.INLINE,
           sourcesContent: false,
+          externalModules: ["sharp"],
         },
-        handler: "index.main",
+        layers: [
+          lambda.LayerVersion.fromLayerVersionArn(
+            this,
+            `${deployEnv()}-_processDeletedImage`,
+            sharpLayerArn,
+          ),
+        ],
         insightsVersion,
         logRetention,
-        // memorySize: 10240,
-        memorySize: 3008,
+        memorySize: 10240,
+        // memorySize: 3008,
         timeout: cdk.Duration.seconds(30),
         environment: {
           ...config,
@@ -206,17 +229,26 @@ export class WiSawCdkStack extends cdk.Stack {
         runtime: lambda.Runtime.NODEJS_18_X,
         // handler: "index.handler",
         entry: `${__dirname}/../lambda-fns/lambdas/processDeletedPrivateImage/index.ts`,
+        handler: "main",
         bundling: {
-          target: "node18",
+          minify: true,
+          target: "es2020",
           sourceMap: true,
           sourceMapMode: SourceMapMode.INLINE,
           sourcesContent: false,
+          externalModules: ["sharp"],
         },
-        handler: "index.main",
+        layers: [
+          lambda.LayerVersion.fromLayerVersionArn(
+            this,
+            `${deployEnv()}-_processDeletedPrivateImage`,
+            sharpLayerArn,
+          ),
+        ],
         insightsVersion,
         logRetention,
-        // memorySize: 10240,
-        memorySize: 3008,
+        memorySize: 10240,
+        // memorySize: 3008,
         timeout: cdk.Duration.seconds(30),
         environment: {
           ...config,
@@ -224,24 +256,33 @@ export class WiSawCdkStack extends cdk.Stack {
       },
     )
 
-    const cleaupupAbuseReports_LambdaFunction = new NodejsFunction(
+    const cleanupAbuseReports_LambdaFunction = new NodejsFunction(
       this,
       `${deployEnv()}_cleaupupAbuseReports`,
       {
         runtime: lambda.Runtime.NODEJS_18_X,
         // handler: "index.handler",
         entry: `${__dirname}/../lambda-fns/lambdas/cleaupupAbuseReports/index.ts`,
+        handler: "main",
         bundling: {
-          target: "node18",
+          minify: true,
+          target: "es2020",
           sourceMap: true,
           sourceMapMode: SourceMapMode.INLINE,
           sourcesContent: false,
+          externalModules: ["sharp"],
         },
-        handler: "index.main",
+        layers: [
+          lambda.LayerVersion.fromLayerVersionArn(
+            this,
+            `${deployEnv()}-_cleaupupAbuseReports`,
+            sharpLayerArn,
+          ),
+        ],
         insightsVersion,
         logRetention,
-        // memorySize: 10240,
-        memorySize: 3008,
+        memorySize: 10240,
+        // memorySize: 3008,
         timeout: cdk.Duration.seconds(30),
         environment: {
           ...config,
@@ -250,7 +291,7 @@ export class WiSawCdkStack extends cdk.Stack {
     )
 
     const cleaupupAbuseReports_LambdaTarget = new LambdaFunction(
-      cleaupupAbuseReports_LambdaFunction,
+      cleanupAbuseReports_LambdaFunction,
     )
 
     new Rule(this, `${deployEnv()}_lambda-polling-rule`, {
@@ -268,17 +309,26 @@ export class WiSawCdkStack extends cdk.Stack {
           runtime: lambda.Runtime.NODEJS_18_X,
           // handler: "index.handler",
           entry: `${__dirname}/../lambda-fns/lambdas/generateSiteMap/index.ts`,
+          handler: "main",
           bundling: {
-            target: "node18",
+            minify: true,
+            target: "es2020",
             sourceMap: true,
             sourceMapMode: SourceMapMode.INLINE,
             sourcesContent: false,
+            externalModules: ["sharp"],
           },
-          handler: "index.main",
+          layers: [
+            lambda.LayerVersion.fromLayerVersionArn(
+              this,
+              `${deployEnv()}-_generateSiteMap`,
+              sharpLayerArn,
+            ),
+          ],
           insightsVersion,
           logRetention,
-          // memorySize: 10240,
-          memorySize: 3008,
+          memorySize: 10240,
+          // memorySize: 3008,
           timeout: cdk.Duration.seconds(30),
           environment: {
             ...config,
@@ -344,6 +394,11 @@ export class WiSawCdkStack extends cdk.Stack {
           "my_cert",
           "arn:aws:acm:us-east-1:963958500685:certificate/538e85e0-39f4-4d34-8580-86e8729e2c3c",
         ),
+        {
+          aliases: ["www.wisaw.com"],
+          securityPolicy: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
+          sslMethod: cloudfront.SSLMethod.SNI, // default
+        },
       )
 
       new cloudfront.CloudFrontWebDistribution(this, "wisaw-distro", {
@@ -358,27 +413,27 @@ export class WiSawCdkStack extends cdk.Stack {
                 isDefaultBehavior: true,
                 compress: true,
               },
-              {
-                pathPattern: "photos/*",
-                compress: true,
-                allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
-                minTtl: cdk.Duration.days(10),
-                maxTtl: cdk.Duration.days(10),
-                defaultTtl: cdk.Duration.days(10),
-                forwardedValues: {
-                  queryString: true,
-                  cookies: {
-                    forward: "all",
-                  },
-                },
-                lambdaFunctionAssociations: [
-                  {
-                    eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
-                    lambdaFunction: injectMetaTagsLambdaFunction,
-                    includeBody: true,
-                  },
-                ],
-              },
+              // {
+              //   pathPattern: "photos/*",
+              //   compress: true,
+              //   allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
+              //   minTtl: cdk.Duration.days(10),
+              //   maxTtl: cdk.Duration.days(10),
+              //   defaultTtl: cdk.Duration.days(10),
+              //   forwardedValues: {
+              //     queryString: true,
+              //     cookies: {
+              //       forward: "all",
+              //     },
+              //   },
+              //   lambdaFunctionAssociations: [
+              //     {
+              //       eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
+              //       lambdaFunction: injectMetaTagsLambdaFunction,
+              //       includeBody: true,
+              //     },
+              //   ],
+              // },
             ],
           },
         ],

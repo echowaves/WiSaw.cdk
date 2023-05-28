@@ -92,7 +92,7 @@ type AppSyncEvent = {
   }
 }
 
-exports.handler = async (event: AppSyncEvent) => {
+exports.main = async (event: AppSyncEvent) => {
   switch (event.info.fieldName) {
     // ******************************************************
     //                       queries
