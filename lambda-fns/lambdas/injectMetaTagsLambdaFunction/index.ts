@@ -4,8 +4,14 @@ export async function main(event: any = {}, context: any, callback: any) {
   // console.log({event: JSON.stringify(event)})
   const { request } = event.Records[0].cf
   const imageId = request.uri.replace("/photos/", "")
+  console.log(
+    ".......................................at the start..............................",
+  )
 
   console.log({ imageId })
+  console.log({ request })
+  // console.log({ event: event.Records[0].cf })
+  // callback(null, request)
 
   const s3 = new AWS.S3()
 
@@ -52,6 +58,9 @@ export async function main(event: any = {}, context: any, callback: any) {
     },
     body,
   }
-
+  console.log(
+    ".......................................at the end..............................",
+  )
+  console.log({ response })
   callback(null, response)
 }

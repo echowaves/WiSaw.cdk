@@ -362,7 +362,7 @@ export class WiSawCdkStack extends cdk.Stack {
           this,
           `${deployEnv()}_injectMetaTagsLambdaFunction`,
           {
-            runtime: lambda.Runtime.NODEJS_18_X,
+            runtime: lambda.Runtime.NODEJS_16_X,
             code: lambda.Code.fromAsset(
               path.join(
                 __dirname,
@@ -414,27 +414,27 @@ export class WiSawCdkStack extends cdk.Stack {
                 isDefaultBehavior: true,
                 compress: true,
               },
-              // {
-              //   pathPattern: "photos/*",
-              //   compress: true,
-              //   allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
-              //   minTtl: cdk.Duration.days(10),
-              //   maxTtl: cdk.Duration.days(10),
-              //   defaultTtl: cdk.Duration.days(10),
-              //   forwardedValues: {
-              //     queryString: true,
-              //     cookies: {
-              //       forward: "all",
-              //     },
-              //   },
-              //   lambdaFunctionAssociations: [
-              //     {
-              //       eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
-              //       lambdaFunction: injectMetaTagsLambdaFunction,
-              //       includeBody: true,
-              //     },
-              //   ],
-              // },
+              {
+                pathPattern: "photos/*",
+                compress: true,
+                allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
+                minTtl: cdk.Duration.days(10),
+                maxTtl: cdk.Duration.days(10),
+                defaultTtl: cdk.Duration.days(10),
+                forwardedValues: {
+                  queryString: true,
+                  cookies: {
+                    forward: "all",
+                  },
+                },
+                lambdaFunctionAssociations: [
+                  {
+                    eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
+                    lambdaFunction: injectMetaTagsLambdaFunction,
+                    includeBody: true,
+                  },
+                ],
+              },
             ],
           },
         ],
