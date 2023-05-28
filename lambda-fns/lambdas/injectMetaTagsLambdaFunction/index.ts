@@ -4,12 +4,14 @@ export async function main(event: any = {}, context: any, callback: any) {
   // console.log({event: JSON.stringify(event)})
   const { request } = event.Records[0].cf
   const imageId = request.uri.replace("/photos/", "")
+
+  console.log("Received event:", JSON.stringify(event, null, 4))
   console.log(
     ".......................................at the start..............................",
   )
 
-  console.log({ imageId })
-  console.log({ request })
+  // console.log({ imageId })
+
   // console.log({ event: event.Records[0].cf })
   // callback(null, request)
 
