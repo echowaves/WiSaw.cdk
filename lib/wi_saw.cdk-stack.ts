@@ -11,6 +11,7 @@ import * as cloudfront from "aws-cdk-lib/aws-cloudfront"
 import * as logs from "aws-cdk-lib/aws-logs"
 
 import { LambdaFunction } from "aws-cdk-lib/aws-events-targets"
+import { Certificate } from "aws-cdk-lib/aws-certificatemanager"
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs"
 import { SourceMapMode } from "aws-cdk-lib/aws-lambda-nodejs"
 import { Architecture } from "aws-cdk-lib/aws-lambda"
@@ -120,7 +121,7 @@ export class WiSawCdkStack extends cdk.Stack {
           sourceMap: true,
           sourceMapMode: SourceMapMode.INLINE,
           sourcesContent: false,
-          externalModules: ["sharp"],
+          externalModules: ["sharp", "aws-sdk"],
         },
         layers: [
           lambda.LayerVersion.fromLayerVersionArn(
@@ -153,7 +154,7 @@ export class WiSawCdkStack extends cdk.Stack {
           sourceMap: true,
           sourceMapMode: SourceMapMode.INLINE,
           sourcesContent: false,
-          externalModules: ["sharp"],
+          externalModules: ["sharp", "aws-sdk"],
         },
         layers: [
           lambda.LayerVersion.fromLayerVersionArn(
@@ -324,7 +325,6 @@ export class WiSawCdkStack extends cdk.Stack {
             timeout: cdk.Duration.seconds(5),
             // insightsVersion,
             logRetention,
-
             // environment: {
             //   ...config,
             // },
@@ -338,10 +338,13 @@ export class WiSawCdkStack extends cdk.Stack {
 
       // const wisawCert = acm.Certificate.fromCertificateArn(this, 'wisawCert', "arn:aws:acm:us-east-1:963958500685:certificate/538e85e0-39f4-4d34-8580-86e8729e2c3c")
 
-      const viewerCertificate =
-        cloudfront.ViewerCertificate.fromCloudFrontDefaultCertificate(
-          "www.wisaw.com",
-        )
+      const viewerCertificate = cloudfront.ViewerCertificate.fromAcmCertificate(
+        Certificate.fromCertificateArn(
+          this,
+          "my_cert",
+          "arn:aws:acm:us-east-1:963958500685:certificate/538e85e0-39f4-4d34-8580-86e8729e2c3c",
+        ),
+      )
 
       new cloudfront.CloudFrontWebDistribution(this, "wisaw-distro", {
         originConfigs: [
