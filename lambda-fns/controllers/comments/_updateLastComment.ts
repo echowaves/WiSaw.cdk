@@ -1,13 +1,13 @@
-import * as moment from 'moment'
+import moment from "moment"
 
-import psql from '../../psql'
+import psql from "../../psql"
 
-export const _updateLastComment = async( photoId: bigint) => {
+export const _updateLastComment = async (photoId: bigint) => {
   const updatedAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
 
   await psql.connect()
-  const photo =
-  (await psql.query(`
+  const photo = (
+    await psql.query(`
     UPDATE "Photos"
       SET "lastComment" =
         (

@@ -1,23 +1,19 @@
-import * as moment from 'moment'
+import moment from "moment"
 
-import {validate as uuidValidate,} from 'uuid'
+import { validate as uuidValidate } from "uuid"
 
 // import {plainToClass,} from 'class-transformer'
 
-import psql from '../../psql'
+import psql from "../../psql"
 
 // import Message from '../../models/message'
 
-export default async function main(
-  chatUuid: string,
-  uuid: string,
-) {
-
+export default async function main(chatUuid: string, uuid: string) {
   // here validate values before inserting into DB
-  if(uuidValidate(chatUuid) === false ) {
+  if (uuidValidate(chatUuid) === false) {
     throw new Error(`Wrong UUID format1`)
   }
-  if(uuidValidate(uuid) === false ) {
+  if (uuidValidate(uuid) === false) {
     throw new Error(`Wrong UUID format2`)
   }
 

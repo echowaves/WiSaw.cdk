@@ -1,6 +1,4 @@
-// import * as moment from 'moment'
-
-const AWS = require('aws-sdk')
+import AWS from "aws-sdk"
 
 // import AbuseReport from '../../models/abuseReport'
 
@@ -11,10 +9,10 @@ export default async function main(assetKey: string, contentType: string) {
     Key: `${assetKey}`,
     ContentType: contentType,
     Expires: 60 * 60, // expires in 1 minute * 60 minutes, after that request a new URL
-    ACL: 'public-read',
+    ACL: "public-read",
   }
 
-  const uploadUrl = s3.getSignedUrl('putObject', s3Params)
+  const uploadUrl = s3.getSignedUrl("putObject", s3Params)
 
   return uploadUrl
 }

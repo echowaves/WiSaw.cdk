@@ -1,19 +1,29 @@
-import * as cdk from "@aws-cdk/core"
-import * as s3 from "@aws-cdk/aws-s3"
-import * as s3n from "@aws-cdk/aws-s3-notifications"
-import * as ec2 from "@aws-cdk/aws-ec2"
-import * as lambda from "@aws-cdk/aws-lambda"
-import * as cloudfront from "@aws-cdk/aws-cloudfront"
-import * as origins from "@aws-cdk/aws-cloudfront-origins"
-import * as acm from "@aws-cdk/aws-certificatemanager"
-import * as route53 from "@aws-cdk/aws-route53"
-import * as logs from "@aws-cdk/aws-logs"
+import * as cdk from "aws-cdk-lib"
 
-import { LambdaFunction } from "@aws-cdk/aws-events-targets"
-import { Rule, Schedule } from "@aws-cdk/aws-events"
-import * as rds from "@aws-cdk/aws-rds"
-import * as appsync from "@aws-cdk/aws-appsync"
-import * as iam from "@aws-cdk/aws-iam"
+import * as ec2 from "aws-cdk-lib/aws-ec2"
+import * as s3 from "aws-cdk-lib/aws-s3"
+
+import * as s3n from "aws-cdk-lib/aws-s3-notifications"
+
+import * as lambda from "aws-cdk-lib/aws-lambda"
+import * as cloudfront from "aws-cdk-lib/aws-cloudfront"
+
+import * as logs from "aws-cdk-lib/aws-logs"
+
+import { LambdaFunction } from "aws-cdk-lib/aws-events-targets"
+import { Certificate } from "aws-cdk-lib/aws-certificatemanager"
+import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs"
+import { SourceMapMode } from "aws-cdk-lib/aws-lambda-nodejs"
+import { Architecture } from "aws-cdk-lib/aws-lambda"
+
+import { Rule, Schedule } from "aws-cdk-lib/aws-events"
+import * as rds from "aws-cdk-lib/aws-rds"
+import * as appsync from "aws-cdk-lib/aws-appsync"
+import * as iam from "aws-cdk-lib/aws-iam"
+
+import { Construct } from "constructs"
+import { TagOptions } from "aws-cdk-lib/aws-servicecatalog"
+
 // import {ISecret, Secret,} from "@aws-cdk/aws-secretsmanager"
 // import * as path from 'path'
 
@@ -27,52 +37,11 @@ export function deployEnv() {
 
 const config = require(`../.env.${deployEnv()}`).config()
 
-// function envSpecific(logicalName: string | Function) {
-//   const suffix =
-//     typeof logicalName === "function"
-//       ? logicalName.name
-//       : logicalName
-
-//   return `${deployEnv()}-${suffix}`
-// }
-
 export class WiSawCdkStack extends cdk.Stack {
-  constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
+  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props)
 
     // The code that defines your stack goes here
-
-    // Create the VPC needed for the Aurora Serverless DB instance
-    // const vpc = new ec2.Vpc(this, `${deployEnv()}-WiSaw-VPC-cdk`)
-
-    // create RDS database
-
-    // const database = new rds.DatabaseInstance(this, `${deployEnv()}-WiSaw-Postgres-cdk`, {
-    //   engine: rds.DatabaseInstanceEngine.postgres({
-    //     version: rds.PostgresEngineVersion.VER_12_4,
-    //   }),
-    //   instanceType: ec2.InstanceType.of(
-    //     ec2.InstanceClass.T3,
-    //     ec2.InstanceSize.MICRO
-    //   ),
-    //   vpc,
-    //   vpcPlacement: {
-    //     subnetType: ec2.SubnetType.PUBLIC,
-    //   },
-    //   storageType: rds.StorageType.GP2,
-    //   allocatedStorage: 20,
-    //   maxAllocatedStorage: 40,
-    //   // monitoringInterval: 60,
-    //   deletionProtection: deployEnv() === "prod", // should be conditional for prod
-    //   instanceIdentifier: `${deployEnv()}-wisaw-db-cdk`,
-    //   databaseName: config.DB_DATABASE,
-    //   port: config.DB_PORT,
-    //   credentials: {
-    //     username: config.DB_USERNAME,
-    //     password: config.DB_PASSWORD,
-    //   },
-    // })
-    //get VPC Info form AWS account, FYI we are not rebuilding we are referencing
 
     // will refer to already created DB instance instead of creating new one.
     const database = rds.DatabaseInstance.fromDatabaseInstanceAttributes(
@@ -80,6 +49,7 @@ export class WiSawCdkStack extends cdk.Stack {
       `wisaw-${deployEnv()}`,
       {
         instanceIdentifier: `wisaw-${deployEnv()}`,
+        instanceResourceId: config.DB_RESOURCE_ID,
         instanceEndpointAddress: `wisaw-${deployEnv()}.cbaw0b5dcxjh.us-east-1.rds.amazonaws.com`,
         port: 5432,
         securityGroups: [],
@@ -95,7 +65,7 @@ export class WiSawCdkStack extends cdk.Stack {
       `${deployEnv()}-WiSaw-appsyncApi-cdk`,
       {
         name: `${deployEnv()}-cdk-wisaw-appsync-api`,
-        schema: appsync.Schema.fromAsset("graphql/schema.graphql"),
+        schema: appsync.SchemaFile.fromAsset("graphql/schema.graphql"),
         authorizationConfig: {
           defaultAuthorization: {
             authorizationType: appsync.AuthorizationType.API_KEY,
@@ -108,30 +78,43 @@ export class WiSawCdkStack extends cdk.Stack {
       },
     )
 
-    // const prototypeDS = api.addNoneDataSource(`prototypeDataSource`, {
-    //   name: "Prototype",
-    //   description: "Prototype graphql responses",
-    // })
-
     const layerArn =
       "arn:aws:lambda:us-east-1:580247275435:layer:LambdaInsightsExtension:14"
     const insightsVersion =
       lambda.LambdaInsightsVersion.fromInsightVersionArn(layerArn)
     const logRetention = logs.RetentionDays.TWO_WEEKS
 
+    const sharpLayerArn =
+      "arn:aws:lambda:us-east-1:963958500685:layer:sharp-layer:2"
+
     // Create the Lambda function that will map GraphQL operations into Postgres
-    const wisawFn = new lambda.Function(
+    const wisawFn = new NodejsFunction(
       this,
       `${deployEnv()}-WiSaw-GraphQlMapFunction-cdk`,
       {
-        runtime: lambda.Runtime.NODEJS_16_X,
-        code: lambda.Code.fromAsset("lambda-fns/lambdas.zip"),
+        runtime: lambda.Runtime.NODEJS_18_X,
+        // handler: "index.handler",
+        entry: `${__dirname}/../lambda-fns/index.ts`,
+        handler: "main",
+        bundling: {
+          minify: true,
+          target: "es2020",
+          sourceMap: true,
+          sourceMapMode: SourceMapMode.INLINE,
+          sourcesContent: false,
+          externalModules: ["sharp"],
+        },
+        layers: [
+          lambda.LayerVersion.fromLayerVersionArn(
+            this,
+            `${deployEnv()}-GraphQlMapFunction`,
+            sharpLayerArn,
+          ),
+        ],
         insightsVersion,
         logRetention,
-        // code: new lambda.AssetCode('lambda-fns'),
-        handler: "index.handler",
-        // memorySize: 10240,
-        memorySize: 3008,
+        memorySize: 10240,
+        // memorySize: 3008,
         timeout: cdk.Duration.seconds(30),
         environment: {
           ...config,
@@ -139,108 +122,176 @@ export class WiSawCdkStack extends cdk.Stack {
       },
     )
 
-    // create a layer
-    // const ffmpegLayer = lambda.LayerVersion.fromLayerVersionArn(this, 'ffmpegLayer',
-    //   'arn:aws:lambda:us-east-1:963958500685:layer:ffmpeg:1'
-    // )
-
-    // define lambda for thumbnails processing
-    const processUploadedImageLambdaFunction = new lambda.Function(
+    const processUploadedImageLambdaFunction = new NodejsFunction(
       this,
       `${deployEnv()}_processUploadedImage`,
       {
-        runtime: lambda.Runtime.NODEJS_16_X,
-        code: lambda.Code.fromAsset("lambda-fns/lambdas.zip"),
+        runtime: lambda.Runtime.NODEJS_18_X,
+        entry: `${__dirname}/../lambda-fns/lambdas/processUploadedImage/index.ts`,
+        handler: "main",
+        bundling: {
+          minify: true,
+          target: "es2020",
+          sourceMap: true,
+          sourceMapMode: SourceMapMode.INLINE,
+          sourcesContent: false,
+          externalModules: ["sharp"],
+        },
+        layers: [
+          lambda.LayerVersion.fromLayerVersionArn(
+            this,
+            `${deployEnv()}-processUploadedImage`,
+            sharpLayerArn,
+          ),
+        ],
         insightsVersion,
         logRetention,
-        // code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos')),
-        handler: "lambdas/processUploadedImage.main",
-        memorySize: 3008,
-        timeout: cdk.Duration.seconds(300),
-        // layers: [ffmpegLayer],
+        memorySize: 10240,
+        // memorySize: 3008,
+        timeout: cdk.Duration.seconds(30),
         environment: {
           ...config,
         },
       },
     )
 
-    // define lambda for thumbnails deletion processing
-    const processDeletedImageLambdaFunction = new lambda.Function(
-      this,
-      `${deployEnv()}_processDeletedImage`,
-      {
-        runtime: lambda.Runtime.NODEJS_16_X,
-        code: lambda.Code.fromAsset("lambda-fns/lambdas.zip"),
-        insightsVersion,
-        logRetention,
-        // code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos')),
-        handler: "lambdas/processDeletedImage.main",
-        memorySize: 3008,
-        timeout: cdk.Duration.seconds(300),
-        environment: {
-          ...config,
-        },
-      },
-    )
-
-    // define lambda for thumbnails processing
-    const processUploadedPrivateImageLambdaFunction = new lambda.Function(
+    const processUploadedPrivateImageLambdaFunction = new NodejsFunction(
       this,
       `${deployEnv()}_processUploadedPrivateImage`,
       {
-        runtime: lambda.Runtime.NODEJS_16_X,
-        code: lambda.Code.fromAsset("lambda-fns/lambdas.zip"),
+        runtime: lambda.Runtime.NODEJS_18_X,
+        entry: `${__dirname}/../lambda-fns/lambdas/processUploadedPrivateImage/index.ts`,
+        handler: "main",
+        bundling: {
+          minify: true,
+          target: "es2020",
+          sourceMap: true,
+          sourceMapMode: SourceMapMode.INLINE,
+          sourcesContent: false,
+          externalModules: ["sharp"],
+        },
+        layers: [
+          lambda.LayerVersion.fromLayerVersionArn(
+            this,
+            `${deployEnv()}-processUploadedPrivateImage`,
+            sharpLayerArn,
+          ),
+        ],
         insightsVersion,
         logRetention,
-        // code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos')),
-        handler: "lambdas/processUploadedPrivateImage.main",
-        memorySize: 3008,
-        timeout: cdk.Duration.seconds(300),
-        // layers: [ffmpegLayer],
+        memorySize: 10240,
+        // memorySize: 3008,
+        timeout: cdk.Duration.seconds(30),
         environment: {
           ...config,
         },
       },
     )
 
-    // define lambda for thumbnails deletion processing
-    const processDeletedPrivateImageLambdaFunction = new lambda.Function(
+    const processDeletedImageLambdaFunction = new NodejsFunction(
+      this,
+      `${deployEnv()}_processDeletedImage`,
+      {
+        runtime: lambda.Runtime.NODEJS_18_X,
+        // handler: "index.handler",
+        entry: `${__dirname}/../lambda-fns/lambdas/processDeletedImage/index.ts`,
+        handler: "main",
+        bundling: {
+          minify: true,
+          target: "es2020",
+          sourceMap: true,
+          sourceMapMode: SourceMapMode.INLINE,
+          sourcesContent: false,
+          externalModules: ["sharp"],
+        },
+        layers: [
+          lambda.LayerVersion.fromLayerVersionArn(
+            this,
+            `${deployEnv()}-_processDeletedImage`,
+            sharpLayerArn,
+          ),
+        ],
+        insightsVersion,
+        logRetention,
+        memorySize: 10240,
+        // memorySize: 3008,
+        timeout: cdk.Duration.seconds(30),
+        environment: {
+          ...config,
+        },
+      },
+    )
+
+    const processDeletedPrivateImageLambdaFunction = new NodejsFunction(
       this,
       `${deployEnv()}_processDeletedPrivateImage`,
       {
-        runtime: lambda.Runtime.NODEJS_16_X,
-        code: lambda.Code.fromAsset("lambda-fns/lambdas.zip"),
+        runtime: lambda.Runtime.NODEJS_18_X,
+        // handler: "index.handler",
+        entry: `${__dirname}/../lambda-fns/lambdas/processDeletedPrivateImage/index.ts`,
+        handler: "main",
+        bundling: {
+          minify: true,
+          target: "es2020",
+          sourceMap: true,
+          sourceMapMode: SourceMapMode.INLINE,
+          sourcesContent: false,
+          externalModules: ["sharp"],
+        },
+        layers: [
+          lambda.LayerVersion.fromLayerVersionArn(
+            this,
+            `${deployEnv()}-_processDeletedPrivateImage`,
+            sharpLayerArn,
+          ),
+        ],
         insightsVersion,
         logRetention,
-        // code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos')),
-        handler: "lambdas/processDeletedPrivateImage.main",
-        memorySize: 3008,
-        timeout: cdk.Duration.seconds(300),
+        memorySize: 10240,
+        // memorySize: 3008,
+        timeout: cdk.Duration.seconds(30),
         environment: {
           ...config,
         },
       },
     )
 
-    // cleanup older abuse reports
-    const cleaupupAbuseReports_LambdaFunction = new lambda.Function(
+    const cleanupAbuseReports_LambdaFunction = new NodejsFunction(
       this,
       `${deployEnv()}_cleaupupAbuseReports`,
       {
-        runtime: lambda.Runtime.NODEJS_16_X,
-        code: lambda.Code.fromAsset("lambda-fns/lambdas.zip"),
+        runtime: lambda.Runtime.NODEJS_18_X,
+        // handler: "index.handler",
+        entry: `${__dirname}/../lambda-fns/lambdas/cleaupupAbuseReports/index.ts`,
+        handler: "main",
+        bundling: {
+          minify: true,
+          target: "es2020",
+          sourceMap: true,
+          sourceMapMode: SourceMapMode.INLINE,
+          sourcesContent: false,
+          externalModules: ["sharp"],
+        },
+        layers: [
+          lambda.LayerVersion.fromLayerVersionArn(
+            this,
+            `${deployEnv()}-_cleaupupAbuseReports`,
+            sharpLayerArn,
+          ),
+        ],
         insightsVersion,
         logRetention,
-        handler: "lambdas/cleaupupAbuseReports.main",
-        memorySize: 3008,
-        timeout: cdk.Duration.seconds(300),
+        memorySize: 10240,
+        // memorySize: 3008,
+        timeout: cdk.Duration.seconds(30),
         environment: {
           ...config,
         },
       },
     )
+
     const cleaupupAbuseReports_LambdaTarget = new LambdaFunction(
-      cleaupupAbuseReports_LambdaFunction,
+      cleanupAbuseReports_LambdaFunction,
     )
 
     new Rule(this, `${deployEnv()}_lambda-polling-rule`, {
@@ -251,24 +302,40 @@ export class WiSawCdkStack extends cdk.Stack {
     })
 
     if (deployEnv() === "prod") {
-      // generate sitemap.xml lambda
-      const generateSiteMap_LambdaFunction = new lambda.Function(
+      const generateSiteMap_LambdaFunction = new NodejsFunction(
         this,
         `${deployEnv()}_generateSiteMap`,
         {
-          runtime: lambda.Runtime.NODEJS_16_X,
-          code: lambda.Code.fromAsset("lambda-fns/lambdas.zip"),
+          runtime: lambda.Runtime.NODEJS_18_X,
+          // handler: "index.handler",
+          entry: `${__dirname}/../lambda-fns/lambdas/generateSiteMap/index.ts`,
+          handler: "main",
+          bundling: {
+            minify: true,
+            target: "es2020",
+            sourceMap: true,
+            sourceMapMode: SourceMapMode.INLINE,
+            sourcesContent: false,
+            externalModules: ["sharp"],
+          },
+          layers: [
+            lambda.LayerVersion.fromLayerVersionArn(
+              this,
+              `${deployEnv()}-_generateSiteMap`,
+              sharpLayerArn,
+            ),
+          ],
           insightsVersion,
           logRetention,
-          // code: lambda.Code.fromAsset(path.join(__dirname, '/../lambda-fns/controllers/photos')),
-          handler: "lambdas/generateSiteMap.main",
-          memorySize: 3008,
-          timeout: cdk.Duration.seconds(300),
+          memorySize: 10240,
+          // memorySize: 3008,
+          timeout: cdk.Duration.seconds(30),
           environment: {
             ...config,
           },
         },
       )
+
       const generateSiteMapLambdaFunction_LambdaTarget = new LambdaFunction(
         generateSiteMap_LambdaFunction,
       )
@@ -287,12 +354,6 @@ export class WiSawCdkStack extends cdk.Stack {
       )
       webAppBucket.grantPut(generateSiteMap_LambdaFunction)
       webAppBucket.grantPutAcl(generateSiteMap_LambdaFunction)
-
-      // const myFunc = new cloudfront.experimental.EdgeFunction(this, 'MyFunction', {
-      //   runtime: lambda.Runtime.NODEJS_12_X,
-      //   handler: 'index.handler',
-      //   code: lambda.Code.fromAsset(path.join(__dirname, 'lambda-handler')),
-      // });
 
       // lambda@edge function for ingecting OG meta tags on the fly
       const injectMetaTagsLambdaFunction =
@@ -314,7 +375,6 @@ export class WiSawCdkStack extends cdk.Stack {
             timeout: cdk.Duration.seconds(5),
             // insightsVersion,
             logRetention,
-
             // environment: {
             //   ...config,
             // },
@@ -328,7 +388,21 @@ export class WiSawCdkStack extends cdk.Stack {
 
       // const wisawCert = acm.Certificate.fromCertificateArn(this, 'wisawCert', "arn:aws:acm:us-east-1:963958500685:certificate/538e85e0-39f4-4d34-8580-86e8729e2c3c")
 
+      const viewerCertificate = cloudfront.ViewerCertificate.fromAcmCertificate(
+        Certificate.fromCertificateArn(
+          this,
+          "my_cert",
+          "arn:aws:acm:us-east-1:963958500685:certificate/538e85e0-39f4-4d34-8580-86e8729e2c3c",
+        ),
+        {
+          aliases: ["www.wisaw.com"],
+          securityPolicy: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
+          sslMethod: cloudfront.SSLMethod.SNI, // default
+        },
+      )
+
       new cloudfront.CloudFrontWebDistribution(this, "wisaw-distro", {
+        priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
         originConfigs: [
           {
             s3OriginSource: {
@@ -359,29 +433,12 @@ export class WiSawCdkStack extends cdk.Stack {
                     lambdaFunction: injectMetaTagsLambdaFunction,
                     includeBody: true,
                   },
-                  // {
-                  //   eventType: cloudfront.LambdaEdgeEventType.VIEWER_RESPONSE,
-                  //   lambdaFunction: injectMetaTagsLambdaFunction,
-                  // },
-                  // {
-                  //   eventType: cloudfront.LambdaEdgeEventType.ORIGIN_REQUEST,
-                  //   lambdaFunction: injectMetaTagsLambdaFunction,
-                  //   includeBody: true,
-                  // },
-                  // {
-                  //   eventType: cloudfront.LambdaEdgeEventType.ORIGIN_RESPONSE,
-                  //   lambdaFunction: injectMetaTagsLambdaFunction,
-                  // },
                 ],
               },
             ],
           },
         ],
-        aliasConfiguration: {
-          acmCertRef:
-            "arn:aws:acm:us-east-1:963958500685:certificate/538e85e0-39f4-4d34-8580-86e8729e2c3c", //wisawCert.certificateArn,
-          names: ["www.wisaw.com"],
-        },
+        viewerCertificate,
         errorConfigurations: [
           {
             errorCode: 403,
@@ -397,151 +454,6 @@ export class WiSawCdkStack extends cdk.Stack {
           },
         ],
       })
-
-      // const distribution = cloudfront.CloudFrontWebDistribution.fromDistributionAttributes(this, 'ImportedDist', {
-      //   domainName: 'dqaq70qqy8lyk.cloudfront.net',
-      //   distributionId: 'E275CUZVESLWC7',
-      //   originConfigs: []
-      // }
-      // );
-
-      // distribution.
-      // addBehavior('photos/23288', wisawClientS3Origin, {
-      //   edgeLambdas: [
-      //     {
-      //       functionVersion: injectMetaTagsLambdaFunction.currentVersion,
-      //       eventType: cloudfront.LambdaEdgeEventType.VIEWER_RESPONSE,
-      //     },
-      //   ],
-      // })
-
-      // const hostedZone = route53.HostedZone.fromHostedZoneAttributes(this, "Zone", {
-      //   hostedZoneId: "E275CUZVESLWC7",
-      //   zoneName: "*.wisaw.com"
-      // })
-
-      // Certificate.fromCertificateArn(this, "Cert", "...arn...")
-      // const wisawCertificate = new acm.DnsValidatedCertificate(this, '538e85e0-39f4-4d34-8580-86e8729e2c3c', {
-      //   domainName: '*.wisaw.com',
-      //   // hostedZone,
-      // })
-
-      // const wisawClientS3Origin = new origins.S3Origin(webAppBucket)
-      // const wisawDistribution = new cloudfront.Distribution(this, 'wisaw-distribution',
-      // {
-      //   defaultBehavior: {
-      //     origin: wisawClientS3Origin,
-      //     // edgeLambdas: [
-      //     //   {
-      //     //     functionVersion: injectMetaTagsLambdaFunction.currentVersion,
-      //     //     eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
-      //     //   }
-      //     // ],
-      //   },
-      //   domainNames: ['www.wisaw.com'],
-      //   certificate:wisawCertificate,
-      // })
-
-      // wisawDistribution.addBehavior('photos/23288', wisawClientS3Origin, {
-      //   edgeLambdas: [
-      //     {
-      //       functionVersion: injectMetaTagsLambdaFunction.currentVersion,
-      //       eventType: cloudfront.LambdaEdgeEventType.VIEWER_RESPONSE,
-      //     },
-      //   ],
-      // })
-
-      // const version = injectMetaTagsLambdaFunction.addVersion(':sha256:' + sha256('./lambda/index.js'));
-      // const version = injectMetaTagsLambdaFunction.currentVersion
-      // // A numbered version to give to cloudfront
-      // const myOriginRequestHandlerVersion = new lambda.Version(this, "OriginRequestHandlerVersion", {
-      //   lambda: injectMetaTagsLambdaFunction,
-      // });
-
-      // Origin access identity for cloudfront to access the bucket
-      // const distribution = new cloudfront.OriginAccessIdentity(this, `${config.CLOUD_FRONT_DISTRIBUTION}`) // CloudFront distribution
-
-      // const distribution = cloudfront.CloudFrontWebDistribution.fromDistributionAttributes(this, `${config.CLOUD_FRONT_DISTRIBUTION}`, {
-      //   domainName: 'www.wisaw.com',
-      //   distributionId: `${config.CLOUD_FRONT_DISTRIBUTION}`,
-      // })
-
-      // const distribution = new cloudfront.Distribution(this, `${config.CLOUD_FRONT_DISTRIBUTION}`, {
-      //   defaultBehavior: { origin: new origins.S3Origin(webAppBucket) },
-      //   additionalBehaviors: {
-      //     'images/*': {
-      //       origin: new origins.S3Origin(webAppBucket),
-      //       edgeLambdas: [
-      //         {
-      //           functionVersion: injectMetaTagsLambdaFunction.currentVersion,
-      //           eventType: cloudfront.LambdaEdgeEventType.ORIGIN_REQUEST,
-      //           includeBody: true, // Optional - defaults to false
-      //         },
-      //       ],
-      //     },
-      //   },
-      // });
-
-      // const distribution = new cloudfront.Distribution.fromDistributionAttributes(this, `${config.CLOUD_FRONT_DISTRIBUTION}`, {
-      //   defaultBehavior: { origin: new origins.S3Origin(webAppBucket) },
-      //   additionalBehaviors: {
-      //     'images/*': {
-      //       origin: new origins.S3Origin(webAppBucket),
-      //       edgeLambdas: [
-      //         {
-      //           functionVersion: injectMetaTagsLambdaFunction.currentVersion,
-      //           eventType: cloudfront.LambdaEdgeEventType.ORIGIN_REQUEST,
-      //           includeBody: true, // Optional - defaults to false
-      //         },
-      //       ],
-      //     },
-      //   },
-      // });
-
-      // distribution.addBehavior('/images/*.jpg', new origins.S3Origin(myBucket), {
-      //   viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-      // });
-
-      // const distribution = new cloudfront.CloudFrontWebDistribution(
-      //   this,
-      //   `${config.CLOUD_FRONT_DISTRIBUTION}`)
-      //   // {
-      //   domainName: 'www.wisaw.com',
-      //   distributionId: `${config.CLOUD_FRONT_DISTRIBUTION}`,
-      // });
-      //   {
-      //     originConfigs: [
-      //       {
-      //         s3OriginSource: {
-      //           s3BucketSource: webAppBucket,
-      //         },
-      //         behaviors: [
-      //           {
-      //             isDefaultBehavior: true,
-      //             lambdaFunctionAssociations: [
-      //               {
-      //                 eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
-      //                 lambdaFunction: injectMetaTagsLambdaFunction,
-      //               },
-      //             ],
-      //           },
-      //         ],
-      //       },
-      //     ],
-      //     loggingConfig: {},
-      //     // viewerCertificate: cloudfront.ViewerCertificate.fromAcmCertificate(
-      //     //   acmCertificate,
-      //     //   {
-      //     //     aliases: [DOMAIN],
-      //     //   }
-      //     // ),
-      //   }
-      // );
-
-      // webAppBucket.grantRead(distribution)
-
-      // const injectMetaTagsLambdaFunctionUrl = injectMetaTagsLambdaFunction.addFunctionUrl();
-      // injectMetaTagsLambdaFunctionUrl.grantInvokeUrl(myRole);
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -632,142 +544,51 @@ export class WiSawCdkStack extends cdk.Stack {
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Grant access to the database from the Lambda function
-    database.grantConnect(wisawFn)
+    database.grantConnect(wisawFn, config.username)
+
     // Set the new Lambda function as a data source for the AppSync API
     const lambdaDs = api.addLambdaDataSource(`lambdaDatasource`, wisawFn)
 
     // Map the resolvers to the Lambda function
 
-    // ******************************************************
-    //                       queries
-    // ******************************************************
-    lambdaDs.createResolver({
-      typeName: "Query",
-      fieldName: "generateUploadUrl",
-    })
-    lambdaDs.createResolver({
-      typeName: "Query",
-      fieldName: "generateUploadUrlForMessage",
-    })
+    const fields = [
+      { typeName: "Query", fieldName: "generateUploadUrl" },
+      { typeName: "Query", fieldName: "generateUploadUrlForMessage" },
+      { typeName: "Query", fieldName: "zeroMoment" },
+      { typeName: "Query", fieldName: "feedByDate" },
+      { typeName: "Query", fieldName: "feedForWatcher" },
+      { typeName: "Query", fieldName: "feedRecent" },
+      { typeName: "Query", fieldName: "feedForTextSearch" },
+      { typeName: "Query", fieldName: "getPhotoDetails" },
+      { typeName: "Query", fieldName: "getPhotoAllCurr" },
+      { typeName: "Query", fieldName: "getPhotoAllNext" },
+      { typeName: "Query", fieldName: "getPhotoAllPrev" },
+      { typeName: "Query", fieldName: "getFriendshipsList" },
+      { typeName: "Query", fieldName: "getUnreadCountsList" },
+      { typeName: "Query", fieldName: "getMessagesList" },
 
-    lambdaDs.createResolver({
-      typeName: "Query",
-      fieldName: "zeroMoment",
-    })
-    lambdaDs.createResolver({
-      typeName: "Query",
-      fieldName: "feedByDate",
-    })
-    lambdaDs.createResolver({
-      typeName: "Query",
-      fieldName: "feedForWatcher",
-    })
-    lambdaDs.createResolver({
-      typeName: "Query",
-      fieldName: "feedRecent",
-    })
-    lambdaDs.createResolver({
-      typeName: "Query",
-      fieldName: "feedForTextSearch",
-    })
-    lambdaDs.createResolver({
-      typeName: "Query",
-      fieldName: "getPhotoDetails",
-    })
-
-    lambdaDs.createResolver({
-      typeName: "Query",
-      fieldName: "getPhotoAllCurr",
-    })
-    lambdaDs.createResolver({
-      typeName: "Query",
-      fieldName: "getPhotoAllNext",
-    })
-    lambdaDs.createResolver({
-      typeName: "Query",
-      fieldName: "getPhotoAllPrev",
-    })
-
-    lambdaDs.createResolver({
-      typeName: "Query",
-      fieldName: "getFriendshipsList",
-    })
-    lambdaDs.createResolver({
-      typeName: "Query",
-      fieldName: "getUnreadCountsList",
-    })
-    lambdaDs.createResolver({
-      typeName: "Query",
-      fieldName: "getMessagesList",
-    })
-
-    // ******************************************************
-    //                       mutations
-    // ******************************************************
-    lambdaDs.createResolver({
-      typeName: "Mutation",
-      fieldName: "createContactForm",
-    })
-    lambdaDs.createResolver({
-      typeName: "Mutation",
-      fieldName: "createAbuseReport",
-    })
-    lambdaDs.createResolver({
-      typeName: "Mutation",
-      fieldName: "createPhoto",
-    })
-    lambdaDs.createResolver({
-      typeName: "Mutation",
-      fieldName: "watchPhoto",
-    })
-    lambdaDs.createResolver({
-      typeName: "Mutation",
-      fieldName: "unwatchPhoto",
-    })
-    lambdaDs.createResolver({
-      typeName: "Mutation",
-      fieldName: "deletePhoto",
-    })
-    lambdaDs.createResolver({
-      typeName: "Mutation",
-      fieldName: "createComment",
-    })
-    lambdaDs.createResolver({
-      typeName: "Mutation",
-      fieldName: "deleteComment",
-    })
-    lambdaDs.createResolver({
-      typeName: "Mutation",
-      fieldName: "registerSecret",
-    })
-    lambdaDs.createResolver({
-      typeName: "Mutation",
-      fieldName: "updateSecret",
-    })
-
-    lambdaDs.createResolver({
-      typeName: "Mutation",
-      fieldName: "createFriendship",
-    })
-    lambdaDs.createResolver({
-      typeName: "Mutation",
-      fieldName: "acceptFriendshipRequest",
-    })
-    lambdaDs.createResolver({
-      typeName: "Mutation",
-      fieldName: "deleteFriendship",
-    })
-
-    lambdaDs.createResolver({
-      typeName: "Mutation",
-      fieldName: "sendMessage",
-    })
-
-    lambdaDs.createResolver({
-      typeName: "Mutation",
-      fieldName: "resetUnreadCount",
-    })
-
+      { typeName: "Mutation", fieldName: "createContactForm" },
+      { typeName: "Mutation", fieldName: "createAbuseReport" },
+      { typeName: "Mutation", fieldName: "createPhoto" },
+      { typeName: "Mutation", fieldName: "watchPhoto" },
+      { typeName: "Mutation", fieldName: "unwatchPhoto" },
+      { typeName: "Mutation", fieldName: "deletePhoto" },
+      { typeName: "Mutation", fieldName: "createComment" },
+      { typeName: "Mutation", fieldName: "deleteComment" },
+      { typeName: "Mutation", fieldName: "registerSecret" },
+      { typeName: "Mutation", fieldName: "updateSecret" },
+      { typeName: "Mutation", fieldName: "createFriendship" },
+      { typeName: "Mutation", fieldName: "acceptFriendshipRequest" },
+      { typeName: "Mutation", fieldName: "deleteFriendship" },
+      { typeName: "Mutation", fieldName: "sendMessage" },
+      { typeName: "Mutation", fieldName: "resetUnreadCount" },
+    ]
+    fields.forEach(({ typeName, fieldName }) =>
+      lambdaDs.createResolver(`${typeName}-${fieldName}-Resolver`, {
+        typeName,
+        fieldName,
+      }),
+    )
     // CFN Outputs
     new cdk.CfnOutput(this, "AppSyncAPIURL", {
       value: api.graphqlUrl,

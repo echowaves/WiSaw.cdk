@@ -1,12 +1,12 @@
-import * as moment from 'moment'
+import moment from "moment"
 
-import {validate as uuidValidate,} from 'uuid'
+import { validate as uuidValidate } from "uuid"
 
-import {plainToClass,} from 'class-transformer'
+import { plainToClass } from "class-transformer"
 
-import psql from '../../psql'
+import psql from "../../psql"
 
-import Message from '../../models/message'
+import Message from "../../models/message"
 
 export default async function main(
   chatUuidArg: string,
@@ -16,53 +16,55 @@ export default async function main(
   pendingArg: boolean,
   chatPhotoHashArg: string,
 ): Promise<Message> {
-// 1. if the message with this messageUuid  does not exists -- it's a new message, then intert
-// 2. otherwise update the existing ,message
-
+  // 1. if the message with this messageUuid  does not exists -- it's a new message, then intert
+  // 2. otherwise update the existing ,message
 
   // here validate values before inserting into DB
-  if(uuidValidate(chatUuidArg) === false ) {
+  if (uuidValidate(chatUuidArg) === false) {
     throw new Error(`Wrong UUID format1`)
   }
-  if(uuidValidate(uuidArg) === false ) {
+  if (uuidValidate(uuidArg) === false) {
     throw new Error(`Wrong UUID format2`)
   }
-  if(uuidValidate(messageUuidArg) === false ) {
+  if (uuidValidate(messageUuidArg) === false) {
     throw new Error(`Wrong UUID format3`)
   }
 
-  if( pendingArg !== true && pendingArg !== false ) {
+  if (pendingArg !== true && pendingArg !== false) {
     throw new Error(`Pending value should be passed in`)
   }
 
-  if( chatPhotoHashArg === null || chatPhotoHashArg === undefined ) {
-    throw new Error(`chatPhotoHashArg value should be passed in even if it's empty string`)
+  if (chatPhotoHashArg === null || chatPhotoHashArg === undefined) {
+    throw new Error(
+      `chatPhotoHashArg value should be passed in even if it's empty string`,
+    )
   }
-
 
   const updatedAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
 
   // let's check if this message already exists, then we will update it
 
   await psql.connect()
-  const existingMessages =
-  (await psql.query(`
+  const existingMessages = (
+    await psql.query(`
   SELECT *
     FROM "Messages"
     WHERE "messageUuid" = '${messageUuidArg}'
   `)
   ).rows
 
-  if(existingMessages.length > 1) {
+  if (existingMessages.length > 1) {
     await psql.clean()
-    throw new Error(`Potentially duplicate messages --> messageUuid:${messageUuidArg}`)
+    throw new Error(
+      `Potentially duplicate messages --> messageUuid:${messageUuidArg}`,
+    )
   }
 
   let message = null
   // this is brand new message --> insert
-  if(existingMessages.length === 0) {
-    message =
-    (await psql.query(`
+  if (existingMessages.length === 0) {
+    message = (
+      await psql.query(`
     INSERT INTO "Messages"
                (
                    "chatUuid",
@@ -82,11 +84,11 @@ export default async function main(
                returning *
                `)
     ).rows[0]
-
-  } else { // this is not a new message --> update
+  } else {
+    // this is not a new message --> update
     // "chatUuid", "uuid", "messageUuid" are nor going to be updated even if the different values passed in -- they will be ignored
-    message =
-    (await psql.query(`
+    message = (
+      await psql.query(`
                UPDATE "Messages"
                SET
                    "text" = '${textArg}', 
@@ -99,13 +101,11 @@ export default async function main(
     ).rows[0]
   }
 
-  (await psql.query(`
+  await psql.query(`
     UPDATE "ChatUsers"
             SET "updatedAt" = '${updatedAt}'
             WHERE "chatUuid" = '${chatUuidArg}'
-            returning *`
-  )
-  )
+            returning *`)
   // console.log({message,})
   await psql.clean()
 

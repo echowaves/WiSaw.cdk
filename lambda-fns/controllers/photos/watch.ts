@@ -1,11 +1,10 @@
-import * as moment from 'moment'
+import moment from "moment"
 
-import psql from '../../psql'
+import psql from "../../psql"
 
-import {_updateWatchers,} from './_updateWatchers'
+import { _updateWatchers } from "./_updateWatchers"
 
 export default async function main(photoId: bigint, uuid: string) {
-
   const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
 
   await psql.connect()
@@ -30,11 +29,9 @@ export default async function main(photoId: bigint, uuid: string) {
           '${createdAt}',
           '${createdAt}',
           '${createdAt}'
-        )`
-  )
+        )`)
   await psql.clean()
 
   const watchersCount = await _updateWatchers(photoId, uuid)
   return watchersCount
-
 }
