@@ -29,7 +29,7 @@ export async function main(event: any = {}, context: any, callback: any) {
   const body = index.replace(
     "<head>",
     `<head>
-      <meta name="image" property="og:image" content="https://wisaw-img-prod.s3.amazonaws.com/${imageId}">
+      <meta name="image" property="og:image" content="https://img.wisaw.com/${imageId}">
       <meta name="description" property="og:description" content="Check out What I saw Today">
       <meta property="og:title" content="wisaw photo ${imageId}">
       <meta property="og:url" content="https://www.wisaw.com/photos/${imageId}">
@@ -37,7 +37,7 @@ export async function main(event: any = {}, context: any, callback: any) {
       <link rel="canonical" href="https://www.wisaw.com/photos/${imageId}">
       <meta name="twitter:title" content="wisaw (What I Saw) photo ${imageId}">
       <meta name="twitter:card" content="summary_large_image">
-      <meta name="twitter:image" content="https://wisaw-img-prod.s3.amazonaws.com/${imageId}">
+      <meta name="twitter:image" content="https://img.wisaw.com/${imageId}">
   `,
   )
 
