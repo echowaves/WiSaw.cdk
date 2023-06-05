@@ -2,16 +2,16 @@
 var AWS = require("aws-sdk") //to use built-in modules
 
 exports.handler = async (event, context, callback) => {
-  console.log({ event })
-  console.log({ context })
+  // console.log({ event })
+  // console.log({ context })
   // console.log({event: JSON.stringify(event)})
   const { request } = event.Records[0].cf
   const imageId = request.uri.replace("/photos/", "")
 
-  console.log("Received event:", JSON.stringify(event, null, 4))
-  console.log(
-    ".......................................at the start..............................",
-  )
+  // console.log("Received event:", JSON.stringify(event, null, 4))
+  // console.log(
+  //   ".......................................at the start..............................",
+  // )
 
   // console.log({ imageId })
 
@@ -63,9 +63,9 @@ exports.handler = async (event, context, callback) => {
     },
     body,
   }
-  console.log(
-    ".......................................at the end..............................",
-  )
-  console.log({ response })
+  // console.log(
+  //   ".......................................at the end..............................",
+  // )
+  // console.log({ response })
   callback(null, response)
 }
