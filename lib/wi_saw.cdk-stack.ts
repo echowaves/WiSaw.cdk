@@ -362,7 +362,7 @@ export class WiSawCdkStack extends cdk.Stack {
           this,
           `${deployEnv()}_injectMetaTagsLambdaFunction`,
           {
-            runtime: lambda.Runtime.NODEJS_16_X,
+            runtime: lambda.Runtime.NODEJS_14_X,
             code: lambda.Code.fromAsset(
               path.join(
                 __dirname,
@@ -370,7 +370,7 @@ export class WiSawCdkStack extends cdk.Stack {
               ),
             ),
             // code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
-            handler: "index.main",
+            handler: "index.handler",
             memorySize: 128,
             timeout: cdk.Duration.seconds(5),
             // insightsVersion,

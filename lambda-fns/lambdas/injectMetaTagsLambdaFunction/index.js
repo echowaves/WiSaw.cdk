@@ -1,6 +1,9 @@
-import AWS from "aws-sdk"
+// import AWS from "aws-sdk"
+var AWS = require("aws-sdk") //to use built-in modules
 
-export async function main(event: any = {}, context: any, callback: any) {
+exports.handler = async (event, context, callback) => {
+  console.log({ event })
+  console.log({ context })
   // console.log({event: JSON.stringify(event)})
   const { request } = event.Records[0].cf
   const imageId = request.uri.replace("/photos/", "")
