@@ -38,7 +38,7 @@ export default async function main(
       .format("YYYY-MM-DD HH:mm:ss.SSS")}'
     AND active = true
     ORDER BY distance
-    LIMIT 100
+    LIMIT 1000
     OFFSET 0
   `)
   ).rows
