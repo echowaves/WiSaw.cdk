@@ -6,7 +6,10 @@ exports.handler = async (event, context, callback) => {
   // console.log({ context })
   // console.log({event: JSON.stringify(event)})
   const { request } = event.Records[0].cf
-  const imageId = request.uri.replace("/photos/", "")
+  const imageId = request.uri
+    .replace("/photos/", "")
+    .replace("/full", "")
+    .replace("/thumb", "")
 
   // console.log("Received event:", JSON.stringify(event, null, 4))
   // console.log(
