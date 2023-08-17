@@ -60,6 +60,15 @@ exports.handler = async (event, context, callback) => {
           value: "text/html",
         },
       ],
+      "access-control-allow-origin": [
+        { key: "Access-Control-Allow-Origin", value: "*" },
+      ],
+      "access-control-allow-methods": [
+        { key: "Access-Control-Allow-Methods", value: "GET, HEAD" },
+      ],
+      "access-control-max-age": [
+        { key: "Access-Control-Max-Age", value: "86400" },
+      ],
     },
     body,
   }
