@@ -32,20 +32,43 @@ exports.handler = async (event, context, callback) => {
 
   const index = data.Body.toString("utf-8")
 
-  const body = index.replace(
-    "<head>",
-    `<head>
-      <meta name="image" property="og:image" content="https://img.wisaw.com/${imageId}">
-      <meta name="description" property="og:description" content="Check out What I saw Today">
-      <meta property="og:title" content="wisaw photo ${imageId}">
-      <meta property="og:url" content="https://www.wisaw.com/photos/${imageId}">
-      <meta property="og:site_name" content="wisaw.com">
-      <link rel="canonical" href="https://www.wisaw.com/photos/${imageId}">
-      <meta name="twitter:title" content="wisaw (What I Saw) photo ${imageId}">
-      <meta name="twitter:card" content="summary_large_image">
-      <meta name="twitter:image" content="https://img.wisaw.com/${imageId}">
-  `,
-  )
+  const body = index
+    .replace(
+      /<meta name="image"[\s\S]*?>/,
+      `<meta name="image" property="og:image" content="https://img.wisaw.com/${imageId}">`,
+    )
+    .replace(
+      /<\/head>/,
+      `<meta name="description" property="og:description" content="Check out What I saw Today"><\/head>`,
+    )
+    .replace(
+      /<\/head>/,
+      `<meta property="og:title" content="wisaw photo ${imageId}"><\/head>`,
+    )
+    .replace(
+      /<\/head>/,
+      `<meta property="og:url" content="https://www.wisaw.com/photos/${imageId}"><\/head>`,
+    )
+    .replace(
+      /<\/head>/,
+      `<meta property="og:site_name" content="wisaw.com"><\/head>`,
+    )
+    .replace(
+      /<\/head>/,
+      `<link rel="canonical" href="https://www.wisaw.com/photos/${imageId}" data-rh="true"><\/head>`,
+    )
+    .replace(
+      /<\/head>/,
+      `<meta name="twitter:title" content="wisaw (What I Saw) photo ${imageId}"><\/head>`,
+    )
+    .replace(
+      /<\/head>/,
+      `<meta name="twitter:card" content="summary_large_image"><\/head>`,
+    )
+    .replace(
+      /<\/head>/,
+      `<meta name="twitter:image" content="https://img.wisaw.com/${imageId}"><\/head>`,
+    )
 
   const response = {
     status: "200",
