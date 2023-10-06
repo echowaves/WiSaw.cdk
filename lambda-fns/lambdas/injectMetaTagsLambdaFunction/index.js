@@ -34,12 +34,12 @@ exports.handler = async (event, context, callback) => {
 
   const body = index
     .replace(
-      /<meta name="image"[\s\S]*?>/,
-      `<meta name="image" property="og:image" content="https://img.wisaw.com/${imageId}">`,
+      /<\/head>/,
+      `<meta name="image" property="og:image" content="https://img.wisaw.com/${imageId}" data-rh="true"><\/head>`,
     )
     .replace(
       /<\/head>/,
-      `<meta name="description" property="og:description" content="Check out What I saw Today"><\/head>`,
+      `<meta name="description" property="og:description" content="Check out What I saw Today" data-rh="true"><\/head>`,
     )
     .replace(
       /<\/head>/,
@@ -52,6 +52,10 @@ exports.handler = async (event, context, callback) => {
     .replace(
       /<\/head>/,
       `<meta property="og:site_name" content="wisaw.com"><\/head>`,
+    )
+    .replace(
+      /<\/head>/,
+      `<meta property='og:type' content='article' /><\/head>`,
     )
     .replace(
       /<\/head>/,
