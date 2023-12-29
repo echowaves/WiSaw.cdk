@@ -19,7 +19,6 @@
     "@babel/preset-env": "7.20.2",
     "@babel/register": "7.18.9",
     "@types/node": "20.2.5",
-    "aws-cdk-lib": "^2.81.0",
     "babel-eslint": "10.1.0",
     "chai": "4.3.7",
     "chai-http": "4.3.0",
@@ -40,8 +39,8 @@
     "typescript": "5.0.4"
   },
   "dependencies": {
-    "aws-cdk-lib": "^2.81.0",
-    "aws-sdk": "2.1386.0",
+    "aws-cdk-lib": "2.117.0",
+    "aws-sdk": "2.1527.0",
     "class-transformer": "0.5.1",
     "constructs": "^10.2.31",
     "global": "4.4.0",
