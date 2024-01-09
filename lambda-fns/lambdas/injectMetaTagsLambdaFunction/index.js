@@ -22,7 +22,7 @@ exports.handler = async (event, context, callback) => {
   // callback(null, request)
 
   const s3 = new AWS.S3()
-
+  // console.log("-----------------------------------------------------1")
   const data = await s3
     .getObject({
       Bucket: "wisaw-client",
@@ -30,6 +30,7 @@ exports.handler = async (event, context, callback) => {
     })
     .promise()
 
+  // console.log({ data })
   const index = data.Body.toString("utf-8")
 
   const body = index

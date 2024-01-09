@@ -92,7 +92,7 @@ export class WiSawCdkStack extends cdk.Stack {
       this,
       `${deployEnv()}-WiSaw-GraphQlMapFunction-cdk`,
       {
-        runtime: lambda.Runtime.NODEJS_18_X,
+        runtime: lambda.Runtime.NODEJS_20_X,
         // handler: "index.handler",
         entry: `${__dirname}/../lambda-fns/index.ts`,
         handler: "main",
@@ -126,7 +126,7 @@ export class WiSawCdkStack extends cdk.Stack {
       this,
       `${deployEnv()}_processUploadedImage`,
       {
-        runtime: lambda.Runtime.NODEJS_18_X,
+        runtime: lambda.Runtime.NODEJS_20_X,
         entry: `${__dirname}/../lambda-fns/lambdas/processUploadedImage/index.ts`,
         handler: "main",
         bundling: {
@@ -159,7 +159,7 @@ export class WiSawCdkStack extends cdk.Stack {
       this,
       `${deployEnv()}_processUploadedPrivateImage`,
       {
-        runtime: lambda.Runtime.NODEJS_18_X,
+        runtime: lambda.Runtime.NODEJS_20_X,
         entry: `${__dirname}/../lambda-fns/lambdas/processUploadedPrivateImage/index.ts`,
         handler: "main",
         bundling: {
@@ -192,7 +192,7 @@ export class WiSawCdkStack extends cdk.Stack {
       this,
       `${deployEnv()}_processDeletedImage`,
       {
-        runtime: lambda.Runtime.NODEJS_18_X,
+        runtime: lambda.Runtime.NODEJS_20_X,
         // handler: "index.handler",
         entry: `${__dirname}/../lambda-fns/lambdas/processDeletedImage/index.ts`,
         handler: "main",
@@ -226,7 +226,7 @@ export class WiSawCdkStack extends cdk.Stack {
       this,
       `${deployEnv()}_processDeletedPrivateImage`,
       {
-        runtime: lambda.Runtime.NODEJS_18_X,
+        runtime: lambda.Runtime.NODEJS_20_X,
         // handler: "index.handler",
         entry: `${__dirname}/../lambda-fns/lambdas/processDeletedPrivateImage/index.ts`,
         handler: "main",
@@ -260,7 +260,7 @@ export class WiSawCdkStack extends cdk.Stack {
       this,
       `${deployEnv()}_cleaupupAbuseReports`,
       {
-        runtime: lambda.Runtime.NODEJS_18_X,
+        runtime: lambda.Runtime.NODEJS_20_X,
         // handler: "index.handler",
         entry: `${__dirname}/../lambda-fns/lambdas/cleaupupAbuseReports/index.ts`,
         handler: "main",
@@ -306,7 +306,7 @@ export class WiSawCdkStack extends cdk.Stack {
         this,
         `${deployEnv()}_generateSiteMap`,
         {
-          runtime: lambda.Runtime.NODEJS_18_X,
+          runtime: lambda.Runtime.NODEJS_20_X,
           // handler: "index.handler",
           entry: `${__dirname}/../lambda-fns/lambdas/generateSiteMap/index.ts`,
           handler: "main",
