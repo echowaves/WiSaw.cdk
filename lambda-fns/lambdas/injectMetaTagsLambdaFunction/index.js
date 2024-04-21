@@ -41,7 +41,7 @@ exports.handler = async (event, context, callback) => {
   // const image = await Body.transformToByteArray();
 
   // console.log({ data })
-  console.log({ index })
+  // console.log({ index })
 
   const body = index
     .replace(
@@ -113,9 +113,9 @@ exports.handler = async (event, context, callback) => {
     },
     body,
   }
-  console.log(
-    ".......................................at the end..............................",
-  )
-  console.log({ response })
+  // console.log(
+  //   ".......................................at the end..............................",
+  // )
+  // console.log({ response })
   callback(null, response)
 }

@@ -58,7 +58,7 @@ export async function main(event: any = {}, context: any) {
     _activatePhoto({ photoId }),
   ])
 
-  console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!   ended 4   photoId: ${photoId}`)
+  // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!   ended 4   photoId: ${photoId}`)
 
   // cb(null, 'success everything')
   return true
