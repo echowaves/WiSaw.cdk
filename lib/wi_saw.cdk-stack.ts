@@ -5,24 +5,21 @@ import * as s3 from "aws-cdk-lib/aws-s3"
 
 import * as s3n from "aws-cdk-lib/aws-s3-notifications"
 
-import * as lambda from "aws-cdk-lib/aws-lambda"
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront"
+import * as lambda from "aws-cdk-lib/aws-lambda"
 
 import * as logs from "aws-cdk-lib/aws-logs"
 
-import { LambdaFunction } from "aws-cdk-lib/aws-events-targets"
 import { Certificate } from "aws-cdk-lib/aws-certificatemanager"
-import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs"
-import { SourceMapMode } from "aws-cdk-lib/aws-lambda-nodejs"
-import { Architecture } from "aws-cdk-lib/aws-lambda"
+import { LambdaFunction } from "aws-cdk-lib/aws-events-targets"
+import { NodejsFunction, SourceMapMode } from "aws-cdk-lib/aws-lambda-nodejs"
 
-import { Rule, Schedule } from "aws-cdk-lib/aws-events"
-import * as rds from "aws-cdk-lib/aws-rds"
 import * as appsync from "aws-cdk-lib/aws-appsync"
+import { Rule, Schedule } from "aws-cdk-lib/aws-events"
 import * as iam from "aws-cdk-lib/aws-iam"
+import * as rds from "aws-cdk-lib/aws-rds"
 
 import { Construct } from "constructs"
-import { TagOptions } from "aws-cdk-lib/aws-servicecatalog"
 
 // import {ISecret, Secret,} from "@aws-cdk/aws-secretsmanager"
 // import * as path from 'path'
