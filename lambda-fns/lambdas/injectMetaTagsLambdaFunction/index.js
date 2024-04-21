@@ -40,7 +40,7 @@ exports.handler = async (event, context, callback) => {
 
   // const image = await Body.transformToByteArray();
 
-  console.log({ data })
+  // console.log({ data })
   console.log({ index })
 
   const body = index
