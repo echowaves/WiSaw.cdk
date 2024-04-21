@@ -1,4 +1,4 @@
-import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3"
+const { S3Client, GetObjectCommand } = require("@aws-sdk/client-s3"); // CommonJS import
 
 exports.handler = async (event, context, callback) => {
   // console.log({ event })
@@ -27,16 +27,21 @@ exports.handler = async (event, context, callback) => {
     Key: "index.html",
   });
   // console.log("-----------------------------------------------------1")
-  const data = await client.send(command);
+  const  { Body }  = await client.send(command);
 
   // console.log({ data })
-  const index = data.Body.toString("utf-8")
+  const index = await Body.transformToString();
+
+  // const index = data.toString("utf-8")
+  // const index = data.toString()
 
   // const command = new GetObjectCommand(input);
   // const { Body } = await client.send(command);
 
   // const image = await Body.transformToByteArray();
 
+  console.log({ data })
+  console.log({ index })
 
   const body = index
     .replace(
@@ -108,9 +113,9 @@ exports.handler = async (event, context, callback) => {
     },
     body,
   }
-  // console.log(
-  //   ".......................................at the end..............................",
-  // )
-  // console.log({ response })
+  console.log(
+    ".......................................at the end..............................",
+  )
+  console.log({ response })
   callback(null, response)
 }
