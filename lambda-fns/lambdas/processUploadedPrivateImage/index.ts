@@ -30,9 +30,12 @@ export async function main(event: any = {}, context: any) {
 };
 
 const command = new GetObjectCommand(input);
-const image = await client.send(command);
+const { Body } = await client.send(command);
 
-  // console.log({image,})
+const image = await Body.transformToByteArray();
+
+
+// console.log({image,})
 
   await Promise.all([
     _genWebpThumb({ image, Bucket, Key: `${photoHash}-thumb` }),
@@ -57,7 +60,7 @@ const _genWebpThumb = async ({
   Bucket: string
   Key: string
 }) => {
-  const buffer = await sharp(image.Body)
+  const buffer = await sharp(image)
     .rotate()
     .webp({ lossless: false, quality: 90 })
     .resize({ height: 300 })
@@ -88,7 +91,7 @@ const _genWebp = async ({
   Bucket: string
   Key: string
 }) => {
-  const buffer = await sharp(image.Body)
+  const buffer = await sharp(image)
     .rotate()
     .webp({ lossless: false, quality: 90 })
     .toBuffer()

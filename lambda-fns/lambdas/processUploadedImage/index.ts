@@ -36,7 +36,9 @@ export async function main(event: any = {}, context: any) {
   };
 
   const command = new GetObjectCommand(input);
-  const image = await client.send(command);
+  const { Body } = await client.send(command);
+
+  const image = await Body.transformToByteArray();
 
   console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!'`, {image})
 
@@ -72,7 +74,7 @@ const _genWebpThumb = async ({
   Key: string
 }) => {
   console.log(`_genWebpThumb started  ${Key}`)
-  const buffer = await sharp(image.Body)
+  const buffer = await sharp(image)
     .rotate()
     .webp({ lossless: false, quality: 90 })
     .resize({ height: 300 })
@@ -106,7 +108,7 @@ const _genWebp = async ({
 }) => {
   // console.log(`_genWebp started  ${Key}`)
 
-  const buffer = await sharp(image.Body)
+  const buffer = await sharp(image)
     .rotate()
     .webp({ lossless: false, quality: 90 })
     .toBuffer()
