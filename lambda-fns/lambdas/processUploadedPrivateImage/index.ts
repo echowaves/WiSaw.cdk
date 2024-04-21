@@ -1,6 +1,7 @@
 import psql from "../../psql"
 
-import AWS from "aws-sdk"
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3"
+
 
 const sharp = require("sharp")
 
@@ -19,16 +20,22 @@ export async function main(event: any = {}, context: any) {
   // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!received image: ${name}`)
   // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!       photoHash: ${photoHash}`)
 
-  const s3 = new AWS.S3()
+  const client = new S3Client({region: 'us-east-1' })
 
-  let image = await s3
-    .getObject({
-      Bucket,
-      Key: name,
-    })
-    .promise()
+  const input = 
+  {
+    Bucket,
+    Key: name,
+  
+};
 
-  // console.log({image,})
+const command = new GetObjectCommand(input);
+const { Body } = await client.send(command);
+
+const image = await Body.transformToByteArray();
+
+
+// console.log({image,})
 
   await Promise.all([
     _genWebpThumb({ image, Bucket, Key: `${photoHash}-thumb` }),
@@ -53,14 +60,13 @@ const _genWebpThumb = async ({
   Bucket: string
   Key: string
 }) => {
-  const buffer = await sharp(image.Body)
+  const buffer = await sharp(image)
     .rotate()
     .webp({ lossless: false, quality: 90 })
     .resize({ height: 300 })
     .toBuffer()
-  const s3 = new AWS.S3()
-  await s3
-    .putObject({
+
+    const putCommand = new PutObjectCommand({
       Bucket,
       Key,
       Body: buffer,
@@ -68,7 +74,12 @@ const _genWebpThumb = async ({
       ACL: "public-read",
       CacheControl: "max-age=31536000",
     })
-    .promise()
+
+    const client = new S3Client({region: 'us-east-1' })
+
+    await client.send(putCommand)
+
+  
 }
 
 const _genWebp = async ({
@@ -80,13 +91,11 @@ const _genWebp = async ({
   Bucket: string
   Key: string
 }) => {
-  const buffer = await sharp(image.Body)
+  const buffer = await sharp(image)
     .rotate()
     .webp({ lossless: false, quality: 90 })
     .toBuffer()
-  const s3 = new AWS.S3()
-  await s3
-    .putObject({
+    const putCommand = new PutObjectCommand({
       Bucket,
       Key,
       Body: buffer,
@@ -94,7 +103,10 @@ const _genWebp = async ({
       ACL: "public-read",
       CacheControl: "max-age=31536000",
     })
-    .promise()
+
+    const client = new S3Client({region: 'us-east-1' })
+
+    await client.send(putCommand)
 }
 
 const _deleteUpload = async ({
@@ -104,13 +116,15 @@ const _deleteUpload = async ({
   Bucket: string
   Key: string
 }) => {
-  const s3 = new AWS.S3()
-  await s3
-    .deleteObject({
-      Bucket,
-      Key,
-    })
-    .promise()
+  const deleteCommand = new DeleteObjectCommand({
+    Bucket,
+    Key,
+  })
+
+  const client = new S3Client({region: 'us-east-1' })
+
+  await client.send(deleteCommand)
+
 }
 
 const _activatePhoto = async ({ photoHash }: { photoHash: string }) => {

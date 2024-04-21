@@ -1,8 +1,11 @@
 import moment from "moment"
-
+ 
 import psql from "../../psql"
 
-import AWS from "aws-sdk"
+
+import { DetectLabelsCommand, DetectModerationLabelsCommand, DetectTextCommand, RekognitionClient } from "@aws-sdk/client-rekognition"
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3"
+
 
 const sharp = require("sharp")
 
@@ -21,16 +24,26 @@ export async function main(event: any = {}, context: any) {
   // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!received image: ${name}`)
   // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!       photoId: ${photoId}`)
 
-  const s3 = new AWS.S3()
   // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!   ended 1    photoId: ${photoId}`)
 
-  let image = await s3
-    .getObject({
+  const client = new S3Client({region: 'us-east-1' })
+
+  const input = 
+    {
       Bucket,
       Key: name,
-    })
-    .promise()
+    
+  };
+
+  const command = new GetObjectCommand(input);
+  const { Body } = await client.send(command);
+
+  const image = await Body.transformToByteArray();
+
+  // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!'`, {image})
+
   // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!   ended 2    photoId: ${photoId}`)
+  // const image = Buffer.from(await response.Body.transformToByteArray())
 
   await Promise.all([
     _genWebpThumb({ image, Bucket, Key: `${photoId}-thumb` }),
@@ -61,14 +74,15 @@ const _genWebpThumb = async ({
   Key: string
 }) => {
   // console.log(`_genWebpThumb started  ${Key}`)
-  const buffer = await sharp(image.Body)
+  const buffer = await sharp(image)
     .rotate()
     .webp({ lossless: false, quality: 90 })
     .resize({ height: 300 })
     .toBuffer()
-  const s3 = new AWS.S3()
-  await s3
-    .putObject({
+
+
+  
+    const putCommand = new PutObjectCommand({
       Bucket,
       Key,
       Body: buffer,
@@ -76,8 +90,10 @@ const _genWebpThumb = async ({
       ACL: "public-read",
       CacheControl: "max-age=31536000",
     })
-    .promise()
 
+    const client = new S3Client({region: 'us-east-1' })
+
+    await client.send(putCommand)
   // console.log(`_genWebpThumb ended  ${Key}`)
 }
 
@@ -92,13 +108,14 @@ const _genWebp = async ({
 }) => {
   // console.log(`_genWebp started  ${Key}`)
 
-  const buffer = await sharp(image.Body)
+  const buffer = await sharp(image)
     .rotate()
     .webp({ lossless: false, quality: 90 })
     .toBuffer()
-  const s3 = new AWS.S3()
-  await s3
-    .putObject({
+  
+    
+
+    const putCommand = new PutObjectCommand({
       Bucket,
       Key,
       Body: buffer,
@@ -106,7 +123,11 @@ const _genWebp = async ({
       ACL: "public-read",
       CacheControl: "max-age=31536000",
     })
-    .promise()
+
+    const client = new S3Client({region: 'us-east-1' })
+
+    await client.send(putCommand)
+
   // console.log(`_genWebp ended  ${Key}`)
 }
 
@@ -119,13 +140,16 @@ const _deleteUpload = async ({
 }) => {
   // console.log(`_deleteUpload started  ${Key}`)
 
-  const s3 = new AWS.S3()
-  await s3
-    .deleteObject({
+
+    const deleteCommand = new DeleteObjectCommand({
       Bucket,
       Key,
     })
-    .promise()
+
+    const client = new S3Client({region: 'us-east-1' })
+
+    await client.send(deleteCommand)
+
   // console.log(`_deleteUpload ended  ${Key}`)
 }
 
@@ -139,7 +163,13 @@ const _recognizeImage = async ({
   // console.log(`_recognizeImage started  ${Key}`)
 
   // console.log({Bucket, Key})
-  const rekognition = new AWS.Rekognition()
+  
+  const rekognitionClient = new RekognitionClient({
+    region: "us-east-1",
+    
+  });
+
+  
   const params = {
     Image: {
       S3Object: {
@@ -151,17 +181,19 @@ const _recognizeImage = async ({
   // console.log(`_recognizeImage ended 1  ${Key}`)
 
   const metaData = {
-    Labels: null,
-    TextDetections: null,
-    ModerationLabels: null,
+    Labels: <any> {},
+    TextDetections: <any> {},
+    ModerationLabels: <any> {},
   }
   try {
+    
     const [labelsData, moderationData, textData] = await Promise.all([
-      rekognition.detectLabels(params).promise(),
-      rekognition.detectModerationLabels(params).promise(),
-      rekognition.detectText(params).promise(),
+      rekognitionClient.send(new DetectLabelsCommand(params)),
+      rekognitionClient.send(new DetectModerationLabelsCommand(params)),
+      rekognitionClient.send(new DetectTextCommand(params)),
     ])
 
+    
     // console.log(`_recognizeImage ended 2  ${Key}`)
 
     metaData.Labels = labelsData.Labels

@@ -6,9 +6,9 @@ import { plainToClass } from "class-transformer"
 
 import psql from "../../psql"
 
-import Friendship from "../../models/friendship"
 import Chat from "../../models/chat"
 import ChatUser from "../../models/chatUser"
+import Friendship from "../../models/friendship"
 
 export default async function main(friendshipUuid: string, uuid: string) {
   const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
@@ -18,7 +18,7 @@ export default async function main(friendshipUuid: string, uuid: string) {
     throw new Error(`Wrong UUID format`)
   }
 
-  console.log({ friendshipUuid, uuid })
+  // console.log({ friendshipUuid, uuid })
   await psql.connect()
 
   const [friendship, chat, chatUser] = await (async (): Promise<any> => {
@@ -40,7 +40,7 @@ export default async function main(friendshipUuid: string, uuid: string) {
         throw new Error(`Friendship not found`)
       }
 
-      console.log({ friendship1: friendship1[0] })
+      // console.log({ friendship1: friendship1[0] })
 
       if (friendship1[0].uuid2 !== null) {
         throw new Error(`Friendship already confirmed`)
@@ -55,7 +55,7 @@ export default async function main(friendshipUuid: string, uuid: string) {
                             `)
       ).rows[0]
 
-      console.log({ friendship })
+      // console.log({ friendship })
 
       const chatUser = (
         await psql.query(`
@@ -77,7 +77,7 @@ export default async function main(friendshipUuid: string, uuid: string) {
                             `)
       ).rows[0]
 
-      console.log({ chatUser })
+      // console.log({ chatUser })
 
       const chat = (
         await psql.query(`
@@ -87,7 +87,7 @@ export default async function main(friendshipUuid: string, uuid: string) {
                       `)
       ).rows[0]
 
-      console.log({ chat })
+      // console.log({ chat })
 
       await psql.query("COMMIT")
       return [friendship, chat, chatUser]

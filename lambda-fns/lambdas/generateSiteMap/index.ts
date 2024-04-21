@@ -2,7 +2,8 @@ const { SitemapStream, streamToPromise } = require("sitemap")
 
 import psql from "../../psql"
 
-import AWS from "aws-sdk"
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3"; // ES Modules import
+
 
 // eslint-disable-next-line import/prefer-default-export
 export async function main(event: any = {}, context: any /*, cb: any*/) {
@@ -40,19 +41,21 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
   const buffer = await streamToPromise(smStream)
 
   // download the original to disk
-  const s3 = new AWS.S3()
-
+  
   try {
     // console.log('uploading sitemap.xml')
 
-    await s3
-      .putObject({
-        ACL: "public-read",
+      const client = new S3Client({region: 'us-east-1' });
+
+      const input = {
+        // ACL: "public-read",
         Key: "sitemap.xml",
         Body: buffer.toString(),
         Bucket: "wisaw-client",
-      })
-      .promise()
+      };
+
+      const command = new PutObjectCommand(input);
+      const response = await client.send(command);
 
     // console.log('finished uploading')
   } catch (err) {

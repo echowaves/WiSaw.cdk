@@ -298,6 +298,27 @@ export class WiSawCdkStack extends cdk.Stack {
       targets: [cleaupupAbuseReports_LambdaTarget],
     })
 
+
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // imgBucket
+    // Grant access to s3 bucket for lambda function
+    const imgBucket = s3.Bucket.fromBucketName(
+      this,
+      `wisaw-img-${deployEnv()}`,
+      `wisaw-img-${deployEnv()}`,
+    )
+    imgBucket.grantPut(wisawFn)
+    imgBucket.grantPutAcl(wisawFn)
+    imgBucket.grantReadWrite(wisawFn)
+    imgBucket.grantReadWrite(processUploadedImageLambdaFunction)
+    imgBucket.grantPut(processUploadedImageLambdaFunction)
+    imgBucket.grantPutAcl(processUploadedImageLambdaFunction)
+    imgBucket.grantDelete(processUploadedImageLambdaFunction)
+
+    imgBucket.grantDelete(processDeletedImageLambdaFunction)
+
+
+
     if (deployEnv() === "prod") {
       const generateSiteMap_LambdaFunction = new NodejsFunction(
         this,
@@ -359,7 +380,7 @@ export class WiSawCdkStack extends cdk.Stack {
           this,
           `${deployEnv()}_injectMetaTagsLambdaFunction`,
           {
-            runtime: lambda.Runtime.NODEJS_16_X,
+            runtime: lambda.Runtime.NODEJS_20_X,
             code: lambda.Code.fromAsset(
               path.join(
                 __dirname,
@@ -378,6 +399,8 @@ export class WiSawCdkStack extends cdk.Stack {
           },
         )
       webAppBucket.grantRead(injectMetaTagsLambdaFunction)
+      imgBucket.grantReadWrite(injectMetaTagsLambdaFunction)
+      
 
       // Origin access identity for cloudfront to access the bucket
       const myCdnOai = new cloudfront.OriginAccessIdentity(this, "CdnOai")
@@ -450,24 +473,9 @@ export class WiSawCdkStack extends cdk.Stack {
             responsePagePath: "/index.html",
           },
         ],
-      })
+      })  
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // imgBucket
-    // Grant access to s3 bucket for lambda function
-    const imgBucket = s3.Bucket.fromBucketName(
-      this,
-      `wisaw-img-${deployEnv()}`,
-      `wisaw-img-${deployEnv()}`,
-    )
-    imgBucket.grantPut(wisawFn)
-    imgBucket.grantPutAcl(wisawFn)
-    imgBucket.grantPut(processUploadedImageLambdaFunction)
-    imgBucket.grantPutAcl(processUploadedImageLambdaFunction)
-    imgBucket.grantDelete(processUploadedImageLambdaFunction)
-
-    imgBucket.grantDelete(processDeletedImageLambdaFunction)
 
     processUploadedImageLambdaFunction.addToRolePolicy(
       new iam.PolicyStatement({
@@ -515,6 +523,7 @@ export class WiSawCdkStack extends cdk.Stack {
     )
     imgPrivateBucket.grantPut(wisawFn)
     imgPrivateBucket.grantPutAcl(wisawFn)
+    imgPrivateBucket.grantReadWrite(processUploadedPrivateImageLambdaFunction)
     imgPrivateBucket.grantPut(processUploadedPrivateImageLambdaFunction)
     imgPrivateBucket.grantPutAcl(processUploadedPrivateImageLambdaFunction)
     imgPrivateBucket.grantDelete(processUploadedPrivateImageLambdaFunction)

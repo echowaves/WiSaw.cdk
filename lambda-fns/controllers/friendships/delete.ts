@@ -1,6 +1,6 @@
 import psql from '../../psql'
 
-import {validate as uuidValidate,} from 'uuid'
+import { validate as uuidValidate, } from 'uuid'
 
 export default async function main( friendshipUuid: string) {
   // console.log({friendshipUuid,})
@@ -17,7 +17,7 @@ export default async function main( friendshipUuid: string) {
       WHERE "friendshipUuid" = '${friendshipUuid}'
   `)).rows[0].chatUuid
 
-  console.log({chatUuid,})
+  // console.log({chatUuid,})
 
   try {
     await psql.query('BEGIN')
