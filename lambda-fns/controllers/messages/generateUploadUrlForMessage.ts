@@ -1,6 +1,7 @@
 import psql from "../../psql"
 
-import AWS from "aws-sdk"
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3"
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 
 // import AbuseReport from '../../models/abuseReport'
 
@@ -51,16 +52,24 @@ export default async function main(
   //                   `
   // )[0]
 
-  const s3 = new AWS.S3()
+  
+  
   const s3Params = {
     Bucket: process.env.S3_BUCKET_PRIVATE,
     Key: `${assetKey}`,
     ContentType: contentType,
-    Expires: 60 * 60, // expires in 1 minute * 60 minutes, after that request a new URL
-    ACL: "public-read",
+    // Expires: 60 * 60, // expires in 1 minute * 60 minutes, after that request a new URL
+    // ACL: "public-read",
   }
 
-  const uploadUrl = s3.getSignedUrl("putObject", s3Params)
+  const client = new S3Client({region: 'us-east-1' })
+  const command = new PutObjectCommand(s3Params)
+
+  const uploadUrl = await getSignedUrl(client, command, { expiresIn: 3600 })
+
+  // const uploadUrl = await getSignedUrl(s3, new PutObjectCommand(s3Params), {
+  //   expiresIn: "/* add value from 'Expires' from v2 call if present, else remove */",
+  // })
 
   return {
     newAsset: true,

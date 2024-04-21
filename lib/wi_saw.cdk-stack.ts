@@ -359,7 +359,7 @@ export class WiSawCdkStack extends cdk.Stack {
           this,
           `${deployEnv()}_injectMetaTagsLambdaFunction`,
           {
-            runtime: lambda.Runtime.NODEJS_16_X,
+            runtime: lambda.Runtime.NODEJS_20_X,
             code: lambda.Code.fromAsset(
               path.join(
                 __dirname,

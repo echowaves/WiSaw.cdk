@@ -1,6 +1,6 @@
 import psql from "../../psql"
 
-import AWS from "aws-sdk"
+import { DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3"
 
 // eslint-disable-next-line import/prefer-default-export
 export async function main(event: any = {}, context: any) {
@@ -31,13 +31,16 @@ const _deleteUpload = async ({
   // console.log(`_deleteUpload started: ${Key}`)
 
   try {
-    const s3 = new AWS.S3()
-    await s3
-      .deleteObject({
-        Bucket,
-        Key,
-      })
-      .promise()
+
+    const deleteCommand = new DeleteObjectCommand({
+      Bucket,
+      Key,
+    })
+
+    const client = new S3Client({region: 'us-east-1' })
+
+    await client.send(deleteCommand)
+
   } catch (err) {
     console.log("Error deleting object")
     console.log({ err })

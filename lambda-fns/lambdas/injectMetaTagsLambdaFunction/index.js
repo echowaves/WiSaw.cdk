@@ -1,5 +1,4 @@
-// import AWS from "aws-sdk"
-var AWS = require("aws-sdk") //to use built-in modules
+import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3"
 
 exports.handler = async (event, context, callback) => {
   // console.log({ event })
@@ -21,14 +20,14 @@ exports.handler = async (event, context, callback) => {
   // console.log({ event: event.Records[0].cf })
   // callback(null, request)
 
-  const s3 = new AWS.S3()
+  const client = new S3Client({region: 'us-east-1' })
+
+  const command = new GetObjectCommand({
+    Bucket: "wisaw-client",
+    Key: "index.html",
+  });
   // console.log("-----------------------------------------------------1")
-  const data = await s3
-    .getObject({
-      Bucket: "wisaw-client",
-      Key: "index.html",
-    })
-    .promise()
+  const data = await client.send(command);
 
   // console.log({ data })
   const index = data.Body.toString("utf-8")

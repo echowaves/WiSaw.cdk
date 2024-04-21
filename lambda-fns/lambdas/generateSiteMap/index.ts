@@ -2,7 +2,6 @@ const { SitemapStream, streamToPromise } = require("sitemap")
 
 import psql from "../../psql"
 
-import AWS from "aws-sdk"
 
 // eslint-disable-next-line import/prefer-default-export
 export async function main(event: any = {}, context: any /*, cb: any*/) {
