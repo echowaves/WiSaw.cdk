@@ -1,10 +1,11 @@
 import moment from "moment"
-
+ 
 import psql from "../../psql"
 
-import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3"
 
 import { DetectLabelsCommand, DetectModerationLabelsCommand, DetectTextCommand, RekognitionClient } from "@aws-sdk/client-rekognition"
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3"
+
 
 const sharp = require("sharp")
 
@@ -20,10 +21,10 @@ export async function main(event: any = {}, context: any) {
   const photoId = name.replace(".upload", "")
   const Bucket = record.s3.bucket.name
   // we only want to deal with originals
-  // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!received image: ${name}`)
-  // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!       photoId: ${photoId}`)
+  console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!received image: ${name}`)
+  console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!       photoId: ${photoId}`)
 
-  // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!   ended 1    photoId: ${photoId}`)
+  console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!   ended 1    photoId: ${photoId}`)
 
   const client = new S3Client({region: 'us-east-1' })
 
@@ -37,8 +38,9 @@ export async function main(event: any = {}, context: any) {
   const command = new GetObjectCommand(input);
   const image = await client.send(command);
 
+  console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!'`, {image})
 
-  // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!   ended 2    photoId: ${photoId}`)
+  console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!   ended 2    photoId: ${photoId}`)
   // const image = Buffer.from(await response.Body.transformToByteArray())
 
   await Promise.all([
@@ -47,14 +49,14 @@ export async function main(event: any = {}, context: any) {
     _recognizeImage({ Bucket, Key: `${name}` }),
   ])
 
-  // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!   ended 3    photoId: ${photoId}`)
+  console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!   ended 3    photoId: ${photoId}`)
 
   await Promise.all([
     _deleteUpload({ Bucket, Key: name }),
     _activatePhoto({ photoId }),
   ])
 
-  // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!   ended 4   photoId: ${photoId}`)
+  console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!   ended 4   photoId: ${photoId}`)
 
   // cb(null, 'success everything')
   return true
@@ -69,7 +71,7 @@ const _genWebpThumb = async ({
   Bucket: string
   Key: string
 }) => {
-  // console.log(`_genWebpThumb started  ${Key}`)
+  console.log(`_genWebpThumb started  ${Key}`)
   const buffer = await sharp(image.Body)
     .rotate()
     .webp({ lossless: false, quality: 90 })
@@ -90,7 +92,7 @@ const _genWebpThumb = async ({
     const client = new S3Client({region: 'us-east-1' })
 
     await client.send(putCommand)
-  // console.log(`_genWebpThumb ended  ${Key}`)
+  console.log(`_genWebpThumb ended  ${Key}`)
 }
 
 const _genWebp = async ({
