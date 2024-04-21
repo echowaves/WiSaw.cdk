@@ -32,6 +32,12 @@ exports.handler = async (event, context, callback) => {
   // console.log({ data })
   const index = data.Body.toString("utf-8")
 
+  // const command = new GetObjectCommand(input);
+  // const { Body } = await client.send(command);
+
+  // const image = await Body.transformToByteArray();
+
+
   const body = index
     .replace(
       /<\/head>/,
