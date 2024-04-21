@@ -41,15 +41,9 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
   const buffer = await streamToPromise(smStream)
 
   // download the original to disk
-  const s3 = new AWS.S3()
-
+  
   try {
     // console.log('uploading sitemap.xml')
-
-    await s3
-      .putObject()
-      .promise()
-
 
       const client = new S3Client({region: 'us-east-1' });
 
