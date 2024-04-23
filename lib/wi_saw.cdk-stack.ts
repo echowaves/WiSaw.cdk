@@ -361,7 +361,7 @@ export class WiSawCdkStack extends cdk.Stack {
       new Rule(this, "lambda-polling-rule", {
         description: "Rule to trigger scheduled lambda",
         // schedule: Schedule.rate(cdk.Duration.minutes(1)),
-        schedule: Schedule.rate(cdk.Duration.hours(1)),
+        schedule: Schedule.rate(cdk.Duration.hours(3)),
         targets: [generateSiteMapLambdaFunction_LambdaTarget],
       })
 
