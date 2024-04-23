@@ -27,7 +27,7 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
       `)
     ).rows
   } catch (err) {
-    console.log("Unable to retrieve Photos feed", { err })
+    console.error("Unable to retrieve Photos feed", { err })
     // return false
   }
   await psql.clean()
@@ -59,7 +59,7 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
 
     // console.log('finished uploading')
   } catch (err) {
-    console.log("Unable to upload sitemap.xml", { err })
+    console.error("Unable to upload sitemap.xml", { err })
   }
 
   // console.log('done')

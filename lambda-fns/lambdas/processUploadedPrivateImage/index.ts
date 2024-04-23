@@ -158,8 +158,8 @@ const _activatePhoto = async ({ photoHash }: { photoHash: string }) => {
     }
     // console.log({result})
   } catch (err) {
-    console.log("Error activating photo")
-    console.log({ err })
+    console.error("Error activating photo")
+    console.error({ err })
   }
   await psql.clean()
 

@@ -39,8 +39,8 @@ const _deleteUpload = async ({
     await client.send(deleteCommand)
 
   } catch (err) {
-    console.log("Error deleting object")
-    console.log({ err })
+    console.error("Error deleting object")
+    console.error({ err })
   }
 }
 
@@ -54,8 +54,8 @@ const _cleanupTables = async ({ photoHash }: { photoHash: string }) => {
                     `)
     //
   } catch (err) {
-    console.log("Error ChatPhotos delete")
-    console.log({ err })
+    console.error("Error ChatPhotos delete")
+    console.error({ err })
   }
 
   try {
@@ -66,8 +66,8 @@ const _cleanupTables = async ({ photoHash }: { photoHash: string }) => {
                     `)
     //
   } catch (err) {
-    console.log("Error Messages delete")
-    console.log({ err })
+    console.error("Error Messages delete")
+    console.error({ err })
   }
   await psql.clean()
 }

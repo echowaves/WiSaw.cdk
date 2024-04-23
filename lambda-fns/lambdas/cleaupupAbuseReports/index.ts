@@ -9,7 +9,7 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
     DELETE FROM "AbuseReports" where "createdAt" < NOW() - INTERVAL '7 days'
     `)
   } catch (err) {
-    console.log("Unable to cleanup", { err })
+    console.error("Unable to cleanup", { err })
     await psql.clean()
     return false
   }

@@ -42,8 +42,8 @@ const _deleteUpload = async ({
     await client.send(deleteCommand)
 
   } catch (err) {
-    console.log("Error deleting object")
-    console.log({ err })
+    console.error("Error deleting object")
+    console.error({ err })
   }
   // console.log(`_deleteUpload ended: ${Key}`)
 }
@@ -60,8 +60,8 @@ const _cleanupTables = async ({ photoId }: { photoId: string }) => {
                     `)
     //
   } catch (err) {
-    console.log("Error de-activating photo")
-    console.log({ err })
+    console.error("Error de-activating photo")
+    console.error({ err })
   }
   // console.log(`_cleanupTables ended 1: ${photoId}`)
 
@@ -73,8 +73,8 @@ const _cleanupTables = async ({ photoId }: { photoId: string }) => {
                     `)
     //
   } catch (err) {
-    console.log("Error cleaning up Watchers")
-    console.log({ err })
+    console.error("Error cleaning up Watchers")
+    console.error({ err })
   }
   // console.log(`_cleanupTables ended 2: ${photoId}`)
 
@@ -86,8 +86,8 @@ const _cleanupTables = async ({ photoId }: { photoId: string }) => {
                     `)
     //
   } catch (err) {
-    console.log("Error cleaning up Recognitions")
-    console.log({ err })
+    console.error("Error cleaning up Recognitions")
+    console.error({ err })
   }
   // console.log(`_cleanupTables ended 3: ${photoId}`)
 

@@ -207,8 +207,8 @@ const _recognizeImage = async ({
 
     // console.log(JSON.stringify(metaData))
   } catch (err) {
-    console.log("Error parsing image")
-    console.log({ err })
+    console.error("Error parsing image")
+    console.error({ err })
   }
   // console.log(`_recognizeImage ended 3  ${Key}`)
 
@@ -240,8 +240,8 @@ const _recognizeImage = async ({
     // ).rows
     // console.log({result})
   } catch (err) {
-    console.log("Error saving recognitions")
-    console.log({ err })
+    console.error("Error saving recognitions")
+    console.error({ err })
   }
   await psql.clean()
   // console.log(`_recognizeImage ended 4  ${Key}`)
@@ -262,8 +262,8 @@ const _activatePhoto = async ({ photoId }: { photoId: string }) => {
                     `)
     // console.log({result})
   } catch (err) {
-    console.log("Error activating photo")
-    console.log({ err })
+    console.error("Error activating photo")
+    console.error({ err })
   }
   await psql.clean()
   // console.log(`_activatePhoto ended  ${photoId}`)
