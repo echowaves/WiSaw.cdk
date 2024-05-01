@@ -9,6 +9,7 @@ exports.handler = async (event, context, callback) => {
     .replace("/photos/", "")
     .replace("/full", "")
     .replace("/thumb", "")
+    .replace("/", "")
 
   // console.log("Received event:", JSON.stringify(event, null, 4))
   // console.log(
