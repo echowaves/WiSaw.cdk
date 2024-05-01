@@ -32,9 +32,9 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
   }
   await psql.clean()
 
-  // console.log('photos.length:', photos.length)
+  console.log('photos.length:', photos.length)
   photos?.forEach((photo: any) => {
-    const jsonObj = JSON.parse(JSON.stringify(photo))
+    // const jsonObj = JSON.parse(JSON.stringify(photo))
     smStream.write({ url: `/photos/${photo.id}/` })
   })
   smStream.end()
@@ -43,7 +43,7 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
   // download the original to disk
   
   try {
-    // console.log('uploading sitemap.xml')
+    console.log('uploading sitemap.xml')
 
       const client = new S3Client({region: 'us-east-1' });
 
@@ -57,7 +57,7 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
       const command = new PutObjectCommand(input);
       const response = await client.send(command);
 
-    // console.log('finished uploading')
+    console.log('finished uploading')
   } catch (err) {
     console.error("Unable to upload sitemap.xml", { err })
   }
