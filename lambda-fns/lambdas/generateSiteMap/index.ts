@@ -48,10 +48,11 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
       const client = new S3Client({region: 'us-east-1' });
 
       const input = {
-        // ACL: "public-read",
         Key: "sitemap.xml",
         Body: buffer.toString(),
         Bucket: "wisaw-client",
+        ACL: "public-read",
+        CacheControl: "max-age=0",  
       };
 
       const command = new PutObjectCommand(input);

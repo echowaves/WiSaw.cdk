@@ -9,7 +9,7 @@ export default async function main(assetKey: string, contentType: string) {
     Key: `${assetKey}`,
     ContentType: contentType,
     // Expires: 60 * 60, // expires in 1 minute * 60 minutes, after that request a new URL
-    // ACL: "public-read",    
+    ACL: "public-read",    
   }
 
   // const putObjectParams = {
