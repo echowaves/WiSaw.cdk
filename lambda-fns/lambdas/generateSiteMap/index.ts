@@ -35,7 +35,7 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
   // console.log('photos.length:', photos.length)
   photos?.forEach((photo: any) => {
     const jsonObj = JSON.parse(JSON.stringify(photo))
-    smStream.write({ url: `/photos/${photo.id}/thumb` })
+    smStream.write({ url: `/photos/${photo.id}` })
   })
   smStream.end()
   const buffer = await streamToPromise(smStream)
