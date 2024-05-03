@@ -24,6 +24,7 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
             "commentsCount" > 0
         AND
             active = true
+        ORDER BY "createdAt" DESC
       `)
     ).rows
   } catch (err) {
