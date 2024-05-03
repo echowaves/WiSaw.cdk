@@ -21,8 +21,7 @@
     "@types/node": "20.12.7",
     "babel-eslint": "10.1.0",
     "chai": "5.1.0",
-    "chai-http": "4.4.0",
-    "constructs": "^10.2.31",
+    "chai-http": "4.4.0",    
     "dotenv": "16.4.5",
     "esbuild": "^0.20.2",
     "eslint": "9.1.0",
@@ -43,6 +42,8 @@
   },
   "dependencies": {
     "@aws-sdk/client-lambda": "^3.556.0",
+    "@aws-sdk/client-sts": "^3.556.0",
+    "@aws-sdk/client-sso-oidc": "^3.556.0",
     "@aws-sdk/client-rekognition": "^3.556.0",
     "@aws-sdk/client-s3": "^3.556.0",
     "@aws-sdk/s3-request-presigner": "^3.556.0",
