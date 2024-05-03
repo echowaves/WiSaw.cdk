@@ -71,7 +71,7 @@ exports.handler = async (event, context, callback) => {
     )
     .replace(
       /<\/head>/,
-      `<link rel="canonical" href="https://www.wisaw.com/photos/${imageId}" data-rh="true"><\/head>`,
+      `<link rel="canonical" href="https://www.wisaw.com/photos/${imageId}/" data-rh="true"><\/head>`,
     )
     .replace(
       /<\/head>/,
