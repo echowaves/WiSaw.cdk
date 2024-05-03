@@ -1,8 +1,8 @@
 import psql from '../../psql'
 
-import {_getPhoto} from './_getPhoto'
-import {_getComments} from './_getComments'
-import {_getRecognitions} from './_getRecognitions'
+import { _getComments } from './_getComments'
+import { _getPhoto } from './_getPhoto'
+import { _getRecognitions } from './_getRecognitions'
 
 export default async function main(
   photoId: bigint,
@@ -13,10 +13,10 @@ export default async function main(
   (await psql.query(`
                       SELECT "id" FROM "Photos"
                     WHERE
-                      "id" < ${photoId}
+                      "updatedAt" < (select "updatedAt" FROM "Photos" where "id" = ${photoId})
                     AND
                       active = true
-                    ORDER BY id DESC
+                    ORDER BY "updatedAt" DESC
                     LIMIT 1
                     `
                   )).rows[0]?.id || 2147483640
