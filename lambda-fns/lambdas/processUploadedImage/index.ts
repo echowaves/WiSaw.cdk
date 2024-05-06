@@ -181,9 +181,9 @@ const _recognizeImage = async ({
   // console.log(`_recognizeImage ended 1  ${Key}`)
 
   const metaData = {
-    Labels: <any> {},
-    TextDetections: <any> {},
-    ModerationLabels: <any> {},
+    Labels: <any> [],
+    TextDetections: <any> [],
+    ModerationLabels: <any> [],
   }
   try {
     
@@ -196,19 +196,23 @@ const _recognizeImage = async ({
     
     // console.log(`_recognizeImage ended 2  ${Key}`)
 
-    metaData.Labels = labelsData.Labels
+    metaData.Labels = labelsData?.Labels || []
     // console.log(JSON.stringify(labelsData))
 
-    metaData.ModerationLabels = moderationData.ModerationLabels
+    metaData.ModerationLabels = moderationData?.ModerationLabels || []
     // console.log(JSON.stringify(moderationData))
 
-    metaData.TextDetections = textData.TextDetections
+    metaData.TextDetections = textData?.TextDetections || []
     // console.log(JSON.stringify(textData))
 
     // console.log(JSON.stringify(metaData))
   } catch (err) {
     console.error("Error parsing image")
     console.error({ err })
+    // metaData.Labels = []
+    // metaData.ModerationLabels = []
+    // metaData.TextDetections = []
+    
   }
   // console.log(`_recognizeImage ended 3  ${Key}`)
 
