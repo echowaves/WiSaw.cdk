@@ -47,7 +47,7 @@ exports.handler = async (event, context, callback) => {
   const body = index
     .replace(
       /<\/title>/,
-      `<\/title><meta property="og:image" content="https://img.wisaw.com/${imageId}-thumb" data-rh="true">`,
+      `<\/title><meta property="og:image" content="https://img.wisaw.com/${imageId}" data-rh="true">`,
     )
     .replace(
       /<\/title>/,
@@ -83,7 +83,7 @@ exports.handler = async (event, context, callback) => {
     )
     .replace(
       /<\/title>/,
-      `<\/title><meta name="twitter:image" content="https://img.wisaw.com/${imageId}-thumb">`,
+      `<\/title><meta name="twitter:image" content="https://img.wisaw.com/${imageId}">`,
     )
 
   const response = {
