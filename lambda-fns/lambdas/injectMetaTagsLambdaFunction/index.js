@@ -47,11 +47,11 @@ exports.handler = async (event, context, callback) => {
   const body = index
     .replace(
       /<\/head>/,
-      `<meta name="image" property="og:image" content="https://img.wisaw.com/${imageId}" data-rh="true"><\/head>`,
+      `<meta property="og:image" content="https://img.wisaw.com/${imageId}" data-rh="true"><\/head>`,
     )
     .replace(
       /<\/head>/,
-      `<meta name="description" property="og:description" content="Check out What I saw Today" data-rh="true"><\/head>`,
+      `<meta property="og:description" content="Check out What I saw Today" data-rh="true"><\/head>`,
     )
     .replace(
       /<\/head>/,
