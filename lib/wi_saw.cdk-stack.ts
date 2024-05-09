@@ -79,7 +79,7 @@ export class WiSawCdkStack extends cdk.Stack {
       "arn:aws:lambda:us-east-1:580247275435:layer:LambdaInsightsExtension:14"
     const insightsVersion =
       lambda.LambdaInsightsVersion.fromInsightVersionArn(layerArn)
-    const logRetention = logs.RetentionDays.TWO_WEEKS
+    const logRetention = logs.RetentionDays.ONE_DAY
 
     const sharpLayerArn =
       "arn:aws:lambda:us-east-1:963958500685:layer:sharp-layer:2"
