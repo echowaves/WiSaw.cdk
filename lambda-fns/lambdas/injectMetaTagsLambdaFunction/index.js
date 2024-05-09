@@ -46,44 +46,44 @@ exports.handler = async (event, context, callback) => {
 
   const body = index
     .replace(
-      /<\/head>/,
-      `<meta property="og:image" content="https://img.wisaw.com/${imageId}" data-rh="true"><\/head>`,
+      /<\/title>/,
+      `<\/title><meta property="og:image" content="https://img.wisaw.com/${imageId}" data-rh="true">`,
     )
     .replace(
-      /<\/head>/,
-      `<meta property="og:description" content="Check out What I saw Today" data-rh="true"><\/head>`,
+      /<\/title>/,
+      `<\/title><meta property="og:description" content="Check out What I saw Today" data-rh="true">`,
     )
     .replace(
-      /<\/head>/,
-      `<meta property="og:title" content="wisaw photo ${imageId}"><\/head>`,
+      /<\/title>/,
+      `<\/title><meta property="og:title" content="wisaw photo ${imageId}">`,
     )
     .replace(
-      /<\/head>/,
-      `<meta property="og:url" content="https://www.wisaw.com/photos/${imageId}"><\/head>`,
+      /<\/title>/,
+      `<\/title><meta property="og:url" content="https://www.wisaw.com/photos/${imageId}">`,
     )
     .replace(
-      /<\/head>/,
-      `<meta property="og:site_name" content="wisaw.com"><\/head>`,
+      /<\/title>/,
+      `<\/title><meta property="og:site_name" content="wisaw.com">`,
     )
     .replace(
-      /<\/head>/,
-      `<meta property='og:type' content='article' /><\/head>`,
+      /<\/title>/,
+      `<\/title><meta property='og:type' content='article' />`,
     )
     .replace(
-      /<\/head>/,
-      `<link rel="canonical" href="https://www.wisaw.com/photos/${imageId}/" data-rh="true"><\/head>`,
+      /<\/title>/,
+      `<\/title><link rel="canonical" href="https://www.wisaw.com/photos/${imageId}/" data-rh="true">`,
     )
     .replace(
-      /<\/head>/,
-      `<meta name="twitter:title" content="wisaw (What I Saw) photo ${imageId}"><\/head>`,
+      /<\/title>/,
+      `<\/title><meta name="twitter:title" content="wisaw (What I Saw) photo ${imageId}">`,
     )
     .replace(
-      /<\/head>/,
-      `<meta name="twitter:card" content="summary_large_image"><\/head>`,
+      /<\/title>/,
+      `<\/title><meta name="twitter:card" content="summary_large_image">`,
     )
     .replace(
-      /<\/head>/,
-      `<meta name="twitter:image" content="https://img.wisaw.com/${imageId}"><\/head>`,
+      /<\/title>/,
+      `<\/title><meta name="twitter:image" content="https://img.wisaw.com/${imageId}">`,
     )
 
   const response = {
