@@ -54,7 +54,7 @@ exports.handler = async (event, context, callback) => {
       <meta property="og:url" content="https://www.wisaw.com/photos/${imageId}">
       <meta property="og:site_name" content="wisaw.com">
       <meta property='og:type' content='article' />
-      <link rel="canonical" href="https://www.wisaw.com/photos/${imageId}/" data-rh="true">
+      <link rel="canonical" href="https://www.wisaw.com/photos/${imageId}" data-rh="true">
       <meta name="twitter:title" content="wisaw (What I Saw) photo ${imageId}">
       <meta name="twitter:card" content="summary_large_image">
       <meta name="twitter:image" content="https://img.wisaw.com/${imageId}">
