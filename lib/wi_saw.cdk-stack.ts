@@ -374,11 +374,11 @@ export class WiSawCdkStack extends cdk.Stack {
       webAppBucket.grantPutAcl(generateSiteMap_LambdaFunction)
 
       // lambda@edge function for ingecting OG meta tags on the fly
-      const injectMetaTagsLambdaFunction =
+      const injectMetaTagsLambdaFunction_photo =
         // new lambda.Function( // trying to define it as an Lambda@Edge function
         new cloudfront.experimental.EdgeFunction(
           this,
-          `${deployEnv()}_injectMetaTagsLambdaFunction`,
+          `${deployEnv()}_injectPhotoMetaTagsLambdaFunction_photo`,
           {
             runtime: lambda.Runtime.NODEJS_20_X,
             code: lambda.Code.fromAsset(
@@ -388,7 +388,7 @@ export class WiSawCdkStack extends cdk.Stack {
               ),
             ),
             // code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
-            handler: "index.handler",
+            handler: "photo.handler",
             memorySize: 128,
             timeout: cdk.Duration.seconds(5),
             // insightsVersion,
@@ -398,8 +398,36 @@ export class WiSawCdkStack extends cdk.Stack {
             // },
           },
         )
-      webAppBucket.grantRead(injectMetaTagsLambdaFunction)
-      imgBucket.grantReadWrite(injectMetaTagsLambdaFunction)
+      webAppBucket.grantRead(injectMetaTagsLambdaFunction_photo)
+      imgBucket.grantReadWrite(injectMetaTagsLambdaFunction_photo)
+      
+      const injectMetaTagsLambdaFunction_video =
+        // new lambda.Function( // trying to define it as an Lambda@Edge function
+        new cloudfront.experimental.EdgeFunction(
+          this,
+          `${deployEnv()}_injectPhotoMetaTagsLambdaFunction_video`,
+          {
+            runtime: lambda.Runtime.NODEJS_20_X,
+            code: lambda.Code.fromAsset(
+              path.join(
+                __dirname,
+                "../lambda-fns/lambdas/injectMetaTagsLambdaFunction",
+              ),
+            ),
+            // code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
+            handler: "video.handler",
+            memorySize: 128,
+            timeout: cdk.Duration.seconds(5),
+            // insightsVersion,
+            logRetention,
+            // environment: {
+            //   ...config,
+            // },
+          },
+        )
+      webAppBucket.grantRead(injectMetaTagsLambdaFunction_video)
+      imgBucket.grantReadWrite(injectMetaTagsLambdaFunction_video)
+      
       
 
       // Origin access identity for cloudfront to access the bucket
@@ -450,7 +478,28 @@ export class WiSawCdkStack extends cdk.Stack {
                 lambdaFunctionAssociations: [
                   {
                     eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
-                    lambdaFunction: injectMetaTagsLambdaFunction,
+                    lambdaFunction: injectMetaTagsLambdaFunction_photo,
+                    includeBody: true,
+                  },
+                ],
+              },
+              {
+                pathPattern: "videos/*",
+                compress: true,
+                allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
+                minTtl: cdk.Duration.days(10),
+                maxTtl: cdk.Duration.days(10),
+                defaultTtl: cdk.Duration.days(10),
+                forwardedValues: {
+                  queryString: true,
+                  cookies: {
+                    forward: "all",
+                  },
+                },
+                lambdaFunctionAssociations: [
+                  {
+                    eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
+                    lambdaFunction: injectMetaTagsLambdaFunction_video,
                     includeBody: true,
                   },
                 ],

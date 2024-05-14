@@ -7,6 +7,7 @@ exports.handler = async (event, context, callback) => {
   const { request } = event.Records[0].cf
   const imageId = request.uri
     .replace("/photos/", "")
+    .replace("/videos/", "")
     .replace("/full", "")
     .replace("/thumb", "")
     .replace("/", "")
@@ -49,13 +50,13 @@ exports.handler = async (event, context, callback) => {
       /<\/title>/,
       `<\/title>
       <meta property="og:image" content="https://img.wisaw.com/${imageId}" data-rh="true">
-      <meta property="og:description" content="Check out What I saw Today" data-rh="true">
-      <meta property="og:title" content="wisaw photo ${imageId}">
+      <meta property="og:description" content="Check out What I saw Today (video)" data-rh="true">
+      <meta property="og:title" content="wisaw video ${imageId}">
       <meta property="og:url" content="https://www.wisaw.com/photos/${imageId}">
       <meta property="og:site_name" content="wisaw.com">
-      <meta property='og:type' content='article' />
-      <link rel="canonical" href="https://www.wisaw.com/photos/${imageId}" data-rh="true">
-      <meta name="twitter:title" content="wisaw (What I Saw) photo ${imageId}">
+      <meta property='og:type' content='video.movie' />
+      <link rel="canonical" href="https://www.wisaw.com/videos/${imageId}" data-rh="true">
+      <meta name="twitter:title" content="wisaw (What I Saw) video ${imageId}">
       <meta name="twitter:card" content="summary_large_image">
       <meta name="twitter:image" content="https://img.wisaw.com/${imageId}">
       `,
