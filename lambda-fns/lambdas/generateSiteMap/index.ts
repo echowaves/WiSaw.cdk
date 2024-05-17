@@ -36,8 +36,17 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
   console.log('photos.length:', photos.length)
   photos?.forEach((photo: any) => {
     // const jsonObj = JSON.parse(JSON.stringify(photo))
-    if(photo?.video === true)
-      smStream.write({ url: `/videos/${photo.id}` })
+    if(photo?.video === true) {
+      smStream.write({ url: `/videos/${photo.id}`,
+      video: [
+        {
+          thumbnail_loc: `https://img.wisaw.com/${photo.id}-thumb`,
+          title: `(video) ${photo.lastComment}`,
+          description: `(video) ${photo.lastComment}`,
+        }
+      ] 
+      })
+    }
     else 
       smStream.write({ url: `/photos/${photo.id}` })
   })
