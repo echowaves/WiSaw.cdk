@@ -64,16 +64,16 @@ export default async function main(
     day8,
     day9,
   ] = await Promise.all([
-    _retrievePhotos(currentDate, daysAgo * 3 + 0, lat , lon),
-    _retrievePhotos(currentDate, daysAgo * 3 + 1, lat , lon),
-    _retrievePhotos(currentDate, daysAgo * 3 + 2, lat , lon),    
-    _retrievePhotos(currentDate, daysAgo * 3 + 3, lat , lon),    
-    _retrievePhotos(currentDate, daysAgo * 3 + 4, lat , lon),
-    _retrievePhotos(currentDate, daysAgo * 3 + 5, lat , lon),
-    _retrievePhotos(currentDate, daysAgo * 3 + 6, lat , lon),    
-    _retrievePhotos(currentDate, daysAgo * 3 + 7, lat , lon),
-    _retrievePhotos(currentDate, daysAgo * 3 + 8, lat , lon),
-    _retrievePhotos(currentDate, daysAgo * 3 + 9, lat , lon),    
+    _retrievePhotos(currentDate, daysAgo * 10 + 0, lat , lon),
+    _retrievePhotos(currentDate, daysAgo * 10 + 1, lat , lon),
+    _retrievePhotos(currentDate, daysAgo * 10 + 2, lat , lon),    
+    _retrievePhotos(currentDate, daysAgo * 10 + 3, lat , lon),    
+    _retrievePhotos(currentDate, daysAgo * 10 + 4, lat , lon),
+    _retrievePhotos(currentDate, daysAgo * 10 + 5, lat , lon),
+    _retrievePhotos(currentDate, daysAgo * 10 + 6, lat , lon),    
+    _retrievePhotos(currentDate, daysAgo * 10 + 7, lat , lon),
+    _retrievePhotos(currentDate, daysAgo * 10 + 8, lat , lon),
+    _retrievePhotos(currentDate, daysAgo * 10 + 9, lat , lon),    
   ])
 
   await psql.clean()
