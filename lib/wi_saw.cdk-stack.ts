@@ -345,7 +345,7 @@ export class WiSawCdkStack extends cdk.Stack {
           ],
           insightsVersion,
           logRetention,
-          memorySize: 10240,
+          memorySize: 1024,
           // memorySize: 3008,
           timeout: cdk.Duration.seconds(30),
           environment: {
@@ -361,7 +361,7 @@ export class WiSawCdkStack extends cdk.Stack {
       new Rule(this, "lambda-polling-rule", {
         description: "Rule to trigger scheduled lambda",
         // schedule: Schedule.rate(cdk.Duration.minutes(1)),
-        schedule: Schedule.rate(cdk.Duration.hours(3)),
+        schedule: Schedule.rate(cdk.Duration.hours(5)),
         targets: [generateSiteMapLambdaFunction_LambdaTarget],
       })
 
