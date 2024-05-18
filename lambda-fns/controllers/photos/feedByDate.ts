@@ -51,19 +51,14 @@ export default async function main(
   const whenToStopDate = moment(whenToStop)
   
   await psql.connect()
-
-  const photos = (await Promise.all([
-    _retrievePhotos(currentDate, daysAgo * 10 + 0, lat , lon),
-    _retrievePhotos(currentDate, daysAgo * 10 + 1, lat , lon),
-    _retrievePhotos(currentDate, daysAgo * 10 + 2, lat , lon),    
-    _retrievePhotos(currentDate, daysAgo * 10 + 3, lat , lon),    
-    _retrievePhotos(currentDate, daysAgo * 10 + 4, lat , lon),
-    _retrievePhotos(currentDate, daysAgo * 10 + 5, lat , lon),
-    _retrievePhotos(currentDate, daysAgo * 10 + 6, lat , lon),    
-    _retrievePhotos(currentDate, daysAgo * 10 + 7, lat , lon),
-    _retrievePhotos(currentDate, daysAgo * 10 + 8, lat , lon),
-    _retrievePhotos(currentDate, daysAgo * 10 + 9, lat , lon),    
-  ])).flat(1)
+  
+  const arraySize = 10
+  // call _retrievePhotos 10 times for 10 conscutive days in parallel
+  const photos = (
+    await Promise.all(
+                        [...Array(arraySize)].map((_, i) => _retrievePhotos(currentDate, daysAgo * arraySize + i, lat , lon))    
+                      )
+  ).flat(1)
 
   await psql.clean()
 
