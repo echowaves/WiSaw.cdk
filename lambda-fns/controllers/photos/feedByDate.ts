@@ -52,18 +52,7 @@ export default async function main(
   
   await psql.connect()
 
-  const [
-    day0, 
-    day1, 
-    day2, 
-    day3,
-    day4, 
-    day5, 
-    day6, 
-    day7,
-    day8,
-    day9,
-  ] = await Promise.all([
+  const photos = (await Promise.all([
     _retrievePhotos(currentDate, daysAgo * 10 + 0, lat , lon),
     _retrievePhotos(currentDate, daysAgo * 10 + 1, lat , lon),
     _retrievePhotos(currentDate, daysAgo * 10 + 2, lat , lon),    
@@ -74,22 +63,10 @@ export default async function main(
     _retrievePhotos(currentDate, daysAgo * 10 + 7, lat , lon),
     _retrievePhotos(currentDate, daysAgo * 10 + 8, lat , lon),
     _retrievePhotos(currentDate, daysAgo * 10 + 9, lat , lon),    
-  ])
+  ])).flat(1)
 
   await psql.clean()
 
-  const photos = [
-    ...day0, 
-    ...day1, 
-    ...day2, 
-    ...day3,
-    ...day4, 
-    ...day5, 
-    ...day6, 
-    ...day7, 
-    ...day8, 
-    ...day9, 
-  ]
 
   let noMoreData = false
 
