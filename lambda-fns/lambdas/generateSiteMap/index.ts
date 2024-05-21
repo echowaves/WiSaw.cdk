@@ -10,8 +10,28 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
   const smStream = new SitemapStream({ hostname: "https://www.wisaw.com" })
   smStream.write({ url: "/", changefreq: "daily" })
 
-  let photos
+  let videos, photos
+  
   await psql.connect()
+
+    // retrieve videos
+  try {
+    videos = (
+      await psql.query(`  
+        SELECT
+        *
+        FROM "Photos"
+        WHERE
+            active = true
+        AND 
+            video = true
+        ORDER BY "updatedAt" DESC
+      `)
+    ).rows
+  } catch (err) {
+    console.error("Unable to retrieve Videos feed", { err })
+    // return false
+  }
 
   // retrieve photos
   try {
@@ -24,6 +44,8 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
             "commentsCount" > 0
         AND
             active = true
+        AND 
+            video = false
         ORDER BY "updatedAt" DESC
       `)
     ).rows
@@ -31,23 +53,27 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
     console.error("Unable to retrieve Photos feed", { err })
     // return false
   }
+
   await psql.clean()
 
   console.log('photos.length:', photos.length)
-  photos?.forEach((photo: any) => {
+  console.log('videos.length:', videos.length)
+
+  videos?.forEach((video: any) => {
     // const jsonObj = JSON.parse(JSON.stringify(photo))
-    if(photo?.video === true) {
-      smStream.write({ url: `/videos/${photo.id}`,
+      smStream.write({ url: `/videos/${video.id}`,
       video: [
         {
-          thumbnail_loc: `https://img.wisaw.com/${photo.id}-thumb`,
-          title: `(video) ${photo.lastComment}`,
-          description: `(video) ${photo.lastComment}`,
+          thumbnail_loc: `https://img.wisaw.com/${video.id}-thumb`,
+          title: `(video) ${video?.lastComment}`,
+          description: `(video) ${video.lastComment}`,
         }
       ] 
       })
-    }
-    else 
+    })
+
+  photos?.forEach((photo: any) => {
+    // const jsonObj = JSON.parse(JSON.stringify(photo))    
       smStream.write({ url: `/photos/${photo.id}` })
   })
   smStream.end()

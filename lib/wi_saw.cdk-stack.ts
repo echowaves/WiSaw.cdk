@@ -345,8 +345,8 @@ export class WiSawCdkStack extends cdk.Stack {
           ],
           insightsVersion,
           logRetention,
-          memorySize: 1024,
-          // memorySize: 3008,
+          // memorySize: 1024,
+          memorySize: 3008,
           timeout: cdk.Duration.seconds(30),
           environment: {
             ...config,
