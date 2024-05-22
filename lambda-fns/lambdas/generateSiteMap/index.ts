@@ -41,8 +41,6 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
         *
         FROM "Photos"
         WHERE
-            "commentsCount" > 0
-        AND
             active = true
         AND 
             video = false
