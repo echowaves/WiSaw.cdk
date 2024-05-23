@@ -99,15 +99,15 @@ export class WiSawCdkStack extends cdk.Stack {
           sourceMap: true,
           sourceMapMode: SourceMapMode.INLINE,
           sourcesContent: false,
-          externalModules: ["sharp"],
+          // externalModules: ["sharp"],
         },
-        layers: [
-          lambda.LayerVersion.fromLayerVersionArn(
-            this,
-            `${deployEnv()}-GraphQlMapFunction`,
-            sharpLayerArn,
-          ),
-        ],
+        // layers: [
+        //   lambda.LayerVersion.fromLayerVersionArn(
+        //     this,
+        //     `${deployEnv()}-GraphQlMapFunction`,
+        //     sharpLayerArn,
+        //   ),
+        // ],
         insightsVersion,
         logRetention,
         memorySize: 10240,
@@ -199,15 +199,15 @@ export class WiSawCdkStack extends cdk.Stack {
           sourceMap: true,
           sourceMapMode: SourceMapMode.INLINE,
           sourcesContent: false,
-          externalModules: ["sharp"],
+          // externalModules: ["sharp"],
         },
-        layers: [
-          lambda.LayerVersion.fromLayerVersionArn(
-            this,
-            `${deployEnv()}-_processDeletedImage`,
-            sharpLayerArn,
-          ),
-        ],
+        // layers: [
+        //   lambda.LayerVersion.fromLayerVersionArn(
+        //     this,
+        //     `${deployEnv()}-_processDeletedImage`,
+        //     sharpLayerArn,
+        //   ),
+        // ],
         insightsVersion,
         logRetention,
         // memorySize: 10240,
@@ -233,15 +233,15 @@ export class WiSawCdkStack extends cdk.Stack {
           sourceMap: true,
           sourceMapMode: SourceMapMode.INLINE,
           sourcesContent: false,
-          externalModules: ["sharp"],
+          // externalModules: ["sharp"],
         },
-        layers: [
-          lambda.LayerVersion.fromLayerVersionArn(
-            this,
-            `${deployEnv()}-_processDeletedPrivateImage`,
-            sharpLayerArn,
-          ),
-        ],
+        // layers: [
+        //   lambda.LayerVersion.fromLayerVersionArn(
+        //     this,
+        //     `${deployEnv()}-_processDeletedPrivateImage`,
+        //     sharpLayerArn,
+        //   ),
+        // ],
         insightsVersion,
         logRetention,
         // memorySize: 10240,
@@ -267,15 +267,15 @@ export class WiSawCdkStack extends cdk.Stack {
           sourceMap: true,
           sourceMapMode: SourceMapMode.INLINE,
           sourcesContent: false,
-          externalModules: ["sharp"],
+          // externalModules: ["sharp"],
         },
-        layers: [
-          lambda.LayerVersion.fromLayerVersionArn(
-            this,
-            `${deployEnv()}-_cleaupupAbuseReports`,
-            sharpLayerArn,
-          ),
-        ],
+        // layers: [
+        //   lambda.LayerVersion.fromLayerVersionArn(
+        //     this,
+        //     `${deployEnv()}-_cleaupupAbuseReports`,
+        //     sharpLayerArn,
+        //   ),
+        // ],
         insightsVersion,
         logRetention,
         // memorySize: 10240,
@@ -334,19 +334,19 @@ export class WiSawCdkStack extends cdk.Stack {
             sourceMap: true,
             sourceMapMode: SourceMapMode.INLINE,
             sourcesContent: false,
-            externalModules: ["sharp"],
+            // externalModules: ["sharp"],
           },
-          layers: [
-            lambda.LayerVersion.fromLayerVersionArn(
-              this,
-              `${deployEnv()}-_generateSiteMap`,
-              sharpLayerArn,
-            ),
-          ],
+          // layers: [
+          //   lambda.LayerVersion.fromLayerVersionArn(
+          //     this,
+          //     `${deployEnv()}-_generateSiteMap`,
+          //     sharpLayerArn,
+          //   ),
+          // ],
           insightsVersion,
           logRetention,
-          // memorySize: 1024,
-          memorySize: 3008,
+          memorySize: 1024,
+          // memorySize: 3008,
           timeout: cdk.Duration.seconds(30),
           environment: {
             ...config,
