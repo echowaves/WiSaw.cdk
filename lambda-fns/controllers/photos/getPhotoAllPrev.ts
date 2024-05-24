@@ -13,7 +13,7 @@ export default async function main(
   (await psql.query(`
                     SELECT "id" FROM "Photos"
                     WHERE
-                      "updatedAt" < (select "updatedAt" FROM "Photos" where "id" = ${photoId})
+                      "updatedAt" < (select "updatedAt" FROM "Photos" where "id" >= ${photoId} ORDER BY "id" ASC LIMIT 1)
                     AND
                       active = true
                     ORDER BY "updatedAt" DESC
