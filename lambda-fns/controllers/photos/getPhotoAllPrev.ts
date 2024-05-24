@@ -11,7 +11,7 @@ export default async function main(
 
   const result =
   (await psql.query(`
-                      SELECT "id" FROM "Photos"
+                    SELECT "id" FROM "Photos"
                     WHERE
                       "updatedAt" < (select "updatedAt" FROM "Photos" where "id" = ${photoId})
                     AND
