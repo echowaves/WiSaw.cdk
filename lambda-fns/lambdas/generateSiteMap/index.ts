@@ -47,6 +47,7 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
           thumbnail_loc: `https://img.wisaw.com/${photo.id}-thumb`,
           title: `(video) ${photo?.lastComment}`,
           description: `(video) ${photo.lastComment}`,
+          content_loc: `https://img.wisaw.com/${photo.id}.mov`,
         }
         ] 
       })
