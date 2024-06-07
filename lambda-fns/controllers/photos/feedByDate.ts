@@ -52,7 +52,7 @@ export default async function main(
   
   await psql.connect()
   
-  const arraySize = 10
+  const arraySize = 15
   // call _retrievePhotos 10 times for 10 conscutive days in parallel
   const photos = (
     await Promise.all(
@@ -65,7 +65,7 @@ export default async function main(
 
   let noMoreData = false
 
-  if (currentDate.clone().subtract(daysAgo, "days").diff(whenToStopDate) < 0) {
+  if (currentDate.clone().subtract(daysAgo * arraySize, "days").diff(whenToStopDate) < 0) {
     noMoreData = true
   }
 
