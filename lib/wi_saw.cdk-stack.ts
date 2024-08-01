@@ -367,8 +367,8 @@ export class WiSawCdkStack extends cdk.Stack {
 
       const webAppBucket = s3.Bucket.fromBucketName(
         this,
-        `wisaw-client`,
-        `wisaw-client`,
+        `wisaw.com`,
+        `wisaw.com`,
       )
       webAppBucket.grantPut(generateSiteMap_LambdaFunction)
       webAppBucket.grantPutAcl(generateSiteMap_LambdaFunction)

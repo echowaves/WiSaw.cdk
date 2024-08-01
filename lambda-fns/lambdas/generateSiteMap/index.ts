@@ -69,7 +69,7 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
       const input = {
         Key: "sitemap.xml",
         Body: buffer.toString(),
-        Bucket: "wisaw-client",
+        Bucket: "wisaw.com",
         ACL: "public-read",
         CacheControl: "max-age=0",  
       };

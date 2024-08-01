@@ -25,7 +25,7 @@ exports.handler = async (event, context, callback) => {
   const client = new S3Client({region: 'us-east-1' })
 
   const command = new GetObjectCommand({
-    Bucket: "wisaw-client",
+    Bucket: "wisaw.com",
     Key: "index.html",
   });
   // console.log("-----------------------------------------------------1")
