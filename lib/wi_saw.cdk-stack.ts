@@ -440,10 +440,10 @@ export class WiSawCdkStack extends cdk.Stack {
         Certificate.fromCertificateArn(
           this,
           "my_cert",
-          "arn:aws:acm:us-east-1:963958500685:certificate/538e85e0-39f4-4d34-8580-86e8729e2c3c",
+          "arn:aws:acm:us-east-1:963958500685:certificate/cf8703c9-9c1b-4405-bc10-a0c3287ebb7e",
         ),
         {
-          aliases: ["www.wisaw.com"],
+          aliases: ["www.wisaw.com", "wisaw.com"],
           securityPolicy: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
           sslMethod: cloudfront.SSLMethod.SNI, // default
         },
