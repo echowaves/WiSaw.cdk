@@ -59,8 +59,6 @@ exports.handler = async (event, context, callback) => {
       <meta name="twitter:title" content="wisaw (What I Saw) photo ${imageId}" data-rh="true">
       <meta name="twitter:card" content="summary_large_image" data-rh="true">
       <meta name="twitter:image" content="https://img.wisaw.com/${imageId}" data-rh="true">
-      <link fetchpriority="high" rel="preload" href="https://img.wisaw.com/${imageId}-thumb" as="image"/>
-      <link fetchpriority="high" rel="preload" href="https://img.wisaw.com/${imageId}" as="image"/>
       `,
     )
     
