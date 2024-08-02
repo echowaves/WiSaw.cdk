@@ -7,7 +7,7 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3"; // ES Modules i
 
 // eslint-disable-next-line import/prefer-default-export
 export async function main(event: any = {}, context: any /*, cb: any*/) {
-  const smStream = new SitemapStream({ hostname: "https://www.wisaw.com" })
+  const smStream = new SitemapStream({ hostname: "https://wisaw.com" })
   smStream.write({ url: "/", changefreq: "daily" })
 
   let videos, photos
