@@ -29,14 +29,20 @@ export default async function main(
           "createdAt",
           "updatedAt"
       ) values (
-        ${photoId},
-        '${uuid}',
-        '${description}',
-        '${createdAt}',
-        '${createdAt}'
+        $1,
+        $2,
+        $3,
+        $4,
+        $5
       )
       returning *
-      `)
+      `, [
+        photoId,
+        uuid,
+        description,
+        createdAt,
+        createdAt
+      ])
   ).rows[0]
   await psql.clean()
 
