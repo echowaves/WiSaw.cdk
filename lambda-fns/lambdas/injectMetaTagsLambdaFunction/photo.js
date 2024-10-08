@@ -54,13 +54,18 @@ exports.handler = async (event, context, callback) => {
       <meta property="og:title" content="wisaw photo ${imageId}" data-rh="true">
       <meta property="og:url" content="https://wisaw.com/photos/${imageId}" data-rh="true">
       <meta property="og:site_name" content="wisaw.com">
-      <meta property='og:type' content='photo' data-rh="true"/>
-      <link rel="canonical" href="https://wisaw.com/photos/${imageId}" data-rh="true">
+      <meta property='og:type' content='photo' data-rh="true"/>    
       <meta name="twitter:title" content="wisaw (What I Saw) photo ${imageId}" data-rh="true">
       <meta name="twitter:card" content="summary_large_image" data-rh="true">
       <meta name="twitter:image" content="https://img.wisaw.com/${imageId}" data-rh="true">
       `,
+    )      
+    .replace(
+      `<link rel="canonical" href="https://wisaw.com" data-rh="true"/>`,
+      `<link rel='canonical' href="https://wisaw.com/photos/${imageId}" data-rh="true">`
+      ,
     )
+  
     
   const response = {
     status: "200",
