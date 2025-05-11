@@ -57,23 +57,21 @@ export class WiSawCdkStack extends cdk.Stack {
     database.connections.allowDefaultPortInternally()
 
     // Create the AppSync API
-    const api = new appsync.GraphqlApi(
-      this,
-      `${deployEnv()}-WiSaw-appsyncApi-cdk`,
-      {
-        name: `${deployEnv()}-cdk-wisaw-appsync-api`,
+    const api = new appsync.GraphqlApi(this, `${deployEnv()}-WiSaw-appsyncApi-cdk`, {
+      name: `${deployEnv()}-cdk-wisaw-appsync-api`,
+      definition: {
         schema: appsync.SchemaFile.fromAsset("graphql/schema.graphql"),
-        authorizationConfig: {
-          defaultAuthorization: {
-            authorizationType: appsync.AuthorizationType.API_KEY,
-            apiKeyConfig: {
-              expires: cdk.Expiration.after(cdk.Duration.days(365)),
-            },
+      },
+      authorizationConfig: {
+        defaultAuthorization: {
+          authorizationType: appsync.AuthorizationType.API_KEY,
+          apiKeyConfig: {
+            expires: cdk.Expiration.after(cdk.Duration.days(365)),
           },
         },
-        xrayEnabled: true,
       },
-    )
+      xrayEnabled: true,
+    })
 
     const layerArn =
       "arn:aws:lambda:us-east-1:580247275435:layer:LambdaInsightsExtension:14"
