@@ -41,13 +41,13 @@
     "typescript": "5.8.3"
   },
   "dependencies": {
+    "aws-cdk-lib": "2.195.0",
     "@aws-sdk/client-lambda": "^3.577.0",
     "@aws-sdk/client-rekognition": "^3.577.0",
     "@aws-sdk/client-s3": "^3.577.0",
     "@aws-sdk/client-sso-oidc": "^3.577.0",
     "@aws-sdk/client-sts": "^3.577.0",
     "@aws-sdk/s3-request-presigner": "^3.577.0",
-    "aws-cdk-lib": "2.195.0",
     "class-transformer": "0.5.1",
     "constructs": "^10.3.0",
     "global": "4.4.0",
