@@ -96,7 +96,7 @@
     "@smithy/util-utf8" "^2.0.0"
     tslib "^2.6.2"
 
-"@aws-sdk/client-lambda@^3.577.0":
+"@aws-sdk/client-lambda@^3.806.0":
   version "3.806.0"
   resolved "https://registry.yarnpkg.com/@aws-sdk/client-lambda/-/client-lambda-3.806.0.tgz#418f71b33c51a8ab0598c55dbfc3b90dfbd42599"
   integrity sha512-Fxh08DKju+wzRlGPs+p9yaNDc5IC8hftJi+p6kkQ5DRCqshL/MtH9uGMYL7krYPMSO9ulnmcCWoaHioUvCFE2g==
@@ -146,7 +146,7 @@
     "@smithy/util-waiter" "^4.0.3"
     tslib "^2.6.2"
 
-"@aws-sdk/client-rekognition@^3.577.0":
+"@aws-sdk/client-rekognition@^3.806.0":
   version "3.806.0"
   resolved "https://registry.yarnpkg.com/@aws-sdk/client-rekognition/-/client-rekognition-3.806.0.tgz#147f38aa5fb150fe087aa47f8390f69a9f48a8ae"
   integrity sha512-ErPx64ApWnOlhMJZgCG0Ekt+Uw4qDdN4hZ59sKXWj9d3dJ8bvqN+k3cCJ1FY5SYlkfxIvrZNbt/OzYnJJWdjJg==
@@ -194,7 +194,7 @@
     tslib "^2.6.2"
     uuid "^9.0.1"
 
-"@aws-sdk/client-s3@^3.577.0":
+"@aws-sdk/client-s3@^3.806.0":
   version "3.806.0"
   resolved "https://registry.yarnpkg.com/@aws-sdk/client-s3/-/client-s3-3.806.0.tgz#64740518a393a105e3c9687d3a8c32c1ee8d8c15"
   integrity sha512-kQaBBBxEBU/IJ2wKG+LL2BK+uvBwpdvOA9jy1WhW+U2/DIMwMrjVs7M/ZvTlmVOJwhZaONcJbgQqsN4Yirjj4g==
@@ -256,7 +256,7 @@
     "@smithy/util-waiter" "^4.0.3"
     tslib "^2.6.2"
 
-"@aws-sdk/client-sso-oidc@^3.577.0":
+"@aws-sdk/client-sso-oidc@^3.806.0":
   version "3.806.0"
   resolved "https://registry.yarnpkg.com/@aws-sdk/client-sso-oidc/-/client-sso-oidc-3.806.0.tgz#59f082943095e658f2f2f98bb8403756d45b79e5"
   integrity sha512-mlEG6K8Dbr7ClVn4ITysLnEy3HjXeFyy92gHhhVT/YgcKhgxq2apg7BX5XI6NHYWrR4tFuODrlM1T7AS3URnQw==
@@ -345,7 +345,7 @@
     "@smithy/util-utf8" "^4.0.0"
     tslib "^2.6.2"
 
-"@aws-sdk/client-sts@^3.577.0":
+"@aws-sdk/client-sts@^3.806.0":
   version "3.806.0"
   resolved "https://registry.yarnpkg.com/@aws-sdk/client-sts/-/client-sts-3.806.0.tgz#028eb89af9d1834e3eb254576e868a895ff43487"
   integrity sha512-ooLkgLR2G65EHmhkXl9Ztk8yv7w2QbrXoJ7TCKpCPtrpiqO5GJ6mL3YRHTQmLzYHobDTpaTDYGrlhm5RHPGTSg==
@@ -687,7 +687,7 @@
     "@smithy/util-middleware" "^4.0.2"
     tslib "^2.6.2"
 
-"@aws-sdk/s3-request-presigner@^3.577.0":
+"@aws-sdk/s3-request-presigner@^3.806.0":
   version "3.806.0"
   resolved "https://registry.yarnpkg.com/@aws-sdk/s3-request-presigner/-/s3-request-presigner-3.806.0.tgz#41e31684184a3321cea4af54517f9474b5f71bac"
   integrity sha512-/LjdkoMAr6T0EIIWVt444CJlaOCpYwjKxhTgZODSeRUPhKQxidBehg0TmXgQUc3oGUhGFPGCuQtFgLT0xvOSnw==

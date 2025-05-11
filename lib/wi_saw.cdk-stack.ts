@@ -10,11 +10,12 @@ import * as lambda from "aws-cdk-lib/aws-lambda"
 
 import * as logs from "aws-cdk-lib/aws-logs"
 
-import { Certificate } from "aws-cdk-lib/aws-certificatemanager"
 import { LambdaFunction } from "aws-cdk-lib/aws-events-targets"
 import { NodejsFunction, SourceMapMode } from "aws-cdk-lib/aws-lambda-nodejs"
 
 import * as appsync from "aws-cdk-lib/aws-appsync"
+import { OriginAccessIdentity } from "aws-cdk-lib/aws-cloudfront"
+import { S3Origin } from 'aws-cdk-lib/aws-cloudfront-origins'
 import { Rule, Schedule } from "aws-cdk-lib/aws-events"
 import * as iam from "aws-cdk-lib/aws-iam"
 import * as rds from "aws-cdk-lib/aws-rds"
@@ -429,98 +430,66 @@ export class WiSawCdkStack extends cdk.Stack {
       
 
       // Origin access identity for cloudfront to access the bucket
-      const myCdnOai = new cloudfront.OriginAccessIdentity(this, "CdnOai")
+      const myCdnOai = new OriginAccessIdentity(this, "CdnOai")
       webAppBucket.grantRead(myCdnOai)
 
-      // const wisawCert = acm.Certificate.fromCertificateArn(this, 'wisawCert', "arn:aws:acm:us-east-1:963958500685:certificate/538e85e0-39f4-4d34-8580-86e8729e2c3c")
-
-      const viewerCertificate = cloudfront.ViewerCertificate.fromAcmCertificate(
-        Certificate.fromCertificateArn(
-          this,
-          "my_cert",
-          "arn:aws:acm:us-east-1:963958500685:certificate/cf8703c9-9c1b-4405-bc10-a0c3287ebb7e",
-        ),
-        {
-          aliases: ["www.wisaw.com", "wisaw.com"],
-          securityPolicy: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
-          sslMethod: cloudfront.SSLMethod.SNI, // default
-        },
-      )
-
-      new cloudfront.CloudFrontWebDistribution(this, "wisaw-distro", {
+      new cloudfront.Distribution(this, "wisaw-distro", {
         priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
-        originConfigs: [
-          {
-            s3OriginSource: {
-              s3BucketSource: webAppBucket,
+        defaultBehavior: {
+          origin: new S3Origin(webAppBucket, {
+            originAccessIdentity: myCdnOai,
+          }),
+          compress: true,
+        },
+        additionalBehaviors: {
+          "photos/*": {
+            origin: new S3Origin(webAppBucket, {
               originAccessIdentity: myCdnOai,
-            },
-            behaviors: [
+            }),
+            compress: true,
+            allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+            cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+            functionAssociations: [
               {
-                isDefaultBehavior: true,
-                compress: true,
-              },
-              {
-                pathPattern: "photos/*",
-                compress: true,
-                allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
-                minTtl: cdk.Duration.days(10),
-                maxTtl: cdk.Duration.days(10),
-                defaultTtl: cdk.Duration.days(10),
-                forwardedValues: {
-                  queryString: true,
-                  cookies: {
-                    forward: "all",
-                  },
-                },
-                lambdaFunctionAssociations: [
-                  {
-                    eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
-                    lambdaFunction: injectMetaTagsLambdaFunction_photo,
-                    includeBody: true,
-                  },
-                ],
-              },
-              {
-                pathPattern: "videos/*",
-                compress: true,
-                allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
-                minTtl: cdk.Duration.days(10),
-                maxTtl: cdk.Duration.days(10),
-                defaultTtl: cdk.Duration.days(10),
-                forwardedValues: {
-                  queryString: true,
-                  cookies: {
-                    forward: "all",
-                  },
-                },
-                lambdaFunctionAssociations: [
-                  {
-                    eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
-                    lambdaFunction: injectMetaTagsLambdaFunction_video,
-                    includeBody: true,
-                  },
-                ],
+                eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+                function: new cloudfront.Function(this, 'PhotoMetaTagsFunction', {
+                  code: cloudfront.FunctionCode.fromInline('function handler(event) { return event.request; }'),
+                }),
               },
             ],
           },
-        ],
-        viewerCertificate,
-        errorConfigurations: [
+          "videos/*": {
+            origin: new S3Origin(webAppBucket, {
+              originAccessIdentity: myCdnOai,
+            }),
+            compress: true,
+            allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+            cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+            functionAssociations: [
+              {
+                eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+                function: new cloudfront.Function(this, 'VideoMetaTagsFunction', {
+                  code: cloudfront.FunctionCode.fromInline('function handler(event) { return event.request; }'),
+                }),
+              },
+            ],
+          },
+        },
+        errorResponses: [
           {
-            errorCode: 403,
-            responseCode: 200,
-            errorCachingMinTtl: 31536000,
+            httpStatus: 403,
+            responseHttpStatus: 200,
+            ttl: cdk.Duration.days(365),
             responsePagePath: "/index.html",
           },
           {
-            errorCode: 404,
-            responseCode: 200,
-            errorCachingMinTtl: 31536000,
+            httpStatus: 404,
+            responseHttpStatus: 200,
+            ttl: cdk.Duration.days(365),
             responsePagePath: "/index.html",
           },
         ],
-      })  
+      });
     }
 
 
