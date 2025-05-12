@@ -15,7 +15,7 @@ import { NodejsFunction, SourceMapMode } from "aws-cdk-lib/aws-lambda-nodejs"
 
 import * as appsync from "aws-cdk-lib/aws-appsync"
 import { OriginAccessIdentity } from "aws-cdk-lib/aws-cloudfront"
-import { S3Origin } from 'aws-cdk-lib/aws-cloudfront-origins'
+import { S3BucketOrigin } from 'aws-cdk-lib/aws-cloudfront-origins'
 import { Rule, Schedule } from "aws-cdk-lib/aws-events"
 import * as iam from "aws-cdk-lib/aws-iam"
 import * as rds from "aws-cdk-lib/aws-rds"
@@ -436,14 +436,14 @@ export class WiSawCdkStack extends cdk.Stack {
       new cloudfront.Distribution(this, "wisaw-distro", {
         priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
         defaultBehavior: {
-          origin: new S3Origin(webAppBucket, {
+          origin: S3BucketOrigin.withOriginAccessIdentity(webAppBucket, {
             originAccessIdentity: myCdnOai,
           }),
           compress: true,
         },
         additionalBehaviors: {
           "photos/*": {
-            origin: new S3Origin(webAppBucket, {
+            origin: S3BucketOrigin.withOriginAccessIdentity(webAppBucket, {
               originAccessIdentity: myCdnOai,
             }),
             compress: true,
@@ -459,7 +459,7 @@ export class WiSawCdkStack extends cdk.Stack {
             ],
           },
           "videos/*": {
-            origin: new S3Origin(webAppBucket, {
+            origin: S3BucketOrigin.withOriginAccessIdentity(webAppBucket, {
               originAccessIdentity: myCdnOai,
             }),
             compress: true,
