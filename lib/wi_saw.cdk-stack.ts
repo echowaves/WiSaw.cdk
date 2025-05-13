@@ -496,7 +496,7 @@ export class WiSawCdkStack extends cdk.Stack {
       new cloudfront.Distribution(this, "wisaw-distro", {
         priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
         defaultBehavior: {
-          origin: new origins.S3Origin(webAppBucket, {
+          origin: origins.S3BucketOrigin.withOriginAccessIdentity(webAppBucket, {
             originAccessIdentity: myCdnOai,
           }),
           compress: true,
@@ -513,7 +513,7 @@ export class WiSawCdkStack extends cdk.Stack {
         },
         additionalBehaviors: {
           "photos/*": {
-            origin: new origins.S3Origin(webAppBucket, {
+            origin: origins.S3BucketOrigin.withOriginAccessIdentity(webAppBucket, {
               originAccessIdentity: myCdnOai,
             }),
             compress: true,
@@ -536,7 +536,7 @@ export class WiSawCdkStack extends cdk.Stack {
             ],
           },
           "videos/*": {
-            origin: new origins.S3Origin(webAppBucket, {
+            origin: origins.S3BucketOrigin.withOriginAccessIdentity(webAppBucket, {
               originAccessIdentity: myCdnOai,
             }),
             compress: true,
