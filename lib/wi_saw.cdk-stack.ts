@@ -10,12 +10,12 @@ import * as lambda from "aws-cdk-lib/aws-lambda"
 
 import * as logs from "aws-cdk-lib/aws-logs"
 
+import * as acm from "aws-cdk-lib/aws-certificatemanager"
 import { LambdaFunction } from "aws-cdk-lib/aws-events-targets"
 import { NodejsFunction, SourceMapMode } from "aws-cdk-lib/aws-lambda-nodejs"
 
 import * as appsync from "aws-cdk-lib/aws-appsync"
-import { OriginAccessIdentity } from "aws-cdk-lib/aws-cloudfront"
-import { S3BucketOrigin } from 'aws-cdk-lib/aws-cloudfront-origins'
+import * as origins from "aws-cdk-lib/aws-cloudfront-origins"
 import { Rule, Schedule } from "aws-cdk-lib/aws-events"
 import * as iam from "aws-cdk-lib/aws-iam"
 import * as rds from "aws-cdk-lib/aws-rds"
@@ -58,21 +58,23 @@ export class WiSawCdkStack extends cdk.Stack {
     database.connections.allowDefaultPortInternally()
 
     // Create the AppSync API
-    const api = new appsync.GraphqlApi(this, `${deployEnv()}-WiSaw-appsyncApi-cdk`, {
-      name: `${deployEnv()}-cdk-wisaw-appsync-api`,
-      definition: {
+    const api = new appsync.GraphqlApi(
+      this,
+      `${deployEnv()}-WiSaw-appsyncApi-cdk`,
+      {
+        name: `${deployEnv()}-cdk-wisaw-appsync-api`,
         schema: appsync.SchemaFile.fromAsset("graphql/schema.graphql"),
-      },
-      authorizationConfig: {
-        defaultAuthorization: {
-          authorizationType: appsync.AuthorizationType.API_KEY,
-          apiKeyConfig: {
-            expires: cdk.Expiration.after(cdk.Duration.days(365)),
+        authorizationConfig: {
+          defaultAuthorization: {
+            authorizationType: appsync.AuthorizationType.API_KEY,
+            apiKeyConfig: {
+              expires: cdk.Expiration.after(cdk.Duration.days(365)),
+            },
           },
         },
+        xrayEnabled: true,
       },
-      xrayEnabled: true,
-    })
+    )
 
     const layerArn =
       "arn:aws:lambda:us-east-1:580247275435:layer:LambdaInsightsExtension:14"
@@ -427,54 +429,124 @@ export class WiSawCdkStack extends cdk.Stack {
       webAppBucket.grantRead(injectMetaTagsLambdaFunction_video)
       imgBucket.grantReadWrite(injectMetaTagsLambdaFunction_video)
       
+      const redirectLambdaEdgeFunction =
+        // new lambda.Function( // trying to define it as an Lambda@Edge function
+        new cloudfront.experimental.EdgeFunction(
+          this,
+          `${deployEnv()}_redirectLambdaEdgeFunction`,
+          {
+            runtime: lambda.Runtime.NODEJS_22_X,
+            code: lambda.Code.fromAsset(
+              path.join(
+                __dirname,
+                "../lambda-fns/lambdas/redirectLambdaEdgeFunction",
+              ),
+            ),
+            // code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
+            handler: "index.handler",
+            memorySize: 128,
+            timeout: cdk.Duration.seconds(5),
+            // insightsVersion,
+            logRetention,
+            // environment: {
+            //   ...config,
+            // },
+          },
+        )
+      webAppBucket.grantRead(redirectLambdaEdgeFunction)
+      // imgBucket.grantReadWrite(redirectLambdaEdgeFunction)
+      
       
 
       // Origin access identity for cloudfront to access the bucket
-      const myCdnOai = new OriginAccessIdentity(this, "CdnOai")
+      const myCdnOai = new cloudfront.OriginAccessIdentity(this, "CdnOai")
       webAppBucket.grantRead(myCdnOai)
+      
+      // Output the OAI ID to use in manual bucket policy updates
+      new cdk.CfnOutput(this, "CdnOriginAccessIdentityId", {
+        value: myCdnOai.originAccessIdentityId,
+        description: "Use this Origin Access Identity ID to manually update the bucket policy for wisaw.com"
+      })
+
+      // Use the ACM certificate
+      const cert = acm.Certificate.fromCertificateArn(
+        this,
+        "my_cert",
+        "arn:aws:acm:us-east-1:963958500685:certificate/cf8703c9-9c1b-4405-bc10-a0c3287ebb7e"
+      )
+
+      // Create cache policies
+      const basicCachePolicy = new cloudfront.CachePolicy(this, 'BasicCachePolicy', {
+        defaultTtl: cdk.Duration.days(10),
+        minTtl: cdk.Duration.days(10),
+        maxTtl: cdk.Duration.days(10),
+        enableAcceptEncodingGzip: true,
+        enableAcceptEncodingBrotli: true,
+        queryStringBehavior: cloudfront.CacheQueryStringBehavior.all(),
+        cookieBehavior: cloudfront.CacheCookieBehavior.all(),
+      });
+
+      // Create origin request policy that forwards all cookies and query strings
+      const allForwardPolicy = new cloudfront.OriginRequestPolicy(this, 'AllForwardPolicy', {
+        cookieBehavior: cloudfront.OriginRequestCookieBehavior.all(),
+        queryStringBehavior: cloudfront.OriginRequestQueryStringBehavior.all(),
+        headerBehavior: cloudfront.OriginRequestHeaderBehavior.none(),
+      });
 
       new cloudfront.Distribution(this, "wisaw-distro", {
         priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
         defaultBehavior: {
-          origin: S3BucketOrigin.withOriginAccessIdentity(webAppBucket, {
+          origin: new origins.S3Origin(webAppBucket, {
             originAccessIdentity: myCdnOai,
           }),
           compress: true,
+          // cachePolicy: basicCachePolicy,
+          // originRequestPolicy: allForwardPolicy,
+          // edgeLambdas: [
+          //   {
+          //     eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
+          //     functionVersion: redirectLambdaEdgeFunction.currentVersion,
+          //     includeBody: true,
+          //   },
+          // ],
         },
         additionalBehaviors: {
           "photos/*": {
-            origin: S3BucketOrigin.withOriginAccessIdentity(webAppBucket, {
+            origin: new origins.S3Origin(webAppBucket, {
               originAccessIdentity: myCdnOai,
             }),
             compress: true,
             allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-            cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
-            functionAssociations: [
+            cachePolicy: basicCachePolicy,
+            originRequestPolicy: allForwardPolicy,
+            edgeLambdas: [
               {
-                eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
-                function: new cloudfront.Function(this, 'PhotoMetaTagsFunction', {
-                  code: cloudfront.FunctionCode.fromInline('function handler(event) { return event.request; }'),
-                }),
-              },
+                eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
+                functionVersion: injectMetaTagsLambdaFunction_photo.currentVersion,
+                includeBody: true,
+              }
             ],
           },
           "videos/*": {
-            origin: S3BucketOrigin.withOriginAccessIdentity(webAppBucket, {
+            origin: new origins.S3Origin(webAppBucket, {
               originAccessIdentity: myCdnOai,
             }),
             compress: true,
             allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-            cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
-            functionAssociations: [
+            cachePolicy: basicCachePolicy,
+            originRequestPolicy: allForwardPolicy,
+            edgeLambdas: [
               {
-                eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
-                function: new cloudfront.Function(this, 'VideoMetaTagsFunction', {
-                  code: cloudfront.FunctionCode.fromInline('function handler(event) { return event.request; }'),
-                }),
-              },
+                eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
+                functionVersion: injectMetaTagsLambdaFunction_video.currentVersion,
+                includeBody: true,
+              }
             ],
           },
         },
+        certificate: cert,
+        domainNames: ["www.wisaw.com", "wisaw.com"],
+        minimumProtocolVersion: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
         errorResponses: [
           {
             httpStatus: 403,
