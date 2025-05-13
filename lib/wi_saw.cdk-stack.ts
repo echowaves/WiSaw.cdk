@@ -502,6 +502,7 @@ export class WiSawCdkStack extends cdk.Stack {
           compress: true,
           cachePolicy: basicCachePolicy,
           originRequestPolicy: allForwardPolicy,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS, // Add this line
           edgeLambdas: [
             {
               eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
@@ -519,6 +520,7 @@ export class WiSawCdkStack extends cdk.Stack {
             allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
             cachePolicy: basicCachePolicy,
             originRequestPolicy: allForwardPolicy,
+            viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS, // Add this line
             edgeLambdas: [
            {
               eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
@@ -541,6 +543,7 @@ export class WiSawCdkStack extends cdk.Stack {
             allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
             cachePolicy: basicCachePolicy,
             originRequestPolicy: allForwardPolicy,
+            viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS, // Add this line
             edgeLambdas: [
             {
               eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
