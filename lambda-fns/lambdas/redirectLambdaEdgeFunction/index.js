@@ -1,18 +1,27 @@
-exports.handler = async (event, context, callback) => {
-  var request = event.request;
-    var host = request.headers.host.value;
-
-    if (host === 'www.wisaw.com') {    
-        var response = {
-            statusCode: 301,
-            statusDescription: 'Moved Permanently',
-            headers: { 
-                'location': { "value": `https://wisaw.com${request.uri}` } 
-            }
-        };
-
-        return response;
+exports.handler = async (event) => {
+  const request = event.Records[0].cf.request;
+  
+  // CloudFront headers are in format: { "host": [{"key": "Host", "value": "www.wisaw.com"}] }
+  const host = request.headers.host && request.headers.host[0].value;
+  
+  if (host === 'www.wisaw.com') {
+    // Build the new URL, preserving query string if present
+    let redirectUrl = `https://wisaw.com${request.uri}`;
+    if (request.querystring) {
+      redirectUrl += `?${request.querystring}`;
     }
-
-    return request;  
-}
+    
+    return {
+      status: '301',
+      statusDescription: 'Moved Permanently',
+      headers: {
+        location: [{
+          key: 'Location',
+          value: redirectUrl
+        }]
+      }
+    };
+  }
+  
+  return request;
+};

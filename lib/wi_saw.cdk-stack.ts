@@ -500,15 +500,15 @@ export class WiSawCdkStack extends cdk.Stack {
             originAccessIdentity: myCdnOai,
           }),
           compress: true,
-          // cachePolicy: basicCachePolicy,
-          // originRequestPolicy: allForwardPolicy,
-          // edgeLambdas: [
-          //   {
-          //     eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
-          //     functionVersion: redirectLambdaEdgeFunction.currentVersion,
-          //     includeBody: true,
-          //   },
-          // ],
+          cachePolicy: basicCachePolicy,
+          originRequestPolicy: allForwardPolicy,
+          edgeLambdas: [
+            {
+              eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
+              functionVersion: redirectLambdaEdgeFunction.currentVersion,
+              includeBody: true,
+            },
+          ],
         },
         additionalBehaviors: {
           "photos/*": {
@@ -520,8 +520,14 @@ export class WiSawCdkStack extends cdk.Stack {
             cachePolicy: basicCachePolicy,
             originRequestPolicy: allForwardPolicy,
             edgeLambdas: [
+           {
+              eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
+              functionVersion: redirectLambdaEdgeFunction.currentVersion,
+              includeBody: true,
+            },
+
               {
-                eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
+                eventType: cloudfront.LambdaEdgeEventType.ORIGIN_REQUEST,
                 functionVersion: injectMetaTagsLambdaFunction_photo.currentVersion,
                 includeBody: true,
               }
@@ -536,8 +542,14 @@ export class WiSawCdkStack extends cdk.Stack {
             cachePolicy: basicCachePolicy,
             originRequestPolicy: allForwardPolicy,
             edgeLambdas: [
+            {
+              eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
+              functionVersion: redirectLambdaEdgeFunction.currentVersion,
+              includeBody: true,
+            },
+
               {
-                eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
+                eventType: cloudfront.LambdaEdgeEventType.ORIGIN_REQUEST,
                 functionVersion: injectMetaTagsLambdaFunction_video.currentVersion,
                 includeBody: true,
               }
