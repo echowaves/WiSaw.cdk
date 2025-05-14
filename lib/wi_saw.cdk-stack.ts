@@ -458,16 +458,16 @@ export class WiSawCdkStack extends cdk.Stack {
       
       
 
-      // Origin access identity for cloudfront to access the bucket
-      const myCdnOai = new cloudfront.OriginAccessIdentity(this, "CdnOai")
-      webAppBucket.grantRead(myCdnOai)
+      // Add Origin Access Control (OAC) - the modern replacement for OAI
+      const myOac = new cloudfront.CfnOriginAccessControl(this, 'MyCdnOac', {
+        originAccessControlConfig: {
+          name: `wisaw-s3-oac-${deployEnv()}`,
+          originAccessControlOriginType: 's3',
+          signingBehavior: 'always',
+          signingProtocol: 'sigv4'
+        }
+      });
       
-      // Output the OAI ID to use in manual bucket policy updates
-      new cdk.CfnOutput(this, "CdnOriginAccessIdentityId", {
-        value: myCdnOai.originAccessIdentityId,
-        description: "Use this Origin Access Identity ID to manually update the bucket policy for wisaw.com"
-      })
-
       // Use the ACM certificate
       const cert = acm.Certificate.fromCertificateArn(
         this,
@@ -493,12 +493,11 @@ export class WiSawCdkStack extends cdk.Stack {
         headerBehavior: cloudfront.OriginRequestHeaderBehavior.none(),
       });
 
-      new cloudfront.Distribution(this, "wisaw-distro", {
+      // Create the CloudFront distribution with S3 as an origin
+      const distribution = new cloudfront.Distribution(this, "wisaw-distro", {
         priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
         defaultBehavior: {
-          origin: origins.S3BucketOrigin.withOriginAccessIdentity(webAppBucket, {
-            originAccessIdentity: myCdnOai,
-          }),
+          origin: new origins.S3Origin(webAppBucket),
           compress: true,
           cachePolicy: basicCachePolicy,
           originRequestPolicy: allForwardPolicy,
@@ -513,9 +512,7 @@ export class WiSawCdkStack extends cdk.Stack {
         },
         additionalBehaviors: {
           "photos/*": {
-            origin: origins.S3BucketOrigin.withOriginAccessIdentity(webAppBucket, {
-              originAccessIdentity: myCdnOai,
-            }),
+            origin: new origins.S3Origin(webAppBucket),
             compress: true,
             allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
             cachePolicy: basicCachePolicy,
@@ -536,9 +533,7 @@ export class WiSawCdkStack extends cdk.Stack {
             ],
           },
           "videos/*": {
-            origin: origins.S3BucketOrigin.withOriginAccessIdentity(webAppBucket, {
-              originAccessIdentity: myCdnOai,
-            }),
+            origin: new origins.S3Origin(webAppBucket),
             compress: true,
             allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
             cachePolicy: basicCachePolicy,
@@ -577,6 +572,28 @@ export class WiSawCdkStack extends cdk.Stack {
           },
         ],
       });
+
+      // Output the Distribution ID to use in the OAC bucket policy
+      new cdk.CfnOutput(this, "CloudFrontDistributionId", {
+        value: distribution.distributionId,
+        description: "Use this Distribution ID in the OAC bucket policy for wisaw.com"
+      })
+
+      // Apply the OAC to the CloudFront distribution
+      const cfnDistribution = distribution.node.defaultChild as cloudfront.CfnDistribution;
+      
+      // Connect OAC to the default behavior
+      cfnDistribution.addPropertyOverride('DistributionConfig.Origins.0.OriginAccessControlId', myOac.attrId);
+      
+      // Remove OAI from default origin (required for OAC)
+      cfnDistribution.addPropertyOverride('DistributionConfig.Origins.0.S3OriginConfig.OriginAccessIdentity', '');
+      
+      // For additional behaviors
+      cfnDistribution.addPropertyOverride('DistributionConfig.Origins.1.OriginAccessControlId', myOac.attrId);
+      cfnDistribution.addPropertyOverride('DistributionConfig.Origins.1.S3OriginConfig.OriginAccessIdentity', '');
+      
+      cfnDistribution.addPropertyOverride('DistributionConfig.Origins.2.OriginAccessControlId', myOac.attrId);
+      cfnDistribution.addPropertyOverride('DistributionConfig.Origins.2.S3OriginConfig.OriginAccessIdentity', '');
     }
 
 
