@@ -15,7 +15,9 @@ import { LambdaFunction } from "aws-cdk-lib/aws-events-targets"
 import { NodejsFunction, SourceMapMode } from "aws-cdk-lib/aws-lambda-nodejs"
 
 import * as appsync from "aws-cdk-lib/aws-appsync"
-import * as origins from "aws-cdk-lib/aws-cloudfront-origins"
+// import * as origins from "aws-cdk-lib/aws-cloudfront-origins"
+import * as cloudfront_origins from 'aws-cdk-lib/aws-cloudfront-origins'
+
 import { Rule, Schedule } from "aws-cdk-lib/aws-events"
 import * as iam from "aws-cdk-lib/aws-iam"
 import * as rds from "aws-cdk-lib/aws-rds"
@@ -497,7 +499,7 @@ export class WiSawCdkStack extends cdk.Stack {
       const distribution = new cloudfront.Distribution(this, "wisaw-distro", {
         priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
         defaultBehavior: {
-          origin: new origins.S3Origin(webAppBucket),
+          origin: cloudfront_origins.S3BucketOrigin.withOriginAccessControl(webAppBucket),
           compress: true,
           cachePolicy: basicCachePolicy,
           originRequestPolicy: allForwardPolicy,
@@ -512,7 +514,7 @@ export class WiSawCdkStack extends cdk.Stack {
         },
         additionalBehaviors: {
           "photos/*": {
-            origin: new origins.S3Origin(webAppBucket),
+            origin: cloudfront_origins.S3BucketOrigin.withOriginAccessControl(webAppBucket),
             compress: true,
             allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
             cachePolicy: basicCachePolicy,
@@ -533,7 +535,7 @@ export class WiSawCdkStack extends cdk.Stack {
             ],
           },
           "videos/*": {
-            origin: new origins.S3Origin(webAppBucket),
+            origin: cloudfront_origins.S3BucketOrigin.withOriginAccessControl(webAppBucket),
             compress: true,
             allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
             cachePolicy: basicCachePolicy,
