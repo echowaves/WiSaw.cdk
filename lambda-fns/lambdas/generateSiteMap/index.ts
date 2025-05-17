@@ -76,6 +76,7 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
         Bucket: "wisaw.com",
         // ACL: "public-read",
         CacheControl: "max-age=0",  
+        ContentType: "application/xml",
       };
 
       const command = new PutObjectCommand(input);

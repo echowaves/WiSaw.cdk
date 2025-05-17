@@ -325,12 +325,6 @@ export class WiSawCdkStack extends cdk.Stack {
 
 
     if (deployEnv() === "prod") {
-      // Import the existing LambdaExecutionRole that is referenced in the S3 bucket policy
-      const lambdaExecutionRole = iam.Role.fromRoleArn(
-        this,
-        "ImportedLambdaExecutionRoleForSitemap", // Unique logical ID for the imported role
-        "arn:aws:iam::963958500685:role/LambdaExecutionRole"
-      );
 
       const generateSiteMap_LambdaFunction = new NodejsFunction(
         this,
@@ -353,7 +347,7 @@ export class WiSawCdkStack extends cdk.Stack {
           environment: {
             ...config,
           },
-          role: lambdaExecutionRole, // Assign the imported role to the Lambda function
+          // role: lambdaExecutionRole, // Assign the imported role to the Lambda function
         },
       );
 
@@ -363,7 +357,7 @@ export class WiSawCdkStack extends cdk.Stack {
 
       new Rule(this, "lambda-polling-rule", {
         description: "Rule to trigger scheduled lambda",
-        schedule: Schedule.rate(cdk.Duration.minutes(1)),
+        schedule: Schedule.rate(cdk.Duration.hours(5)),
         targets: [generateSiteMapLambdaFunction_LambdaTarget],
       });
 
@@ -373,19 +367,9 @@ export class WiSawCdkStack extends cdk.Stack {
         `wisaw.com`,
       );
 
-      // Specific permissions for generateSiteMap_LambdaFunction to read and write sitemap.xml.
-      // This policy will be added to the imported lambdaExecutionRole.
-      // The actions are aligned with what the S3 bucket policy allows for this role and resource.
-      generateSiteMap_LambdaFunction.addToRolePolicy(
-        new iam.PolicyStatement({
-          effect: iam.Effect.ALLOW,
-          actions: 
-            ["s3:GetObject", "s3:PutObject"],
-          
-          resources: [`${webAppBucket.bucketArn}/sitemap.xml`],
-        })
-      );
-
+      // Grant the Lambda function permissions to read and write to the S3 bucket
+      webAppBucket.grantReadWrite(generateSiteMap_LambdaFunction);
+    
       // lambda@edge function for ingecting OG meta tags on the fly
       const injectMetaTagsLambdaFunction_photo =
         // new lambda.Function( // trying to define it as an Lambda@Edge function
