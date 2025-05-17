@@ -325,12 +325,18 @@ export class WiSawCdkStack extends cdk.Stack {
 
 
     if (deployEnv() === "prod") {
+      // Import the existing LambdaExecutionRole that is referenced in the S3 bucket policy
+      const lambdaExecutionRole = iam.Role.fromRoleArn(
+        this,
+        "ImportedLambdaExecutionRoleForSitemap", // Unique logical ID for the imported role
+        "arn:aws:iam::963958500685:role/LambdaExecutionRole"
+      );
+
       const generateSiteMap_LambdaFunction = new NodejsFunction(
         this,
         `${deployEnv()}_generateSiteMap`,
         {
           runtime: lambda.Runtime.NODEJS_22_X,
-          // handler: "index.handler",
           entry: `${__dirname}/../lambda-fns/lambdas/generateSiteMap/index.ts`,
           handler: "main",
           bundling: {
@@ -339,44 +345,46 @@ export class WiSawCdkStack extends cdk.Stack {
             sourceMap: true,
             sourceMapMode: SourceMapMode.INLINE,
             sourcesContent: false,
-            // externalModules: ["sharp"],
           },
-          // layers: [
-          //   lambda.LayerVersion.fromLayerVersionArn(
-          //     this,
-          //     `${deployEnv()}-_generateSiteMap`,
-          //     sharpLayerArn,
-          //   ),
-          // ],
           insightsVersion,
           logRetention,
           memorySize: 1024,
-          // memorySize: 3008,
           timeout: cdk.Duration.seconds(30),
           environment: {
             ...config,
           },
+          role: lambdaExecutionRole, // Assign the imported role to the Lambda function
         },
-      )
+      );
 
       const generateSiteMapLambdaFunction_LambdaTarget = new LambdaFunction(
         generateSiteMap_LambdaFunction,
-      )
+      );
 
       new Rule(this, "lambda-polling-rule", {
         description: "Rule to trigger scheduled lambda",
-        // schedule: Schedule.rate(cdk.Duration.minutes(1)),
-        schedule: Schedule.rate(cdk.Duration.hours(5)),
+        schedule: Schedule.rate(cdk.Duration.minutes(1)),
         targets: [generateSiteMapLambdaFunction_LambdaTarget],
-      })
+      });
 
       const webAppBucket = s3.Bucket.fromBucketName(
         this,
         `wisaw.com`,
         `wisaw.com`,
-      )
-      webAppBucket.grantPut(generateSiteMap_LambdaFunction)
-      webAppBucket.grantPutAcl(generateSiteMap_LambdaFunction)
+      );
+
+      // Specific permissions for generateSiteMap_LambdaFunction to read and write sitemap.xml.
+      // This policy will be added to the imported lambdaExecutionRole.
+      // The actions are aligned with what the S3 bucket policy allows for this role and resource.
+      generateSiteMap_LambdaFunction.addToRolePolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: 
+            ["s3:GetObject", "s3:PutObject"],
+          
+          resources: [`${webAppBucket.bucketArn}/sitemap.xml`],
+        })
+      );
 
       // lambda@edge function for ingecting OG meta tags on the fly
       const injectMetaTagsLambdaFunction_photo =

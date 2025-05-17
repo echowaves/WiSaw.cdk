@@ -49,7 +49,7 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
       video: [
         {
           thumbnail_loc: `https://img.wisaw.com/${photo.id}-thumb`,
-          title: `(video) ${photo?.lastComment}`,
+          title: `(video) ${photo?.lastComment}`.slice(0, 100),
           description: `(video) ${photo.lastComment}`,
           content_loc: `https://img.wisaw.com/${photo.id}.mov`,
         }
@@ -74,7 +74,7 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
         Key: "sitemap.xml",
         Body: buffer.toString(),
         Bucket: "wisaw.com",
-        ACL: "public-read",
+        // ACL: "public-read",
         CacheControl: "max-age=0",  
       };
 
