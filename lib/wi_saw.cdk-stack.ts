@@ -463,6 +463,13 @@ export class WiSawCdkStack extends cdk.Stack {
         "arn:aws:acm:us-east-1:963958500685:certificate/cf8703c9-9c1b-4405-bc10-a0c3287ebb7e"
       )
 
+      // Use the ACM certificate
+      const imgCert = acm.Certificate.fromCertificateArn(
+        this,
+        "img_cert",
+        "arn:aws:acm:us-east-1:963958500685:certificate/538e85e0-39f4-4d34-8580-86e8729e2c3c"
+      )
+
       // Create cache policies
       const basicCachePolicy = new cloudfront.CachePolicy(this, 'BasicCachePolicy', {
         defaultTtl: cdk.Duration.days(10),
@@ -567,6 +574,50 @@ export class WiSawCdkStack extends cdk.Stack {
         description: "Use this Distribution ID in the OAC bucket policy for wisaw.com"
       })
       
+
+          // Create the CloudFront distribution with S3 as an origin for images
+      const imgDistribution = new cloudfront.Distribution(this, "wisaw-img-distro", {
+        priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
+        defaultBehavior: {
+          origin: cloudfront_origins.S3BucketOrigin.withOriginAccessControl(imgBucket),
+          compress: true,
+          cachePolicy: basicCachePolicy,
+          originRequestPolicy: allForwardPolicy,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS, // Add this line
+          edgeLambdas: [
+            
+          ],
+        },
+        additionalBehaviors: {
+          
+        },
+        certificate: imgCert,
+        domainNames: ["img.wisaw.com"],
+        minimumProtocolVersion: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
+        errorResponses: [
+          {
+            httpStatus: 403,
+            responseHttpStatus: 200,
+            ttl: cdk.Duration.days(365),
+            responsePagePath: "/index.html",
+          },
+          {
+            httpStatus: 404,
+            responseHttpStatus: 200,
+            ttl: cdk.Duration.days(365),
+            responsePagePath: "/index.html",
+          },
+        ],
+      });
+
+      // Output the Distribution ID to use in the OAC bucket policy
+      new cdk.CfnOutput(this, "ImgCloudFrontDistributionId", {
+        value: imgDistribution.distributionId,
+        description: "Use this Distribution ID in the OAC bucket policy for img.wisaw.com"
+      })
+      
+
+
     }
 
 
