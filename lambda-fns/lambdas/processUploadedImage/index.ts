@@ -87,7 +87,7 @@ const _genWebpThumb = async ({
       Key,
       Body: buffer,
       ContentType: "image/webp",
-      ACL: "public-read",
+      // ACL: "public-read",
       CacheControl: "max-age=31536000",
     })
 
@@ -120,7 +120,7 @@ const _genWebp = async ({
       Key,
       Body: buffer,
       ContentType: "image/webp",
-      ACL: "public-read",
+      // ACL: "public-read",
       CacheControl: "max-age=31536000",
     })
 

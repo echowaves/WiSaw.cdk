@@ -59,7 +59,7 @@ export default async function main(
     Key: `${assetKey}`,
     ContentType: contentType,
     // Expires: 60 * 60, // expires in 1 minute * 60 minutes, after that request a new URL
-    ACL: "public-read",
+    // ACL: "public-read",
   }
 
   const client = new S3Client({region: 'us-east-1' })
