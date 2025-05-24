@@ -455,15 +455,6 @@ export class WiSawCdkStack extends cdk.Stack {
       
       
 
-      // Add Origin Access Control (OAC) - the modern replacement for OAI
-      const myOac = new cloudfront.CfnOriginAccessControl(this, 'MyCdnOac', {
-        originAccessControlConfig: {
-          name: `wisaw-s3-oac-${deployEnv()}`,
-          originAccessControlOriginType: 's3',
-          signingBehavior: 'always',
-          signingProtocol: 'sigv4'
-        }
-      });
       
       // Use the ACM certificate
       const cert = acm.Certificate.fromCertificateArn(
@@ -575,22 +566,7 @@ export class WiSawCdkStack extends cdk.Stack {
         value: distribution.distributionId,
         description: "Use this Distribution ID in the OAC bucket policy for wisaw.com"
       })
-
-      // // Apply the OAC to the CloudFront distribution
-      // const cfnDistribution = distribution.node.defaultChild as cloudfront.CfnDistribution;
       
-      // // Connect OAC to the default behavior
-      // cfnDistribution.addPropertyOverride('DistributionConfig.Origins.0.OriginAccessControlId', myOac.attrId);
-      
-      // // Remove OAI from default origin (required for OAC)
-      // cfnDistribution.addPropertyOverride('DistributionConfig.Origins.0.S3OriginConfig.OriginAccessIdentity', '');
-      
-      // // For additional behaviors
-      // cfnDistribution.addPropertyOverride('DistributionConfig.Origins.1.OriginAccessControlId', myOac.attrId);
-      // cfnDistribution.addPropertyOverride('DistributionConfig.Origins.1.S3OriginConfig.OriginAccessIdentity', '');
-      
-      // cfnDistribution.addPropertyOverride('DistributionConfig.Origins.2.OriginAccessControlId', myOac.attrId);
-      // cfnDistribution.addPropertyOverride('DistributionConfig.Origins.2.S3OriginConfig.OriginAccessIdentity', '');
     }
 
 
