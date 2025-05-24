@@ -358,6 +358,7 @@ export class WiSawCdkStack extends cdk.Stack {
       new Rule(this, "lambda-polling-rule", {
         description: "Rule to trigger scheduled lambda",
         schedule: Schedule.rate(cdk.Duration.hours(5)),
+        // schedule: Schedule.rate(cdk.Duration.minutes(1)),
         targets: [generateSiteMapLambdaFunction_LambdaTarget],
       });
 
@@ -575,21 +576,21 @@ export class WiSawCdkStack extends cdk.Stack {
         description: "Use this Distribution ID in the OAC bucket policy for wisaw.com"
       })
 
-      // Apply the OAC to the CloudFront distribution
-      const cfnDistribution = distribution.node.defaultChild as cloudfront.CfnDistribution;
+      // // Apply the OAC to the CloudFront distribution
+      // const cfnDistribution = distribution.node.defaultChild as cloudfront.CfnDistribution;
       
-      // Connect OAC to the default behavior
-      cfnDistribution.addPropertyOverride('DistributionConfig.Origins.0.OriginAccessControlId', myOac.attrId);
+      // // Connect OAC to the default behavior
+      // cfnDistribution.addPropertyOverride('DistributionConfig.Origins.0.OriginAccessControlId', myOac.attrId);
       
-      // Remove OAI from default origin (required for OAC)
-      cfnDistribution.addPropertyOverride('DistributionConfig.Origins.0.S3OriginConfig.OriginAccessIdentity', '');
+      // // Remove OAI from default origin (required for OAC)
+      // cfnDistribution.addPropertyOverride('DistributionConfig.Origins.0.S3OriginConfig.OriginAccessIdentity', '');
       
-      // For additional behaviors
-      cfnDistribution.addPropertyOverride('DistributionConfig.Origins.1.OriginAccessControlId', myOac.attrId);
-      cfnDistribution.addPropertyOverride('DistributionConfig.Origins.1.S3OriginConfig.OriginAccessIdentity', '');
+      // // For additional behaviors
+      // cfnDistribution.addPropertyOverride('DistributionConfig.Origins.1.OriginAccessControlId', myOac.attrId);
+      // cfnDistribution.addPropertyOverride('DistributionConfig.Origins.1.S3OriginConfig.OriginAccessIdentity', '');
       
-      cfnDistribution.addPropertyOverride('DistributionConfig.Origins.2.OriginAccessControlId', myOac.attrId);
-      cfnDistribution.addPropertyOverride('DistributionConfig.Origins.2.S3OriginConfig.OriginAccessIdentity', '');
+      // cfnDistribution.addPropertyOverride('DistributionConfig.Origins.2.OriginAccessControlId', myOac.attrId);
+      // cfnDistribution.addPropertyOverride('DistributionConfig.Origins.2.S3OriginConfig.OriginAccessIdentity', '');
     }
 
 
