@@ -451,10 +451,7 @@ export class WiSawCdkStack extends cdk.Stack {
           },
         )
       webAppBucket.grantRead(redirectLambdaEdgeFunction)
-      // imgBucket.grantReadWrite(redirectLambdaEdgeFunction)
-      
-      
-
+          
       
       // Use the ACM certificate
       const cert = acm.Certificate.fromCertificateArn(
