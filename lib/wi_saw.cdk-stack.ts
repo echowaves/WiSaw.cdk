@@ -547,7 +547,7 @@ export class WiSawCdkStack extends cdk.Stack {
           },
         },
         certificate: cert,
-        domainNames: ["www.wisaw.com", "wisaw.com"],
+        domainNames: ["www.wisaw.com", "wisaw.com", "link.wisaw.com"],
         minimumProtocolVersion: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
         errorResponses: [
           {
