@@ -457,7 +457,7 @@ export class WiSawCdkStack extends cdk.Stack {
       const cert = acm.Certificate.fromCertificateArn(
         this,
         "my_cert",
-        "arn:aws:acm:us-east-1:963958500685:certificate/cf8703c9-9c1b-4405-bc10-a0c3287ebb7e"
+        "arn:aws:acm:us-east-1:963958500685:certificate/ef907dfb-ee52-4802-bcb8-6eead57c124b"
       )
 
       // Use the ACM certificate
