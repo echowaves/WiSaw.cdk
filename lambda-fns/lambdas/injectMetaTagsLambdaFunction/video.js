@@ -50,12 +50,12 @@ exports.handler = async (event, context, callback) => {
       /<\/title>/,
       `<\/title>
       <meta property="og:image" content="https://img.wisaw.com/${imageId}" data-rh="true">
-      <meta property="og:description" content="Check out What I saw Today (photo)" data-rh="true">
-      <meta property="og:title" content="wisaw photo ${imageId}" data-rh="true">
+      <meta property="og:description" content="Check out What I saw Today (video)" data-rh="true">
+      <meta property="og:title" content="wisaw video ${imageId}" data-rh="true">
       <meta property="og:url" content="https://wisaw.com/videos/${imageId}" data-rh="true">
       <meta property="og:site_name" content="wisaw.com">
-      <meta property='og:type' content='photo' data-rh="true"/>    
-      <meta name="twitter:title" content="wisaw (What I Saw) photo ${imageId}" data-rh="true">
+      <meta property='og:type' content='video' data-rh="true"/>    
+      <meta name="twitter:title" content="wisaw (What I Saw) video ${imageId}" data-rh="true">
       <meta name="twitter:card" content="summary_large_image" data-rh="true">
       <meta name="twitter:image" content="https://img.wisaw.com/${imageId}" data-rh="true">
       `,
