@@ -511,17 +511,17 @@ export class WiSawCdkStack extends cdk.Stack {
             originRequestPolicy: allForwardPolicy,
             viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS, // Add this line
             edgeLambdas: [
-           {
+              {
+                eventType: cloudfront.LambdaEdgeEventType.ORIGIN_REQUEST,
+                functionVersion: injectMetaTagsLambdaFunction_photo.currentVersion,
+                includeBody: true,
+              }, 
+        {
               eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
               functionVersion: redirectLambdaEdgeFunction.currentVersion,
               includeBody: true,
             },
 
-              {
-                eventType: cloudfront.LambdaEdgeEventType.ORIGIN_REQUEST,
-                functionVersion: injectMetaTagsLambdaFunction_photo.currentVersion,
-                includeBody: true,
-              }
             ],
           },
           "videos/*": {
@@ -532,17 +532,16 @@ export class WiSawCdkStack extends cdk.Stack {
             originRequestPolicy: allForwardPolicy,
             viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS, // Add this line
             edgeLambdas: [
+              {
+                eventType: cloudfront.LambdaEdgeEventType.ORIGIN_REQUEST,
+                functionVersion: injectMetaTagsLambdaFunction_video.currentVersion,
+                includeBody: true,
+              },
             {
               eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
               functionVersion: redirectLambdaEdgeFunction.currentVersion,
               includeBody: true,
             },
-
-              {
-                eventType: cloudfront.LambdaEdgeEventType.ORIGIN_REQUEST,
-                functionVersion: injectMetaTagsLambdaFunction_video.currentVersion,
-                includeBody: true,
-              }
             ],
           },
         },

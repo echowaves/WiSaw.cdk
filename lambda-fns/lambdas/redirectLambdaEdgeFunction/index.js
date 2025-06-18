@@ -22,6 +22,25 @@ exports.handler = async (event) => {
       }
     };
   }
+
+  // if (host === 'link.wisaw.com') {
+  //   // Build the new URL, preserving query string if present
+  //   let redirectUrl = `wisaw://link.wisaw.com${request.uri}`;
+  //   if (request.querystring) {
+  //     redirectUrl += `?${request.querystring}`;
+  //   }
+    
+  //   return {
+  //     status: '301',
+  //     statusDescription: 'Moved Permanently',
+  //     headers: {
+  //       location: [{
+  //         key: 'Location',
+  //         value: redirectUrl
+  //       }]
+  //     }
+  //   };
+  // }
   
   return request;
 };
