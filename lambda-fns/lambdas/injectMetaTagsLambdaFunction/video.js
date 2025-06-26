@@ -49,7 +49,7 @@ exports.handler = async (event, context, callback) => {
     .replace(
       /<\/title>/,
       `<\/title>
-      <meta property="og:image" content="https://img.wisaw.com/${imageId}" data-rh="true">
+      <meta property="og:image" content="https://img.wisaw.com/${imageId}.webp" data-rh="true">
       <meta property="og:description" content="Check out What I saw Today (video)" data-rh="true">
       <meta property="og:title" content="wisaw video ${imageId}" data-rh="true">
       <meta property="og:url" content="https://wisaw.com/videos/${imageId}" data-rh="true">
@@ -57,7 +57,7 @@ exports.handler = async (event, context, callback) => {
       <meta property='og:type' content='video' data-rh="true"/>    
       <meta name="twitter:title" content="wisaw (What I Saw) video ${imageId}" data-rh="true">
       <meta name="twitter:card" content="summary_large_image" data-rh="true">
-      <meta name="twitter:image" content="https://img.wisaw.com/${imageId}" data-rh="true">
+      <meta name="twitter:image" content="https://img.wisaw.com/${imageId}.webp" data-rh="true">
       `,
     )  
     .replace(

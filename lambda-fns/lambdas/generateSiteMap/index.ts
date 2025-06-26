@@ -48,7 +48,7 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
       smStream.write({ url: `/videos/${photo.id}`,
       video: [
         {
-          thumbnail_loc: `https://img.wisaw.com/${photo.id}-thumb`,
+          thumbnail_loc: `https://img.wisaw.com/${photo.id}-thumb.webp`,
           title: `(video) ${photo?.lastComment}`.slice(0, 100),
           description: `(video) ${photo.lastComment}`,
           content_loc: `https://img.wisaw.com/${photo.id}.mov`,
