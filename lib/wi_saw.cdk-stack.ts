@@ -452,6 +452,34 @@ export class WiSawCdkStack extends cdk.Stack {
         )
       webAppBucket.grantRead(redirectLambdaEdgeFunction)
           
+      const imgRedirectLambdaEdgeFunction =
+        // new lambda.Function( // trying to define it as an Lambda@Edge function
+        new cloudfront.experimental.EdgeFunction(
+          this,
+          `${deployEnv()}_imgRedirectLambdaEdgeFunction`,
+          {
+            runtime: lambda.Runtime.NODEJS_22_X,
+            code: lambda.Code.fromAsset(
+              path.join(
+                __dirname,
+                "../lambda-fns/lambdas/imgRedirectLambdaEdgeFunction",
+              ),
+            ),
+            // code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
+            handler: "index.handler",
+            memorySize: 128,
+            timeout: cdk.Duration.seconds(5),
+            // insightsVersion,
+            logRetention,
+            // environment: {
+            //   ...config,
+            // },
+          },
+        )
+      imgBucket.grantRead(imgRedirectLambdaEdgeFunction)
+          
+      
+
       
       // Use the ACM certificate
       const cert = acm.Certificate.fromCertificateArn(
@@ -516,7 +544,7 @@ export class WiSawCdkStack extends cdk.Stack {
                 functionVersion: injectMetaTagsLambdaFunction_photo.currentVersion,
                 includeBody: true,
               }, 
-        {
+            {
               eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
               functionVersion: redirectLambdaEdgeFunction.currentVersion,
               includeBody: true,
@@ -581,8 +609,13 @@ export class WiSawCdkStack extends cdk.Stack {
           originRequestPolicy: allForwardPolicy,
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS, // Add this line
           edgeLambdas: [
-            
+            {
+              eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
+              functionVersion: imgRedirectLambdaEdgeFunction.currentVersion,
+              includeBody: true,
+            },
           ],
+
         },
         additionalBehaviors: {
           
