@@ -1,4 +1,5 @@
 import moment from "moment"
+import { v4 as uuidv4 } from "uuid"
 
 import { plainToClass } from "class-transformer"
 
@@ -20,8 +21,8 @@ export default async function main(
       SELECT COUNT(*)
               FROM "AbuseReports"
               INNER JOIN "Photos" on "AbuseReports"."photoId" = "Photos"."id"
-              WHERE "Photos"."uuid" = '${uuid}'
-  `)
+              WHERE "Photos"."uuid" = $1
+  `, [uuid])
   ).rows[0].count
 
   // console.log({abuseCount})
@@ -32,25 +33,28 @@ export default async function main(
 
   const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
   const updatedAt = createdAt
+  const photoId = uuidv4()
 
   const photo = (
     await psql.query(`
                     INSERT INTO "Photos"
                     (
+                        "id",
                         "uuid",
                         "location",
                         "video",
                         "createdAt",
                         "updatedAt"
                     ) values (
-                      '${uuid}',
-                      ST_MakePoint(${lat}, ${lon}),
-                      ${video ? true : false}, 
-                      '${createdAt}',
-                      '${updatedAt}'
+                      $1,
+                      $2,
+                      ST_MakePoint($3, $4),
+                      $5,
+                      $6,
+                      $7
                     )
                     returning *
-                    `)
+                    `, [photoId, uuid, lat, lon, video ? true : false, createdAt, updatedAt])
   ).rows[0]
   await psql.clean()
 

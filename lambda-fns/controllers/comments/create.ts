@@ -9,7 +9,7 @@ import { _notifyAllWatchers } from "../photos/_notifyAllWatchers"
 import watch from "../photos/watch"
 
 export default async function main(
-  photoId: bigint,
+  photoId: string,
   uuid: string,
   description: string,
 ) {

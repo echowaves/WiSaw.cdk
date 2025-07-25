@@ -1,9 +1,9 @@
-import {_getComments} from './_getComments'
-import {_getRecognitions} from './_getRecognitions'
-import {_isPhotoWatched} from './_isPhotoWatched'
+import { _getComments } from './_getComments'
+import { _getRecognitions } from './_getRecognitions'
+import { _isPhotoWatched } from './_isPhotoWatched'
 
 export default async function main(
-  photoId: bigint,
+  photoId: string,
   uuid: string,
 ) {
 

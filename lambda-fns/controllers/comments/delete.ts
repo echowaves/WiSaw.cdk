@@ -14,10 +14,10 @@ export default async function main(commentId: bigint, uuid: string) {
     UPDATE "Comments"
             SET
               "active" = false,
-              "deactivatedBy" = '${uuid}',
-              "updatedAt" = '${updatedAt}'
-        WHERE id = ${commentId}
-        returning *`)
+              "deactivatedBy" = $1,
+              "updatedAt" = $2
+        WHERE id = $3
+        returning *`, [uuid, updatedAt, commentId])
   ).rows[0]
   await psql.clean()
 

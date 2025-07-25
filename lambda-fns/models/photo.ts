@@ -1,5 +1,5 @@
 class Photo {
-  id: bigint
+  id: string
   uuid: string
   location: object
   commentsCount: bigint

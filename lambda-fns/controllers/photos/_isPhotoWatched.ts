@@ -1,15 +1,15 @@
 import psql from '../../psql'
 
-export const _isPhotoWatched = async( photoId: bigint, uuid: string) => {
+export const _isPhotoWatched = async( photoId: string, uuid: string) => {
   await psql.connect()
   const results =
   (await psql.query(`
   SELECT * FROM "Watchers"
               WHERE
-                "photoId" = ${photoId}
+                "photoId" = $1
                 AND
-                "uuid" = '${uuid}'
-                `)
+                "uuid" = $2
+                `, [photoId, uuid])
   ).rows
   await psql.clean()
 

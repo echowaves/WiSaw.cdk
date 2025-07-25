@@ -6,11 +6,13 @@ import { DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3"
 export async function main(event: any = {}, context: any) {
   const record = event.Records[0]
   const name = record.s3.object.key
-
-  const photoId = name.replace("-thumb", "")
+  console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!deleting name: ${name}`)
+  
+  try {
+  const photoId = name.replace("-thumb", "").replace(".webp", "")
   // we only want to deal with originals
-  // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!deleting image: ${name}`)
-  // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!       photoId: ${photoId}`)
+  console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!deleting image: ${name}`)
+  console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!       photoId: ${photoId}`)
 
   await Promise.all([
     _deleteUpload({ Bucket: record.s3.bucket.name, Key: `${photoId}` }),
@@ -18,6 +20,10 @@ export async function main(event: any = {}, context: any) {
   ])
   // console.log('everything ended')
   // cb(null, 'success everything')
+} catch (err) {
+  console.error("Error processing deleted image")
+  console.error({ err })  
+}
   return true
 }
 
@@ -56,7 +62,7 @@ const _cleanupTables = async ({ photoId }: { photoId: string }) => {
     await psql.query(`
                     DELETE from "Photos"
                     WHERE
-                    id = ${photoId}
+                    id = '${photoId}'
                     `)
     //
   } catch (err) {
@@ -69,7 +75,7 @@ const _cleanupTables = async ({ photoId }: { photoId: string }) => {
     await psql.query(`
         DELETE from "Watchers"
                     WHERE
-                    "photoId" = ${photoId}
+                    "photoId" = '${photoId}'
                     `)
     //
   } catch (err) {
@@ -78,15 +84,31 @@ const _cleanupTables = async ({ photoId }: { photoId: string }) => {
   }
   // console.log(`_cleanupTables ended 2: ${photoId}`)
 
+
+  
+
   try {
     await psql.query(`
                     DELETE from "Recognitions"
                     WHERE
-                    "photoId" = ${photoId}
+                    "photoId" = '${photoId}'
                     `)
     //
   } catch (err) {
     console.error("Error cleaning up Recognitions")
+    console.error({ err })
+  }
+  // console.log(`_cleanupTables ended 3: ${photoId}`)
+
+    try {
+    await psql.query(`
+                    DELETE from "Comments"
+                    WHERE
+                    "photoId" = '${photoId}'
+                    `)
+    //
+  } catch (err) {
+    console.error("Error cleaning up Comments")
     console.error({ err })
   }
   // console.log(`_cleanupTables ended 3: ${photoId}`)

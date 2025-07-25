@@ -1,9 +1,9 @@
-import {_getPhoto} from './_getPhoto'
-import {_getComments} from './_getComments'
-import {_getRecognitions} from './_getRecognitions'
+import { _getComments } from './_getComments'
+import { _getPhoto } from './_getPhoto'
+import { _getRecognitions } from './_getRecognitions'
 
 export default async function main(
-  photoId: bigint,
+  photoId: string,
 ) {
 
   const [

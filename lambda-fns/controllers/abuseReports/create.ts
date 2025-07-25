@@ -2,7 +2,7 @@ import moment from "moment"
 
 import psql from "../../psql"
 
-export default async function main(photoId: bigint, uuid: string) {
+export default async function main(photoId: string, uuid: string) {
   const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
   await psql.connect()
   const result = (
@@ -14,13 +14,13 @@ export default async function main(photoId: bigint, uuid: string) {
                         "createdAt",
                         "updatedAt"
                     ) values (
-                      ${photoId},
-                      '${uuid}',
-                      '${createdAt}',
-                      '${createdAt}'
+                      $1,
+                      $2,
+                      $3,
+                      $4
                     )
                     returning *
-                    `)
+                    `, [photoId, uuid, createdAt, createdAt])
   ).rows[0]
 
   await psql.clean()

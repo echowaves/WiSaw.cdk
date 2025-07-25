@@ -5,7 +5,7 @@ import { _getPhoto } from './_getPhoto'
 import { _getRecognitions } from './_getRecognitions'
 
 export default async function main(
-  photoId: bigint,
+  photoId: string,
 ) {
   await psql.connect()
 
@@ -13,13 +13,13 @@ export default async function main(
   (await psql.query(`
                     SELECT "id" FROM "Photos"
                     WHERE
-                      "updatedAt" > (select "updatedAt" FROM "Photos" where "id" <= ${photoId} ORDER BY "id" DESC LIMIT 1)
+                      "updatedAt" > (select "updatedAt" FROM "Photos" where "id" = $1 ORDER BY "id" DESC LIMIT 1)
                     AND
                       active = true
                     ORDER BY "updatedAt" ASC
                     LIMIT 1
-                    `
-                  )).rows[0]?.id || 0
+                    `, [photoId]
+                  )).rows[0]?.id || '0'
 
   await psql.clean()
 

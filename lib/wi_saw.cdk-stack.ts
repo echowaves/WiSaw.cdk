@@ -452,31 +452,31 @@ export class WiSawCdkStack extends cdk.Stack {
         )
       webAppBucket.grantRead(redirectLambdaEdgeFunction)
           
-      const imgRedirectLambdaEdgeFunction =
-        // new lambda.Function( // trying to define it as an Lambda@Edge function
-        new cloudfront.experimental.EdgeFunction(
-          this,
-          `${deployEnv()}_imgRedirectLambdaEdgeFunction`,
-          {
-            runtime: lambda.Runtime.NODEJS_22_X,
-            code: lambda.Code.fromAsset(
-              path.join(
-                __dirname,
-                "../lambda-fns/lambdas/imgRedirectLambdaEdgeFunction",
-              ),
-            ),
-            // code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
-            handler: "index.handler",
-            memorySize: 128,
-            timeout: cdk.Duration.seconds(5),
-            // insightsVersion,
-            logRetention,
-            // environment: {
-            //   ...config,
-            // },
-          },
-        )
-      imgBucket.grantRead(imgRedirectLambdaEdgeFunction)
+      // const imgRedirectLambdaEdgeFunction =
+      //   // new lambda.Function( // trying to define it as an Lambda@Edge function
+      //   new cloudfront.experimental.EdgeFunction(
+      //     this,
+      //     `${deployEnv()}_imgRedirectLambdaEdgeFunction`,
+      //     {
+      //       runtime: lambda.Runtime.NODEJS_22_X,
+      //       code: lambda.Code.fromAsset(
+      //         path.join(
+      //           __dirname,
+      //           "../lambda-fns/lambdas/imgRedirectLambdaEdgeFunction",
+      //         ),
+      //       ),
+      //       // code: lambda.Code.fromAsset('lambda-fns/lambdas.zip'),
+      //       handler: "index.handler",
+      //       memorySize: 128,
+      //       timeout: cdk.Duration.seconds(5),
+      //       // insightsVersion,
+      //       logRetention,
+      //       // environment: {
+      //       //   ...config,
+      //       // },
+      //     },
+      //   )
+      // imgBucket.grantRead(imgRedirectLambdaEdgeFunction)
           
       
 
@@ -609,11 +609,11 @@ export class WiSawCdkStack extends cdk.Stack {
           originRequestPolicy: allForwardPolicy,
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS, // Add this line
           edgeLambdas: [
-            {
-              eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
-              functionVersion: imgRedirectLambdaEdgeFunction.currentVersion,
-              includeBody: true,
-            },
+            // {
+            //   eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
+            //   functionVersion: imgRedirectLambdaEdgeFunction.currentVersion,
+            //   includeBody: true,
+            // },
           ],
 
         },
@@ -683,7 +683,7 @@ export class WiSawCdkStack extends cdk.Stack {
       new s3n.LambdaDestination(processDeletedImageLambdaFunction),
       // only invoke lambda if object matches the filter
       // {prefix: 'test/', suffix: '.yaml'},
-      { suffix: "-thumb" },
+      { suffix: "-thumb.webp" },
     )
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////

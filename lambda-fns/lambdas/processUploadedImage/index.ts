@@ -46,8 +46,8 @@ export async function main(event: any = {}, context: any) {
   // const image = Buffer.from(await response.Body.transformToByteArray())
 
   await Promise.all([
-    _genWebpThumb({ image, Bucket, Key: `${photoId}-thumb` }),
-    _genWebp({ image, Bucket, Key: `${photoId}` }),
+    _genWebpThumb({ image, Bucket, Key: `${photoId}-thumb.webp` }),
+    _genWebp({ image, Bucket, Key: `${photoId}.webp` }),
     _recognizeImage({ Bucket, Key: `${name}` }),
   ])
 
@@ -260,10 +260,10 @@ const _activatePhoto = async ({ photoId }: { photoId: string }) => {
     await psql.connect()
     await psql.query(`    
                     UPDATE "Photos"
-                    set active = true, "updatedAt" = '${updatedAt}'
+                    set active = true, "updatedAt" = $1
                     WHERE
-                    id = ${photoId}
-                    `)
+                    id = $2
+                    `, [updatedAt, photoId])
     // console.log({result})
   } catch (err) {
     console.error("Error activating photo")

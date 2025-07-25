@@ -17,7 +17,7 @@ type ContactForm {
 
 type Photo {
   row_number: Int!
-  id: ID!
+  id: String!
   uuid: String!
   location: AWSJSON!
   commentsCount: Int!
@@ -35,7 +35,7 @@ type Photo {
 type AbuseReport {
   id: ID!
   # photo: Photo!
-  photoId: ID!
+  photoId: String!
   uuid: String!
   createdAt: AWSDateTime!
   updatedAt: AWSDateTime!
@@ -61,7 +61,7 @@ type PhotoAll {
 
 type Watcher {
   id: ID!
-  photoId: ID!
+  photoId: String!
   uuid: String!
   createdAt: AWSDateTime!
   updatedAt: AWSDateTime!
@@ -70,7 +70,7 @@ type Watcher {
 
 type Comment {
   id: ID!
-  photoId: ID!
+  photoId: String!
   uuid: String!
   active: Boolean!
   comment: String!
@@ -80,7 +80,7 @@ type Comment {
 
 type Recognition {
   id: ID!
-  photoId: ID!
+  photoId: String!
   metaData: AWSJSON!
   createdAt: AWSDateTime!
   updatedAt: AWSDateTime!
@@ -180,13 +180,13 @@ type Query {
     ): PhotoFeed
 
   getPhotoDetails(
-    photoId: ID!
+    photoId: String!
     uuid: String!
     ): PhotoDetails!
 
-  getPhotoAllCurr( photoId: ID!): PhotoAll!
-  getPhotoAllNext( photoId: ID!): PhotoAll!
-  getPhotoAllPrev( photoId: ID!): PhotoAll!
+  getPhotoAllCurr( photoId: String!): PhotoAll!
+  getPhotoAllNext( photoId: String!): PhotoAll!
+  getPhotoAllPrev( photoId: String!): PhotoAll!
 
   # freindship management 
   # getFriendInFriendship(     
@@ -220,7 +220,7 @@ type Mutation {
   ): ContactForm!
 
   createAbuseReport(
-    photoId: ID!
+    photoId: String!
     uuid: String!
   ): AbuseReport!
 
@@ -232,21 +232,21 @@ type Mutation {
   ): Photo!
 
   watchPhoto(
-      photoId: ID!
+      photoId: String!
       uuid: String!
     ): Int!
   unwatchPhoto(
-      photoId: ID!
+      photoId: String!
       uuid: String!
     ): Int!
 
   deletePhoto(
-      photoId: ID!
+      photoId: String!
       uuid: String!
     ): String!
 
   createComment(
-      photoId: ID!
+      photoId: String!
       uuid: String!
       description: String!
     ): Comment!

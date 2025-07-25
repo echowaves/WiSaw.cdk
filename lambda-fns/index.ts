@@ -1,14 +1,14 @@
 // ******************************************************
 //                       queries
 // ******************************************************
-import generateUploadUrl from "./controllers/photos/generateUploadUrl"
 import generateUploadUrlForMessage from "./controllers/messages/generateUploadUrlForMessage"
+import generateUploadUrl from "./controllers/photos/generateUploadUrl"
 import zeroMoment from "./controllers/photos/zeroMoment"
 
 import feedByDate from "./controllers/photos/feedByDate"
+import feedForTextSearch from "./controllers/photos/feedForTextSearch"
 import feedForWatcher from "./controllers/photos/feedForWatcher"
 import feedRecent from "./controllers/photos/feedRecent"
-import feedForTextSearch from "./controllers/photos/feedForTextSearch"
 
 import getPhotoDetails from "./controllers/photos/getPhotoDetails"
 
@@ -25,20 +25,20 @@ import getMessagesList from "./controllers/messages/getMessagesList"
 //                       mutations
 // ******************************************************
 
-import createContactForm from "./controllers/contactForms/create"
 import createAbuseReport from "./controllers/abuseReports/create"
+import createContactForm from "./controllers/contactForms/create"
 
-import createPhoto from "./controllers/photos/create"
-import watchPhoto from "./controllers/photos/watch"
-import unwatchPhoto from "./controllers/photos/unwatch"
-import deletePhoto from "./controllers/photos/delete"
 import createComment from "./controllers/comments/create"
 import deleteComment from "./controllers/comments/delete"
+import createPhoto from "./controllers/photos/create"
+import deletePhoto from "./controllers/photos/delete"
+import unwatchPhoto from "./controllers/photos/unwatch"
+import watchPhoto from "./controllers/photos/watch"
 
 import registerSecret from "./controllers/secrets/register"
 
-import createFriendship from "./controllers/friendships/createFriendship"
 import acceptFriendshipRequest from "./controllers/friendships/acceptFriendshipRequest"
+import createFriendship from "./controllers/friendships/createFriendship"
 import deleteFriendship from "./controllers/friendships/delete"
 
 import updateSecret from "./controllers/secrets/update"
@@ -58,7 +58,7 @@ type AppSyncEvent = {
   arguments: {
     // photo: Photo,
     // abuseReport: AbuseReport,
-    photoId: bigint
+    photoId: string
     uuid: string
     lat: number
     lon: number
@@ -243,3 +243,4 @@ exports.main = async (event: AppSyncEvent) => {
       return null
   }
 }
+

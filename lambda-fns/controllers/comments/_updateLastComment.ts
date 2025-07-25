@@ -2,7 +2,7 @@ import moment from "moment"
 
 import psql from "../../psql"
 
-export const _updateLastComment = async (photoId: bigint) => {
+export const _updateLastComment = async (photoId: string) => {
   const updatedAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
 
   await psql.connect()
@@ -22,9 +22,9 @@ export const _updateLastComment = async (photoId: bigint) => {
               ''
             ) AS "comment"
         ),
-        "updatedAt" = '${updatedAt}'
-      WHERE id = ${photoId}
-      returning *`)
+        "updatedAt" = $1
+      WHERE id = $2
+      returning *`, [updatedAt, photoId])
   ).rows[0]
   await psql.clean()
 
