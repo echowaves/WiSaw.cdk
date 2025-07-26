@@ -12,12 +12,12 @@
     "prod:destroy": "DEPLOY_ENV=prod npx cdk destroy prod-WiSawCdkStack",
     "migrate": "./node_modules/.bin/sequelize db:migrate --env",
     "migrate-undo": "./node_modules/.bin/sequelize db:migrate:undo --env",
-    "cleanup-s3": "NODE_ENV=prod node cleanup-s3.js",
-    "cleanup-s3:dry-run": "NODE_ENV=prod node cleanup-s3.js --dry-run",
-    "cleanup-s3:test": "NODE_ENV=test node cleanup-s3.js",
-    "cleanup-s3:test:dry-run": "NODE_ENV=test node cleanup-s3.js --dry-run",
-    "cleanup-s3:dev": "NODE_ENV=dev node cleanup-s3.js",
-    "cleanup-s3:dev:dry-run": "NODE_ENV=dev node cleanup-s3.js --dry-run"
+    "cleanup-s3": "NODE_ENV=prod node ./scripts/cleanup-s3.js",
+    "cleanup-s3:dry-run": "NODE_ENV=prod node ./scripts/cleanup-s3.js --dry-run",
+    "cleanup-s3:test": "NODE_ENV=test node ./scripts/cleanup-s3.js",
+    "cleanup-s3:test:dry-run": "NODE_ENV=test node ./scripts/cleanup-s3.js --dry-run",
+    "cleanup-s3:dev": "NODE_ENV=dev node ./scripts/cleanup-s3.js",
+    "cleanup-s3:dev:dry-run": "NODE_ENV=dev node ./scripts/cleanup-s3.js --dry-run"
   },
   "devDependencies": {
     "@babel/cli": "7.27.2",
