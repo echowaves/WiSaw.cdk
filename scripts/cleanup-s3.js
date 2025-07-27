@@ -5,7 +5,7 @@ const ServerlessClient = require('serverless-postgres');
 
 // Load environment-specific config (same pattern as your codebase)
 const env = process.env.NODE_ENV || 'dev';
-const config = require(`./.env.${env}`).config();
+const config = require(`../.env.${env}`).config();
 
 // Set NODE_TLS_REJECT_UNAUTHORIZED if specified in config
 if (config.NODE_TLS_REJECT_UNAUTHORIZED) {
@@ -16,22 +16,44 @@ const BUCKET_NAME = config.S3_BUCKET || 'wisaw-img-prod';
 const DRY_RUN = process.argv.includes('--dry-run');
 
 const s3 = new S3Client({ region: 'us-east-1' });
-const db = new ServerlessClient({
-  ...config,  // Use the config object from the env file
-  delayMs: 3000,
-  maxConnections: 80,
-  maxRetries: 3,
-  ssl: true,
-});
 
 async function getPhotoIds() {
-  await db.connect();
-  const result = await db.query('SELECT "id" FROM "Photos" WHERE "active" = true');
-  await db.clean();
-  return new Set(result.rows.map(row => row.id));
+  const db = new ServerlessClient({
+    ...config,  // Use the config object from the env file
+    delayMs: 3000,
+    maxConnections: 80,
+    maxRetries: 3,
+    ssl: true,
+    connectionTimeoutMillis: 10000, // 10 second timeout
+    idleTimeoutMillis: 10000,
+  });
+  try {
+    console.log('🔗 Connecting to database...');
+    
+    // Add timeout wrapper
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Database connection timeout')), 15000);
+    });
+    
+    const connectPromise = (async () => {
+      await db.connect();
+      console.log('📊 Running query to get photo IDs...');
+      const result = await db.query('SELECT "id" FROM "Photos" WHERE "active" = true');
+      console.log(`📊 Found ${result.rows.length} active photos`);
+      await db.clean();
+      return new Set(result.rows.map(row => row.id));
+    })();
+    
+    return await Promise.race([connectPromise, timeoutPromise]);
+  } catch (error) {
+    console.error('❌ Database connection failed:', error.message);
+    console.log('⚠️  Continuing without database verification (LIST-ONLY mode)');
+    return new Set(); // Return empty set - will list all S3 objects
+  }
 }
 
 async function getS3Objects() {
+  console.log('☁️ Listing S3 objects...');
   const objects = [];
   let token = null;
   
@@ -43,6 +65,7 @@ async function getS3Objects() {
     
     if (response.Contents) {
       objects.push(...response.Contents.map(obj => obj.Key));
+      console.log(`📦 Retrieved ${objects.length} objects so far...`);
     }
     token = response.NextContinuationToken;
   } while (token);
@@ -58,11 +81,29 @@ function extractPhotoId(key) {
 
 async function main() {
   console.log(`🧹 S3 Cleanup - ${DRY_RUN ? 'DRY RUN' : 'LIVE MODE'}`);
+  console.log('📡 Connecting to database...');
   
-  const [photoIds, s3Objects] = await Promise.all([
-    getPhotoIds(),
-    getS3Objects()
-  ]);
+  const photoIds = await getPhotoIds();
+  console.log(`✅ Database connected, found ${photoIds.size} photos`);
+  
+  console.log('☁️  Listing S3 objects...');
+  const s3Objects = await getS3Objects();
+  console.log(`✅ S3 connected, found ${s3Objects.length} objects`);
+  
+  if (photoIds.size === 0) {
+    console.log('⚠️  No database data available - showing all S3 objects (LIST-ONLY mode)');
+    console.log(`📦 S3 objects found: ${s3Objects.length}`);
+    
+    if (DRY_RUN) {
+      console.log('\nS3 objects (first 10):');
+      s3Objects.slice(0, 10).forEach(key => console.log(`  ${key}`));
+      if (s3Objects.length > 10) {
+        console.log(`  ... and ${s3Objects.length - 10} more`);
+      }
+    }
+    
+    process.exit(0); // Force exit since db is already cleaned in getPhotoIds
+  }
   
   console.log(`📊 Found ${photoIds.size} photos in DB, ${s3Objects.length} objects in S3`);
   
@@ -94,13 +135,13 @@ async function main() {
   
   if (toDelete.length === 0) {
     console.log('✅ Nothing to delete!');
-    return;
+    process.exit(0); // Force exit since db is already cleaned in getPhotoIds
   }
   
   if (DRY_RUN) {
     console.log('Objects that would be deleted:');
     // toDelete.forEach(key => console.log(`  ${key}`));
-    return;
+    process.exit(0); // Force exit since db is already cleaned in getPhotoIds
   }
   
   // Delete objects
@@ -114,6 +155,12 @@ async function main() {
   }
   
   console.log('✅ Cleanup complete!');
+  process.exit(0); // Force exit since db is already cleaned in getPhotoIds
 }
 
-main().catch(console.error);
+main().catch(console.error).finally(() => {
+  // Force exit after a short delay to ensure all cleanup is done
+  setTimeout(() => {
+    process.exit(0);
+  }, 1000);
+});
