@@ -8,6 +8,8 @@ class Photo {
   updatedAt: string
   active: boolean
   video: boolean
+  width?: number
+  height?: number
 
   // add custom derived attributes to the object
   public toJSON() {

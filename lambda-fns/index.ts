@@ -178,6 +178,8 @@ exports.main = async (event: AppSyncEvent) => {
         event.arguments.lat,
         event.arguments.lon,
         event.arguments.video,
+        event.arguments.width,
+        event.arguments.height,
       )
 
     case "watchPhoto":

@@ -30,6 +30,8 @@ type Photo {
   videoUrl: String!
   lastComment: String!
   video: Boolean!
+  width: Int
+  height: Int
 }
 
 type AbuseReport {

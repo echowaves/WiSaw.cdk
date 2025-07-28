@@ -49,6 +49,7 @@ export async function main(event: any = {}, context: any) {
     _genWebpThumb({ image, Bucket, Key: `${photoId}-thumb.webp` }),
     _genWebp({ image, Bucket, Key: `${photoId}.webp` }),
     _recognizeImage({ Bucket, Key: `${name}` }),
+    _extractImageDimensions({ image, photoId }),
   ])
 
   // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!   ended 3    photoId: ${photoId}`)
@@ -271,4 +272,36 @@ const _activatePhoto = async ({ photoId }: { photoId: string }) => {
   }
   await psql.clean()
   // console.log(`_activatePhoto ended  ${photoId}`)
+}
+
+const _extractImageDimensions = async ({
+  image,
+  photoId,
+}: {
+  image: any
+  photoId: string
+}) => {
+  // console.log(`_extractImageDimensions started  ${photoId}`)
+
+  try {
+    const metadata = await sharp(image).metadata()
+    const width = metadata.width
+    const height = metadata.height
+
+    if (width && height) {
+      const updatedAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
+
+      await psql.connect()
+      await psql.query(`    
+                      UPDATE "Photos"
+                      SET width = $1, height = $2, "updatedAt" = $3
+                      WHERE id = $4
+                      `, [width, height, updatedAt, photoId])
+    }
+  } catch (err) {
+    console.error("Error extracting image dimensions")
+    console.error({ err })
+  }
+  await psql.clean()
+  // console.log(`_extractImageDimensions ended  ${photoId}`)
 }
