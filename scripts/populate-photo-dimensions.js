@@ -19,46 +19,58 @@ if (config.NODE_TLS_REJECT_UNAUTHORIZED) {
 
 const BUCKET_NAME = config.S3_BUCKET || `wisaw-img-${env}`;
 const DRY_RUN = process.argv.includes('--dry-run');
-const BATCH_SIZE = 10; // Process photos in batches to avoid overwhelming the system
+const BATCH_SIZE = parseInt(process.argv.find(arg => arg.startsWith('--batch-size='))?.split('=')[1]) || 20; // Increased default batch size
+const CONCURRENT_LIMIT = parseInt(process.argv.find(arg => arg.startsWith('--concurrent='))?.split('=')[1]) || 5; // Process multiple photos concurrently within each batch
 
 const s3 = new S3Client({ region: 'us-east-1' });
+
+// Create a shared database connection pool
+let dbPool = null;
+const getDbConnection = () => {
+  if (!dbPool) {
+    dbPool = new ServerlessClient({
+      ...config,
+      delayMs: 1000, // Reduced delay for better performance
+      maxConnections: 20, // Reduced max connections
+      maxRetries: 2, // Reduced retries for faster failure
+      ssl: true,
+      connectionTimeoutMillis: 5000, // Reduced timeout
+      idleTimeoutMillis: 30000, // Keep connections alive longer
+    });
+  }
+  return dbPool;
+};
 
 console.log(`🔧 Starting photo dimensions population script`);
 console.log(`📊 Environment: ${env}`);
 console.log(`🪣 S3 Bucket: ${BUCKET_NAME}`);
 console.log(`🌊 Dry run: ${DRY_RUN ? 'YES' : 'NO'}`);
 console.log(`📦 Batch size: ${BATCH_SIZE}`);
+console.log(`⚡ Concurrent limit: ${CONCURRENT_LIMIT}`);
 
 async function getPhotosWithoutDimensions() {
-  const db = new ServerlessClient({
-    ...config,
-    delayMs: 3000,
-    maxConnections: 80,
-    maxRetries: 3,
-    ssl: true,
-    connectionTimeoutMillis: 10000,
-    idleTimeoutMillis: 10000,
-  });
+  const db = getDbConnection();
 
   try {
     console.log('🔗 Connecting to database...');
     
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Database connection timeout')), 15000);
+      setTimeout(() => reject(new Error('Database connection timeout')), 10000);
     });
     
     const connectPromise = (async () => {
       await db.connect();
       console.log('📊 Running query to get photos without dimensions...');
       const result = await db.query(`
-        SELECT "id", "video", "createdAt" 
+        SELECT "id", "createdAt" 
         FROM "Photos" 
         WHERE "active" = true 
         AND ("width" IS NULL OR "height" IS NULL)
         ORDER BY "createdAt" DESC
+        LIMIT 1000
       `);
       console.log(`📊 Found ${result.rows.length} photos without dimensions`);
-      await db.clean();
+      // Don't clean the connection, keep it for reuse
       return result.rows;
     })();
     
@@ -72,7 +84,7 @@ async function getPhotosWithoutDimensions() {
 async function getImageDimensions(photoId, isVideo = false) {
   try {
 
-    // Try to get the original uploaded image first, fallback to webp version
+    // Try .webp first as it's more likely to exist and smaller to download
     let imageKey = `${photoId}.webp`;
     let imageData;
     
@@ -83,12 +95,13 @@ async function getImageDimensions(photoId, isVideo = false) {
       });
       const response = await s3.send(getObjectCommand);
       imageData = await response.Body.transformToByteArray();
-    } catch (uploadError) {
-      // If .upload file doesn't exist, try the .webp version
-      console.log(`❌  upload not found for ${photoId}`);
+    } catch (webpError) {
+      // If .webp doesn't exist, try the original upload
+      console.log(`⚠️  .webp not found for ${photoId}`);
+      
     }
 
-    // Extract dimensions using Sharp
+    // Extract dimensions using Sharp with minimal processing
     const metadata = await sharp(imageData).metadata();
     
     if (metadata.width && metadata.height) {
@@ -113,18 +126,13 @@ async function updatePhotoDimensions(photoId, width, height) {
     return true;
   }
 
-  const db = new ServerlessClient({
-    ...config,
-    delayMs: 3000,
-    maxConnections: 80,
-    maxRetries: 3,
-    ssl: true,
-    connectionTimeoutMillis: 10000,
-    idleTimeoutMillis: 10000,
-  });
+  const db = getDbConnection();
 
   try {
-    await db.connect();
+    // Ensure connection is established (reuse existing connection if available)
+    if (!db.connected) {
+      await db.connect();
+    }
     
     const updatedAt = new Date().toISOString().slice(0, 23); // Format: YYYY-MM-DD HH:mm:ss.SSS
     
@@ -134,13 +142,49 @@ async function updatePhotoDimensions(photoId, width, height) {
       WHERE "id" = $4
     `, [width, height, updatedAt, photoId]);
     
-    await db.clean();
+    // Don't clean the connection, keep it for reuse
     console.log(`✅ Updated ${photoId} with dimensions ${width}x${height}`);
     return true;
   } catch (error) {
     console.error(`❌ Failed to update dimensions for ${photoId}:`, error.message);
     return false;
   }
+}
+
+// Helper function to process a single photo
+async function processPhoto(photo) {
+  try {
+    const dimensions = await getImageDimensions(photo.id, photo.video);
+    
+    if (dimensions) {
+      const success = await updatePhotoDimensions(photo.id, dimensions.width, dimensions.height);
+      return success ? 'updated' : 'error';
+    } else {
+      return 'skipped';
+    }
+  } catch (error) {
+    console.error(`❌ Error processing photo ${photo.id}:`, error.message);
+    return 'error';
+  }
+}
+
+// Helper function to limit concurrency
+async function processConcurrentBatch(photos, limit) {
+  const results = [];
+  
+  for (let i = 0; i < photos.length; i += limit) {
+    const batch = photos.slice(i, i + limit);
+    const promises = batch.map(photo => processPhoto(photo));
+    const batchResults = await Promise.all(promises);
+    results.push(...batchResults);
+    
+    // Small delay between concurrent batches to avoid overwhelming systems
+    if (i + limit < photos.length) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+  }
+  
+  return results;
 }
 
 async function processBatch(photos) {
@@ -153,29 +197,20 @@ async function processBatch(photos) {
     errors: 0
   };
 
-  for (const photo of photos) {
-    try {
-      const dimensions = await getImageDimensions(photo.id, photo.video);
-      results.processed++;
-      
-      if (dimensions) {
-        const success = await updatePhotoDimensions(photo.id, dimensions.width, dimensions.height);
-        if (success) {
-          results.updated++;
-        } else {
-          results.errors++;
-        }
-      } else {
-        results.skipped++;
-      }
-      
-      // Small delay to avoid overwhelming the system
-      await new Promise(resolve => setTimeout(resolve, 100));
-    } catch (error) {
-      console.error(`❌ Error processing photo ${photo.id}:`, error.message);
+  // Process photos concurrently within the batch
+  const batchResults = await processConcurrentBatch(photos, CONCURRENT_LIMIT);
+  
+  // Count results
+  batchResults.forEach(result => {
+    results.processed++;
+    if (result === 'updated') {
+      results.updated++;
+    } else if (result === 'skipped') {
+      results.skipped++;
+    } else if (result === 'error') {
       results.errors++;
     }
-  }
+  });
 
   return results;
 }
@@ -218,10 +253,20 @@ async function main() {
       // Progress update
       console.log(`📊 Batch ${batchNumber} complete: ${batchResults.updated} updated, ${batchResults.skipped} skipped, ${batchResults.errors} errors`);
       
-      // Longer delay between batches
+      // Shorter delay between batches for better performance
       if (i + BATCH_SIZE < photos.length) {
-        console.log('⏸️  Waiting 2 seconds before next batch...');
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        console.log('⏸️  Waiting 500ms before next batch...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+
+    // Clean up database connection
+    if (dbPool) {
+      try {
+        await dbPool.clean();
+        console.log('🧹 Database connection cleaned up');
+      } catch (error) {
+        console.log('⚠️  Error cleaning up database connection:', error.message);
       }
     }
 
@@ -237,6 +282,11 @@ async function main() {
       console.log('\n🔍 This was a dry run. No actual updates were made.');
       console.log('💡 Run without --dry-run to perform actual updates.');
     }
+    
+    console.log('\n💡 Performance tuning options:');
+    console.log('   • --batch-size=N : Set batch size (default: 20)');
+    console.log('   • --concurrent=N : Set concurrent processing limit (default: 5)');
+    console.log('   • Example: npm run populate-dimensions test --batch-size=50 --concurrent=10');
 
   } catch (error) {
     console.error('💥 Script failed:', error.message);
