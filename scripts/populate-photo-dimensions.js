@@ -20,7 +20,7 @@ if (config.NODE_TLS_REJECT_UNAUTHORIZED) {
 const BUCKET_NAME = config.S3_BUCKET || `wisaw-img-${env}`;
 const DRY_RUN = process.argv.includes('--dry-run');
 const BATCH_SIZE = parseInt(process.argv.find(arg => arg.startsWith('--batch-size='))?.split('=')[1]) || 20; // Increased default batch size
-const CONCURRENT_LIMIT = parseInt(process.argv.find(arg => arg.startsWith('--concurrent='))?.split('=')[1]) || 5; // Process multiple photos concurrently within each batch
+const CONCURRENT_LIMIT = parseInt(process.argv.find(arg => arg.startsWith('--concurrent='))?.split('=')[1]) || 10; // Process multiple photos concurrently within each batch
 
 const s3 = new S3Client({ region: 'us-east-1' });
 
