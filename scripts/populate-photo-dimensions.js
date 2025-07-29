@@ -67,7 +67,6 @@ async function getPhotosWithoutDimensions() {
         WHERE "active" = true 
         AND ("width" IS NULL OR "height" IS NULL)
         ORDER BY "createdAt" DESC
-        LIMIT 1000
       `);
       console.log(`📊 Found ${result.rows.length} photos without dimensions`);
       // Don't clean the connection, keep it for reuse
