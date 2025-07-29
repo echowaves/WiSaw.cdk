@@ -149,14 +149,12 @@ async function updatePhotoDimensions(photoId, width, height) {
     if (!db.connected) {
       await db.connect();
     }
-    
-    const updatedAt = new Date().toISOString().slice(0, 23); // Format: YYYY-MM-DD HH:mm:ss.SSS
-    
+        
     await db.query(`
       UPDATE "Photos" 
-      SET "width" = $1, "height" = $2, "updatedAt" = $3 
-      WHERE "id" = $4
-    `, [width, height, updatedAt, photoId]);
+      SET "width" = $1, "height" = $2
+      WHERE "id" = $3
+    `, [width, height, photoId]);
     
     // Don't clean the connection, keep it for reuse
     console.log(`✅ Updated ${photoId} with dimensions ${width}x${height}`);
