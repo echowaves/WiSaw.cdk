@@ -4,8 +4,12 @@ const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
 const ServerlessClient = require('serverless-postgres');
 const sharp = require('sharp');
 
+// Parse command line arguments
+const args = process.argv.slice(2);
+const envArg = args.find(arg => !arg.startsWith('--'));
+const env = envArg || process.env.NODE_ENV || 'dev';
+
 // Load environment-specific config (same pattern as your codebase)
-const env = process.env.NODE_ENV || 'dev';
 const config = require(`../.env.${env}`).config();
 
 // Set NODE_TLS_REJECT_UNAUTHORIZED if specified in config
