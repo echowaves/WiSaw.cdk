@@ -14,12 +14,8 @@
     "migrate-undo": "./node_modules/.bin/sequelize db:migrate:undo --env",
     "populate-dimensions": "node ./scripts/populate-photo-dimensions.js",
     "populate-dimensions:dry-run": "node ./scripts/populate-photo-dimensions.js --dry-run",
-    "cleanup-s3": "NODE_ENV=prod node ./scripts/cleanup-s3.js",
-    "cleanup-s3:dry-run": "NODE_ENV=prod node ./scripts/cleanup-s3.js --dry-run",
-    "cleanup-s3:test": "NODE_ENV=test node ./scripts/cleanup-s3.js",
-    "cleanup-s3:test:dry-run": "NODE_ENV=test node ./scripts/cleanup-s3.js --dry-run",
-    "cleanup-s3:dev": "NODE_ENV=dev node ./scripts/cleanup-s3.js",
-    "cleanup-s3:dev:dry-run": "NODE_ENV=dev node ./scripts/cleanup-s3.js --dry-run"
+    "cleanup-s3": "node ./scripts/cleanup-s3.js",
+    "cleanup-s3:dry-run": "node ./scripts/cleanup-s3.js --dry-run"
   },
   "devDependencies": {
     "@babel/cli": "7.27.2",

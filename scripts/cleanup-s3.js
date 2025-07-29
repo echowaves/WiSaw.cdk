@@ -3,8 +3,12 @@
 const { S3Client, ListObjectsV2Command, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const ServerlessClient = require('serverless-postgres');
 
+// Parse command line arguments
+const args = process.argv.slice(2);
+const envArg = args.find(arg => !arg.startsWith('--'));
+const env = envArg || process.env.NODE_ENV || 'dev';
+
 // Load environment-specific config (same pattern as your codebase)
-const env = process.env.NODE_ENV || 'dev';
 const config = require(`../.env.${env}`).config();
 
 // Set NODE_TLS_REJECT_UNAUTHORIZED if specified in config
@@ -12,7 +16,7 @@ if (config.NODE_TLS_REJECT_UNAUTHORIZED) {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = config.NODE_TLS_REJECT_UNAUTHORIZED;
 }
 
-const BUCKET_NAME = config.S3_BUCKET || 'wisaw-img-prod';
+const BUCKET_NAME = config.S3_BUCKET || `wisaw-img-${env}`;
 const DRY_RUN = process.argv.includes('--dry-run');
 
 const s3 = new S3Client({ region: 'us-east-1' });
