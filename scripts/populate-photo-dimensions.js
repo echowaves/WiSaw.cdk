@@ -96,8 +96,25 @@ async function getImageDimensions(photoId, isVideo = false) {
       imageData = await response.Body.transformToByteArray();
     } catch (webpError) {
       // If .webp doesn't exist, try the original upload
-      console.log(`⚠️  .webp not found for ${photoId}`);
-      
+      console.log(`⚠️  .webp not found for ${photoId}, trying .upload version`);
+      imageKey = `${photoId}.upload`;
+      try {
+        const getObjectCommand = new GetObjectCommand({
+          Bucket: BUCKET_NAME,
+          Key: imageKey,
+        });
+        const response = await s3.send(getObjectCommand);
+        imageData = await response.Body.transformToByteArray();
+      } catch (uploadError) {
+        console.error(`❌ Could not find image for ${photoId} (tried .webp and .upload)`);
+        return null;
+      }
+    }
+
+    // Check if we have imageData before processing
+    if (!imageData) {
+      console.error(`❌ No image data retrieved for ${photoId}`);
+      return null;
     }
 
     // Extract dimensions using Sharp with minimal processing
@@ -223,7 +240,7 @@ async function main() {
     
     if (photos.length === 0) {
       console.log('🎉 All photos already have dimensions!');
-      return;
+      process.exit(0); // Force exit since db is already cleaned
     }
 
     // Process photos in batches
@@ -287,6 +304,9 @@ async function main() {
     console.log('   • --concurrent=N : Set concurrent processing limit (default: 5)');
     console.log('   • Example: npm run populate-dimensions test --batch-size=50 --concurrent=10');
 
+    console.log('\n✅ Script completed successfully!');
+    process.exit(0); // Force exit since db is already cleaned
+
   } catch (error) {
     console.error('💥 Script failed:', error.message);
     process.exit(1);
@@ -297,4 +317,9 @@ async function main() {
 main().catch(error => {
   console.error('💥 Unhandled error:', error);
   process.exit(1);
+}).finally(() => {
+  // Force exit after a short delay to ensure all cleanup is done
+  setTimeout(() => {
+    process.exit(0);
+  }, 1000);
 });
