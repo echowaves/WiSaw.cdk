@@ -170,13 +170,29 @@ const _recognizeImage = async ({
     
   });
 
+  // Download the image from S3 and convert to PNG in memory
+  const s3Client = new S3Client({region: 'us-east-1' })
+  const getObjectCommand = new GetObjectCommand({
+    Bucket,
+    Key,
+  });
+  const { Body } = await s3Client.send(getObjectCommand);
+  
+  if (!Body) {
+    throw new Error(`Failed to download image from S3: ${Key}`)
+  }
+  
+  const imageBuffer = await Body.transformToByteArray();
+  
+  // Convert to PNG format in memory and resize to stay under 5MB limit
+  const pngBuffer = await sharp(imageBuffer)
+    .resize({ width: 2048, height: 2048, fit: 'inside', withoutEnlargement: true })
+    .png({ compressionLevel: 9 })
+    .toBuffer()
   
   const params = {
     Image: {
-      S3Object: {
-        Bucket,
-        Name: Key,
-      },
+      Bytes: pngBuffer,
     },
   }
   // console.log(`_recognizeImage ended 1  ${Key}`)
