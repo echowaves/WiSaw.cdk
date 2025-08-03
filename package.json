@@ -14,6 +14,8 @@
     "migrate-undo": "./node_modules/.bin/sequelize db:migrate:undo --env",
     "populate-dimensions": "node ./scripts/populate-photo-dimensions.js",
     "populate-dimensions:dry-run": "node ./scripts/populate-photo-dimensions.js --dry-run",
+    "populate-recognitions": "node ./scripts/populate-recognitions.js",
+    "populate-recognitions:dry-run": "node ./scripts/populate-recognitions.js --dry-run",
     "cleanup-s3": "node ./scripts/cleanup-s3.js",
     "cleanup-s3:dry-run": "node ./scripts/cleanup-s3.js --dry-run"
   },

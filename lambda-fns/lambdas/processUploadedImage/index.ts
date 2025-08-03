@@ -184,11 +184,29 @@ const _recognizeImage = async ({
   
   const imageBuffer = await Body.transformToByteArray();
   
-  // Convert to PNG format in memory and resize to stay under 5MB limit
-  const pngBuffer = await sharp(imageBuffer)
+  // Convert to PNG format and resize to stay under 5MB limit
+  let pngBuffer = await sharp(imageBuffer)
     .resize({ width: 2048, height: 2048, fit: 'inside', withoutEnlargement: true })
     .png({ compressionLevel: 9 })
     .toBuffer()
+  
+  // If still too large, reduce size further
+  if (pngBuffer.length > 5242880) { // 5MB in bytes
+    console.log(`Image ${Key} is ${Math.round(pngBuffer.length / 1024 / 1024 * 100) / 100}MB, resizing further...`);
+    pngBuffer = await sharp(imageBuffer)
+      .resize({ width: 1024, height: 1024, fit: 'inside', withoutEnlargement: true })
+      .png({ compressionLevel: 9 })
+      .toBuffer();
+    
+    // If STILL too large, try JPEG with lower quality
+    if (pngBuffer.length > 5242880) {
+      console.log(`Image ${Key} still too large, converting to JPEG...`);
+      pngBuffer = await sharp(imageBuffer)
+        .resize({ width: 1024, height: 1024, fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 80 })
+        .toBuffer();
+    }
+  }
   
   const params = {
     Image: {
