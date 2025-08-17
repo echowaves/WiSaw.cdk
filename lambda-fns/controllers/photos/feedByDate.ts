@@ -11,7 +11,7 @@ async function _retrievePhotos(currentDate:any , daysAgo:any, lat:any , lon:any)
     *
     , ST_Distance(
         "location",
-        ST_MakePoint(${lat}, ${lon})
+        ST_MakePoint(${lon}, ${lat})
       ) as distance
     , row_number()  OVER (ORDER BY "createdAt" DESC) + (100*${daysAgo}) as row_number
   

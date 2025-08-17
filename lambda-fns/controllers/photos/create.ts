@@ -48,7 +48,7 @@ export default async function main(
                     ) values (
                       $1,
                       $2,
-                      ST_MakePoint($3, $4),
+                      ST_MakePoint($4, $3),
                       $5,
                       $6,
                       $7
