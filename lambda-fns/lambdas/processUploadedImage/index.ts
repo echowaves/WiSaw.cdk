@@ -112,6 +112,7 @@ const _genWebp = async ({
   const buffer = await sharp(image)
     .rotate()
     .webp({ lossless: false, quality: 90 })
+     .resize({ height: 3000 }) 
     .toBuffer()
   
     
