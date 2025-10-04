@@ -77,7 +77,7 @@ const _genWebpThumb = async ({
   // console.log(`_genWebpThumb started  ${Key}`)
   const buffer = await sharp(image)
     .rotate()
-    .webp({ lossless: false, quality: 90 })
+    .webp({ lossless: false, quality: 100 })
     .resize({ height: 300 })
     .toBuffer()
 
@@ -111,7 +111,7 @@ const _genWebp = async ({
 
   const buffer = await sharp(image)
     .rotate()
-    .webp({ lossless: false, quality: 90 })
+    .webp({ lossless: false, quality: 100 })
      .resize({ height: 3000 }) 
     .toBuffer()
   
@@ -204,7 +204,7 @@ const _recognizeImage = async ({
       console.log(`Image ${Key} still too large, converting to JPEG...`);
       pngBuffer = await sharp(imageBuffer)
         .resize({ width: 1024, height: 1024, fit: 'inside', withoutEnlargement: true })
-        .jpeg({ quality: 80 })
+        .jpeg({ quality: 100 })
         .toBuffer();
     }
   }
