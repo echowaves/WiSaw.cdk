@@ -35,7 +35,21 @@ export function deployEnv() {
   return process.env.DEPLOY_ENV || "test"
 }
 
-const config = require(`../.env.${deployEnv()}`).config()
+function loadConfig() {
+  const env = deployEnv()
+  switch (env) {
+    case "test":
+      return require("../.env.test").config()
+    case "prod":
+      return require("../.env.prod").config()
+    case "dev":
+      return require("../.env.dev").config()
+    default:
+      return require("../.env.test").config()
+  }
+}
+
+const config = loadConfig()
 
 export class WiSawCdkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
