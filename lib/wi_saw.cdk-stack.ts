@@ -18,7 +18,7 @@ import * as appsync from "aws-cdk-lib/aws-appsync"
 // import * as origins from "aws-cdk-lib/aws-cloudfront-origins"
 import * as cloudfront_origins from 'aws-cdk-lib/aws-cloudfront-origins'
 
-import { Rule, Schedule } from "aws-cdk-lib/aws-events"
+import { Rule, Schedule } from 'aws-cdk-lib/aws-events'
 import * as iam from "aws-cdk-lib/aws-iam"
 import * as rds from "aws-cdk-lib/aws-rds"
 
@@ -318,7 +318,7 @@ export class WiSawCdkStack extends cdk.Stack {
     })
 
 
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // imgBucket
     // Grant access to s3 bucket for lambda function
     const imgBucket = s3.Bucket.fromBucketName(
@@ -384,7 +384,7 @@ export class WiSawCdkStack extends cdk.Stack {
 
       // Grant the Lambda function permissions to read and write to the S3 bucket
       webAppBucket.grantReadWrite(generateSiteMap_LambdaFunction);
-    
+
       // lambda@edge function for ingecting OG meta tags on the fly
       const injectMetaTagsLambdaFunction_photo =
         // new lambda.Function( // trying to define it as an Lambda@Edge function
@@ -412,7 +412,7 @@ export class WiSawCdkStack extends cdk.Stack {
         )
       webAppBucket.grantRead(injectMetaTagsLambdaFunction_photo)
       imgBucket.grantReadWrite(injectMetaTagsLambdaFunction_photo)
-      
+
       const injectMetaTagsLambdaFunction_video =
         // new lambda.Function( // trying to define it as an Lambda@Edge function
         new cloudfront.experimental.EdgeFunction(
@@ -439,7 +439,7 @@ export class WiSawCdkStack extends cdk.Stack {
         )
       webAppBucket.grantRead(injectMetaTagsLambdaFunction_video)
       imgBucket.grantReadWrite(injectMetaTagsLambdaFunction_video)
-      
+
       const redirectLambdaEdgeFunction =
         // new lambda.Function( // trying to define it as an Lambda@Edge function
         new cloudfront.experimental.EdgeFunction(
@@ -465,7 +465,7 @@ export class WiSawCdkStack extends cdk.Stack {
           },
         )
       webAppBucket.grantRead(redirectLambdaEdgeFunction)
-          
+
       // const imgRedirectLambdaEdgeFunction =
       //   // new lambda.Function( // trying to define it as an Lambda@Edge function
       //   new cloudfront.experimental.EdgeFunction(
@@ -491,10 +491,10 @@ export class WiSawCdkStack extends cdk.Stack {
       //     },
       //   )
       // imgBucket.grantRead(imgRedirectLambdaEdgeFunction)
-          
-      
 
-      
+
+
+
       // Use the ACM certificate
       const cert = acm.Certificate.fromCertificateArn(
         this,
@@ -557,12 +557,12 @@ export class WiSawCdkStack extends cdk.Stack {
                 eventType: cloudfront.LambdaEdgeEventType.ORIGIN_REQUEST,
                 functionVersion: injectMetaTagsLambdaFunction_photo.currentVersion,
                 includeBody: true,
-              }, 
-            {
-              eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
-              functionVersion: redirectLambdaEdgeFunction.currentVersion,
-              includeBody: true,
-            },
+              },
+              {
+                eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
+                functionVersion: redirectLambdaEdgeFunction.currentVersion,
+                includeBody: true,
+              },
 
             ],
           },
@@ -579,11 +579,11 @@ export class WiSawCdkStack extends cdk.Stack {
                 functionVersion: injectMetaTagsLambdaFunction_video.currentVersion,
                 includeBody: true,
               },
-            {
-              eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
-              functionVersion: redirectLambdaEdgeFunction.currentVersion,
-              includeBody: true,
-            },
+              {
+                eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
+                functionVersion: redirectLambdaEdgeFunction.currentVersion,
+                includeBody: true,
+              },
             ],
           },
         },
@@ -611,9 +611,9 @@ export class WiSawCdkStack extends cdk.Stack {
         value: distribution.distributionId,
         description: "Use this Distribution ID in the OAC bucket policy for wisaw.com"
       })
-      
 
-          // Create the CloudFront distribution with S3 as an origin for images
+
+      // Create the CloudFront distribution with S3 as an origin for images
       const imgDistribution = new cloudfront.Distribution(this, "wisaw-img-distro", {
         priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
         defaultBehavior: {
@@ -632,7 +632,7 @@ export class WiSawCdkStack extends cdk.Stack {
 
         },
         additionalBehaviors: {
-          
+
         },
         certificate: imgCert,
         domainNames: ["img.wisaw.com"],
@@ -658,7 +658,7 @@ export class WiSawCdkStack extends cdk.Stack {
         value: imgDistribution.distributionId,
         description: "Use this Distribution ID in the OAC bucket policy for img.wisaw.com"
       })
-      
+
 
 
     }
