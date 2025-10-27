@@ -1,28 +1,28 @@
-import * as cdk from "aws-cdk-lib"
+import * as cdk from 'aws-cdk-lib'
 
-import * as ec2 from "aws-cdk-lib/aws-ec2"
-import * as s3 from "aws-cdk-lib/aws-s3"
+import * as ec2 from 'aws-cdk-lib/aws-ec2'
+import * as s3 from 'aws-cdk-lib/aws-s3'
 
-import * as s3n from "aws-cdk-lib/aws-s3-notifications"
+import * as s3n from 'aws-cdk-lib/aws-s3-notifications'
 
-import * as cloudfront from "aws-cdk-lib/aws-cloudfront"
-import * as lambda from "aws-cdk-lib/aws-lambda"
+import * as cloudfront from 'aws-cdk-lib/aws-cloudfront'
+import * as lambda from 'aws-cdk-lib/aws-lambda'
 
-import * as logs from "aws-cdk-lib/aws-logs"
+import * as logs from 'aws-cdk-lib/aws-logs'
 
-import * as acm from "aws-cdk-lib/aws-certificatemanager"
-import { LambdaFunction } from "aws-cdk-lib/aws-events-targets"
-import { NodejsFunction, SourceMapMode } from "aws-cdk-lib/aws-lambda-nodejs"
+import * as acm from 'aws-cdk-lib/aws-certificatemanager'
+import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets'
+import { NodejsFunction, SourceMapMode } from 'aws-cdk-lib/aws-lambda-nodejs'
 
-import * as appsync from "aws-cdk-lib/aws-appsync"
-// import * as origins from "aws-cdk-lib/aws-cloudfront-origins"
+import * as appsync from 'aws-cdk-lib/aws-appsync'
+// import * as origins from 'aws-cdk-lib/aws-cloudfront-origins'
 import * as cloudfront_origins from 'aws-cdk-lib/aws-cloudfront-origins'
 
 import { Rule, Schedule } from 'aws-cdk-lib/aws-events'
-import * as iam from "aws-cdk-lib/aws-iam"
-import * as rds from "aws-cdk-lib/aws-rds"
+import * as iam from 'aws-cdk-lib/aws-iam'
+import * as rds from 'aws-cdk-lib/aws-rds'
 
-import { Construct } from "constructs"
+import { Construct } from 'constructs'
 
 // import {ISecret, Secret,} from "@aws-cdk/aws-secretsmanager"
 // import * as path from 'path'
