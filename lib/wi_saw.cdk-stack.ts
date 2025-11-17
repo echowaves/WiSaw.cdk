@@ -23,13 +23,12 @@ import * as iam from 'aws-cdk-lib/aws-iam'
 import * as rds from 'aws-cdk-lib/aws-rds'
 
 import { Construct } from 'constructs'
+import * as path from 'path'
 
 // import {ISecret, Secret,} from "@aws-cdk/aws-secretsmanager"
 // import * as path from 'path'
 
 // const hostedZone =  route53.HostedZone
-
-var path = require("path")
 
 export function deployEnv() {
   return process.env.DEPLOY_ENV || "test"
