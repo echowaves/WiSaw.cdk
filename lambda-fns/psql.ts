@@ -46,6 +46,7 @@ const CONNECTION_ERROR_PATTERNS = [
 
 const DEFAULT_HEALTH_CHECK_INTERVAL_MS = 30000
 const DEFAULT_HEALTH_CHECK_TIMEOUT_MS = 5000
+const DEFAULT_MAX_LIFETIME_MS = 10 * 60 * 1000
 
 function parsePositiveInt (raw: string | undefined, fallback: number): number {
   if (raw === undefined) {
@@ -63,11 +64,13 @@ class ManagedServerlessClient {
   private readonly baseConfig: ServerlessConfig
   private readonly healthCheckIntervalMs: number
   private readonly healthCheckTimeoutMs: number
+  private readonly maxLifetimeMs: number
   private readonly debugEnabled: boolean
   private healthStatus: ConnectionHealthStatus = 'unknown'
   private lastHealthCheckAt = 0
   private pendingHealthCheck: Promise<void> | null = null
   private connecting: Promise<void> | null = null
+  private connectionCreatedAt = 0
 
   constructor (config: ServerlessConfig) {
     this.baseConfig = { ...config }
@@ -79,6 +82,10 @@ class ManagedServerlessClient {
     this.healthCheckTimeoutMs = parsePositiveInt(
       env.PG_HEALTH_CHECK_TIMEOUT_MS,
       DEFAULT_HEALTH_CHECK_TIMEOUT_MS
+    )
+    this.maxLifetimeMs = parsePositiveInt(
+      env.PG_CONNECTION_MAX_LIFETIME_MS,
+      DEFAULT_MAX_LIFETIME_MS
     )
     this.debugEnabled = env.PG_CLIENT_DEBUG === 'true'
   }
@@ -144,7 +151,12 @@ class ManagedServerlessClient {
 
   private async ensureConnected (): Promise<void> {
     if (this.hasActiveClient()) {
-      return
+      if (this.hasConnectionExpired()) {
+        this.logDebug('Connection lifetime exceeded; rotating connection')
+        await this.restartClient()
+      } else {
+        return
+      }
     }
     if (this.connecting === null) {
       this.connecting = this.client.connect().finally(() => {
@@ -152,6 +164,14 @@ class ManagedServerlessClient {
       })
     }
     await this.connecting
+    this.connectionCreatedAt = Date.now()
+  }
+
+  private hasConnectionExpired (): boolean {
+    if (this.connectionCreatedAt === 0) {
+      return false
+    }
+    return Date.now() - this.connectionCreatedAt >= this.maxLifetimeMs
   }
 
   private async runHealthCheck (force = false): Promise<void> {
@@ -181,9 +201,9 @@ class ManagedServerlessClient {
   private async performHealthCheck (): Promise<void> {
     try {
       await this.withTimeout(
-        this.client.query("SELECT 1"),
+        this.client.query('SELECT 1'),
         this.healthCheckTimeoutMs,
-        `PostgreSQL health check timed out after ${this.healthCheckTimeoutMs}ms`,
+        `PostgreSQL health check timed out after ${this.healthCheckTimeoutMs}ms`
       )
       this.healthStatus = 'healthy'
       this.lastHealthCheckAt = Date.now()
@@ -204,10 +224,10 @@ class ManagedServerlessClient {
       return false
     }
     const code = (error as { code?: string }).code
-    if (code && CONNECTION_ERROR_CODES.has(code)) {
+    if (typeof code === 'string' && code.length > 0 && CONNECTION_ERROR_CODES.has(code)) {
       return true
     }
-    const message = (error as { message?: string }).message || ""
+    const message = (error as { message?: string }).message ?? ''
     return CONNECTION_ERROR_PATTERNS.some((pattern) => pattern.test(message))
   }
 
@@ -222,6 +242,7 @@ class ManagedServerlessClient {
     this.connecting = null
     this.healthStatus = 'unknown'
     this.lastHealthCheckAt = 0
+    this.connectionCreatedAt = 0
   }
 
   private async safeEnd (): Promise<void> {
@@ -242,10 +263,10 @@ class ManagedServerlessClient {
     timeoutMessage: string
   ): Promise<T> {
     let timeoutHandle: NodeJS.Timeout | undefined
-    const timeoutPromise = new Promise<T>((_, reject) => {
+    const timeoutPromise = new Promise<T>((_resolve, reject) => {
       timeoutHandle = setTimeout(() => {
         const timeoutError = new Error(timeoutMessage) as Error & { code?: string }
-        timeoutError.name = "HealthCheckTimeoutError"
+        timeoutError.name = 'HealthCheckTimeoutError'
         timeoutError.code = 'HEALTH_CHECK_TIMEOUT'
         reject(timeoutError)
       }, timeoutMs)
@@ -254,7 +275,7 @@ class ManagedServerlessClient {
     try {
       return await Promise.race([promise, timeoutPromise])
     } finally {
-      if (timeoutHandle) {
+      if (timeoutHandle !== undefined) {
         clearTimeout(timeoutHandle)
       }
     }
@@ -264,18 +285,18 @@ class ManagedServerlessClient {
     if (!this.debugEnabled) {
       return
     }
-    if (error) {
-      console.debug(`[psql] ${message}`, error)
+    if (error !== undefined && error !== null) {
+      console.debug({ context: 'psql', message, error })
     } else {
-      console.debug(`[psql] ${message}`)
+      console.debug({ context: 'psql', message })
     }
   }
 
   private logWarn (message: string, error?: unknown): void {
-    if (error) {
-      console.warn(`[psql] ${message}`, error)
+    if (error !== undefined && error !== null) {
+      console.warn({ context: 'psql', message, error })
     } else {
-      console.warn(`[psql] ${message}`)
+      console.warn({ context: 'psql', message })
     }
   }
 }

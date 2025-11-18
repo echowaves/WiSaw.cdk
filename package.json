@@ -1,6 +1,6 @@
 {
   "name": "wi_saw.cdk",
-    "version": "0.2.2", 
+    "version": "0.2.3", 
   "bin": {
     "wi_saw.cdk": "bin/wi_saw.cdk.js"
   },
