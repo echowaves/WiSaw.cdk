@@ -1,16 +1,22 @@
-const { S3Client, GetObjectCommand } = require("@aws-sdk/client-s3"); // CommonJS import
+var { S3Client, GetObjectCommand } = require("@aws-sdk/client-s3"); // CommonJS import
 
 exports.handler = async (event, context, callback) => {
   // console.log({ event })
   // console.log({ context })
   // console.log({event: JSON.stringify(event)})
-  const { request } = event.Records[0].cf
-  const imageId = request.uri
-    .replace("/photos/", "")
-    .replace("/videos/", "")
-    .replace("/full", "")
-    .replace("/thumb", "")
-    .replace("/", "")
+  var { request } = event.Records[0].cf
+  var imageId = request.uri
+    .replace('/photos/', '')
+    .replace('/videos/', '')
+    .replace('/full', '')
+    .replace('/thumb', '')
+    .replace('/', '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+
 
   // console.log("Received event:", JSON.stringify(event, null, 4))
   // console.log(
@@ -22,17 +28,17 @@ exports.handler = async (event, context, callback) => {
   // console.log({ event: event.Records[0].cf })
   // callback(null, request)
 
-  const client = new S3Client({region: 'us-east-1' })
+  var client = new S3Client({region: 'us-east-1' })
 
-  const command = new GetObjectCommand({
+  var command = new GetObjectCommand({
     Bucket: "wisaw.com",
     Key: "index.html",
   });
   // console.log("-----------------------------------------------------1")
-  const  { Body }  = await client.send(command);
+  var  { Body }  = await client.send(command);
 
   // console.log({ data })
-  const index = await Body.transformToString();
+  var index = await Body.transformToString();
 
   // const index = data.toString("utf-8")
   // const index = data.toString()
@@ -45,7 +51,7 @@ exports.handler = async (event, context, callback) => {
   // console.log({ data })
   // console.log({ index })
 
-  const body = index
+  var body = index
     .replace(
       /<\/title>/,
       `<\/title>
@@ -67,7 +73,7 @@ exports.handler = async (event, context, callback) => {
     )
   
     
-  const response = {
+  var response = {
     status: "200",
     statusDescription: "OK",
     headers: {
