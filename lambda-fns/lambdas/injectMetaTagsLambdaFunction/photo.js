@@ -1,11 +1,11 @@
-var { S3Client, GetObjectCommand } = require("@aws-sdk/client-s3"); // CommonJS import
+const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3'); // CommonJS import
 
 exports.handler = async (event, context, callback) => {
   // console.log({ event })
   // console.log({ context })
   // console.log({event: JSON.stringify(event)})
-  var { request } = event.Records[0].cf
-  var imageId = request.uri
+  const { request } = event.Records[0].cf
+  const imageId = request.uri
     .replace('/photos/', '')
     .replace('/videos/', '')
     .replace('/full', '')
@@ -28,17 +28,17 @@ exports.handler = async (event, context, callback) => {
   // console.log({ event: event.Records[0].cf })
   // callback(null, request)
 
-  var client = new S3Client({region: 'us-east-1' })
+  const client = new S3Client({region: 'us-east-1' })
 
-  var command = new GetObjectCommand({
-    Bucket: "wisaw.com",
-    Key: "index.html",
+  const command = new GetObjectCommand({
+    Bucket: 'wisaw.com',
+    Key: 'index.html',
   });
   // console.log("-----------------------------------------------------1")
-  var  { Body }  = await client.send(command);
+  const { Body } = await client.send(command);
 
   // console.log({ data })
-  var index = await Body.transformToString();
+  const index = await Body.transformToString();
 
   // const index = data.toString("utf-8")
   // const index = data.toString()
@@ -51,7 +51,7 @@ exports.handler = async (event, context, callback) => {
   // console.log({ data })
   // console.log({ index })
 
-  var body = index
+  const body = index
     .replace(
       /<\/title>/,
       `<\/title>
@@ -73,30 +73,30 @@ exports.handler = async (event, context, callback) => {
     )
   
     
-  var response = {
-    status: "200",
-    statusDescription: "OK",
+  const response = {
+    status: '200',
+    statusDescription: 'OK',
     headers: {
-      "cache-control": [
+      'cache-control': [
         {
-          key: "Cache-Control",
-          value: "max-age=100",
+          key: 'Cache-Control',
+          value: 'max-age=100',
         },
       ],
-      "content-type": [
+      'content-type': [
         {
-          key: "Content-Type",
-          value: "text/html",
+          key: 'Content-Type',
+          value: 'text/html',
         },
       ],
-      "access-control-allow-origin": [
-        { key: "Access-Control-Allow-Origin", value: "*" },
+      'access-control-allow-origin': [
+        { key: 'Access-Control-Allow-Origin', value: '*' },
       ],
-      "access-control-allow-methods": [
-        { key: "Access-Control-Allow-Methods", value: "GET, HEAD" },
+      'access-control-allow-methods': [
+        { key: 'Access-Control-Allow-Methods', value: 'GET, HEAD' },
       ],
-      "access-control-max-age": [
-        { key: "Access-Control-Max-Age", value: "86400" },
+      'access-control-max-age': [
+        { key: 'Access-Control-Max-Age', value: '86400' },
       ],
     },
     body,
