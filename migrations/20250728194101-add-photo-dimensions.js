@@ -19,13 +19,13 @@ module.exports = {
           comment: 'Image height in pixels',
         },
       ),
-    ]);
+    ])
   },
 
   down: (queryInterface, Sequelize) => { // eslint-disable-line no-unused-vars
     return Promise.all([
       queryInterface.removeColumn('Photos', 'width'),
       queryInterface.removeColumn('Photos', 'height'),
-    ]);
+    ])
   },
-};
+}

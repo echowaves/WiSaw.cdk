@@ -42,10 +42,10 @@ exports.handler = async (event, context, callback) => {
   // const index = data.toString("utf-8")
   // const index = data.toString()
 
-  // const command = new GetObjectCommand(input);
-  // const { Body } = await client.send(command);
+  // const command = new GetObjectCommand(input)
+  // const { Body } = await client.send(command)
 
-  // const image = await Body.transformToByteArray();
+  // const image = await Body.transformToByteArray()
 
   // console.log({ data })
   // console.log({ index })
@@ -68,10 +68,8 @@ exports.handler = async (event, context, callback) => {
     .replace(
       `<link rel="canonical" href="https://wisaw.com" data-rh="true"/>`,
       `<link rel='canonical' href="https://wisaw.com/photos/${imageId}" data-rh="true">`
-      ,
     )
-  
-    
+
   const response = {
     status: '200',
     statusDescription: 'OK',

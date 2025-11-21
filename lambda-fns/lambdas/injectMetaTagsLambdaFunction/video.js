@@ -1,16 +1,16 @@
-const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3'); // CommonJS import
+const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3') // CommonJS import
 
-const escapeHtml = (unsafe) => {
-  return unsafe
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
+exports.handler = async (event, context, callback) => {
+  // console.log({ event })
+  // console.log({ context })
+  // console.log({event: JSON.stringify(event)})
   const { request } = event.Records[0].cf
-  const imageId = escapeHtml(request.uri
+  const imageId = request.uri
     .replace('/photos/', '')
     .replace('/videos/', '')
     .replace('/full', '')
     .replace('/thumb', '')
-    .replace('/', ''))
+    .replace('/', '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -27,25 +27,25 @@ const escapeHtml = (unsafe) => {
   // console.log({ event: event.Records[0].cf })
   // callback(null, request)
 
-  const client = new S3Client({region: 'us-east-1' })
+  const client = new S3Client({ region: 'us-east-1' })
 
   const command = new GetObjectCommand({
     Bucket: 'wisaw.com',
-    Key: 'index.html',
-  });
+    Key: 'index.html'
+  })
   // console.log("-----------------------------------------------------1")
-  const  { Body }  = await client.send(command);
+  const { Body } = await client.send(command)
 
   // console.log({ data })
-  const index = await Body.transformToString();
+  const index = await Body.transformToString()
 
   // const index = data.toString("utf-8")
   // const index = data.toString()
 
-  // const command = new GetObjectCommand(input);
-  // const { Body } = await client.send(command);
+  // const command = new GetObjectCommand(input)
+  // const { Body } = await client.send(command)
 
-  // const image = await Body.transformToByteArray();
+  // const image = await Body.transformToByteArray()
 
   // console.log({ data })
   // console.log({ index })
@@ -64,13 +64,12 @@ const escapeHtml = (unsafe) => {
       <meta name="twitter:card" content="summary_large_image" data-rh="true">
       <meta name="twitter:image" content="https://img.wisaw.com/${imageId}.webp" data-rh="true">
       `,
-    )  
+    )      
     .replace(
       `<link rel="canonical" href="https://wisaw.com" data-rh="true"/>`,
       `<link rel='canonical' href="https://wisaw.com/videos/${imageId}" data-rh="true">`
-      ,
     )
-    
+
   const response = {
     status: '200',
     statusDescription: 'OK',
