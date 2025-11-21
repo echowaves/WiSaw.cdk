@@ -1,4 +1,4 @@
-const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3'); // CommonJS import
+const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3') // CommonJS import
 
 exports.handler = async (event, context, callback) => {
   // console.log({ event })
@@ -17,7 +17,6 @@ exports.handler = async (event, context, callback) => {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;')
 
-
   // console.log("Received event:", JSON.stringify(event, null, 4))
   // console.log(
   //   ".......................................at the start..............................",
@@ -28,17 +27,17 @@ exports.handler = async (event, context, callback) => {
   // console.log({ event: event.Records[0].cf })
   // callback(null, request)
 
-  const client = new S3Client({region: 'us-east-1' })
+  const client = new S3Client({ region: 'us-east-1' })
 
   const command = new GetObjectCommand({
     Bucket: 'wisaw.com',
-    Key: 'index.html',
-  });
+    Key: 'index.html'
+  })
   // console.log("-----------------------------------------------------1")
-  const { Body } = await client.send(command);
+  const { Body } = await client.send(command)
 
   // console.log({ data })
-  const index = await Body.transformToString();
+  const index = await Body.transformToString()
 
   // const index = data.toString("utf-8")
   // const index = data.toString()
