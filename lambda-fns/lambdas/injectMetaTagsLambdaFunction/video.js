@@ -1,21 +1,14 @@
+/* eslint-env node */
+/* global require, exports */
 const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3') // CommonJS import
+const { sanitizeImageId, injectMetaTags } = require('./utils')
 
 exports.handler = async (event, context, callback) => {
   // console.log({ event })
   // console.log({ context })
   // console.log({event: JSON.stringify(event)})
   const { request } = event.Records[0].cf
-  const imageId = request.uri
-    .replace('/photos/', '')
-    .replace('/videos/', '')
-    .replace('/full', '')
-    .replace('/thumb', '')
-    .replace('/', '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;')
+  const { text: imageIdText, url: imageIdUrl } = sanitizeImageId(request.uri)
 
   // console.log("Received event:", JSON.stringify(event, null, 4))
   // console.log(
@@ -50,25 +43,14 @@ exports.handler = async (event, context, callback) => {
   // console.log({ data })
   // console.log({ index })
 
-  const body = index
-    .replace(
-      /<\/title>/,
-      `<\/title>
-      <meta property="og:image" content="https://img.wisaw.com/${imageId}.webp" data-rh="true">
-      <meta property="og:description" content="Check out What I saw Today (video)" data-rh="true">
-      <meta property="og:title" content="wisaw video ${imageId}" data-rh="true">
-      <meta property="og:url" content="https://wisaw.com/videos/${imageId}" data-rh="true">
-      <meta property="og:site_name" content="wisaw.com">
-      <meta property='og:type' content='video' data-rh="true"/>    
-      <meta name="twitter:title" content="wisaw (What I Saw) video ${imageId}" data-rh="true">
-      <meta name="twitter:card" content="summary_large_image" data-rh="true">
-      <meta name="twitter:image" content="https://img.wisaw.com/${imageId}.webp" data-rh="true">
-      `,
-    )      
-    .replace(
-      `<link rel="canonical" href="https://wisaw.com" data-rh="true"/>`,
-      `<link rel='canonical' href="https://wisaw.com/videos/${imageId}" data-rh="true">`
-    )
+  const body = injectMetaTags(index, {
+    description: 'Check out What I saw Today (video)',
+    entityLabel: 'video',
+    ogType: 'video',
+    pathSegment: 'videos',
+    imageIdText,
+    imageIdUrl
+  })
 
   const response = {
     status: '200',
@@ -77,26 +59,26 @@ exports.handler = async (event, context, callback) => {
       'cache-control': [
         {
           key: 'Cache-Control',
-          value: 'max-age=100',
-        },
+          value: 'max-age=100'
+        }
       ],
       'content-type': [
         {
           key: 'Content-Type',
-          value: 'text/html',
-        },
+          value: 'text/html'
+        }
       ],
       'access-control-allow-origin': [
-        { key: 'Access-Control-Allow-Origin', value: '*' },
+        { key: 'Access-Control-Allow-Origin', value: '*' }
       ],
       'access-control-allow-methods': [
-        { key: 'Access-Control-Allow-Methods', value: 'GET, HEAD' },
+        { key: 'Access-Control-Allow-Methods', value: 'GET, HEAD' }
       ],
       'access-control-max-age': [
-        { key: 'Access-Control-Max-Age', value: '86400' },
-      ],
+        { key: 'Access-Control-Max-Age', value: '86400' }
+      ]
     },
-    body,
+    body
   }
   // console.log(
   //   ".......................................at the end..............................",
