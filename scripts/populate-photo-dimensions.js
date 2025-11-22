@@ -43,20 +43,20 @@ const getDbConnection = () => {
       maxRetries: 2, // Reduced retries for faster failure
       ssl: true,
       connectionTimeoutMillis: 5000, // Reduced timeout
-      idleTimeoutMillis: 30000, // Keep connections alive longer
+      idleTimeoutMillis: 30000 // Keep connections alive longer
     })
   }
   return dbPool
 }
 
-console.log(`🔧 Starting photo dimensions population script`)
+console.log('🔧 Starting photo dimensions population script')
 console.log(`📊 Environment: ${env}`)
 console.log(`🪣 S3 Bucket: ${BUCKET_NAME}`)
 console.log(`🌊 Dry run: ${DRY_RUN ? 'YES' : 'NO'}`)
 console.log(`📦 Batch size: ${BATCH_SIZE}`)
 console.log(`⚡ Concurrent limit: ${CONCURRENT_LIMIT}`)
 
-async function getPhotosWithoutDimensions() {
+async function getPhotosWithoutDimensions () {
   const db = getDbConnection()
 
   try {
