@@ -138,7 +138,7 @@ async function getImageDimensions(photoId, isVideo = false) {
       return null
     }
   } catch (error) {
-    console.error(`❌ Error processing ${photoId}:`, error.message)
+    console.error('❌ Error processing:', photoId, error.message)
     return null
   }
 }
