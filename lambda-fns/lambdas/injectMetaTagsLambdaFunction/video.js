@@ -23,6 +23,7 @@ exports.handler = async (event, context, callback) => {
   const client = new S3Client({ region: 'us-east-1' })
 
   let created = new Date().toISOString()
+  let duration
   try {
     const headCommand = new HeadObjectCommand({
       Bucket: 'wisaw-img-prod',
@@ -31,6 +32,9 @@ exports.handler = async (event, context, callback) => {
     const headData = await client.send(headCommand)
     if (headData.LastModified) {
       created = headData.LastModified.toISOString()
+    }
+    if (headData.Metadata && headData.Metadata.duration) {
+      duration = headData.Metadata.duration
     }
   } catch (e) {
     // eslint-disable-next-line no-console, no-undef
@@ -65,7 +69,8 @@ exports.handler = async (event, context, callback) => {
     pathSegment: 'videos',
     imageIdText,
     imageIdUrl,
-    created
+    created,
+    duration
   })
 
   const response = {
