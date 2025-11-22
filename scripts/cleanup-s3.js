@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-env node */
 
 const { S3Client, ListObjectsV2Command, DeleteObjectCommand } = require('@aws-sdk/client-s3')
 const ServerlessClient = require('serverless-postgres')
@@ -21,21 +22,21 @@ const DRY_RUN = process.argv.includes('--dry-run')
 
 const s3 = new S3Client({ region: 'us-east-1' })
 
-async function getPhotoIds() {
+async function getPhotoIds () {
   const db = new ServerlessClient({
-    ...config,  // Use the config object from the env file
+    ...config, // Use the config object from the env file
     delayMs: 3000,
     maxConnections: 80,
     maxRetries: 3,
     ssl: true,
     connectionTimeoutMillis: 10000, // 10 second timeout
-    idleTimeoutMillis: 10000,
+    idleTimeoutMillis: 10000
   })
   try {
     console.log('🔗 Connecting to database...')
 
     // Add timeout wrapper
-    const timeoutPromise = new Promise((_, reject) => {
+    const timeoutPromise = new Promise((_resolve, reject) => {
       setTimeout(() => reject(new Error('Database connection timeout')), 15000)
     })
 
@@ -52,11 +53,11 @@ async function getPhotoIds() {
   } catch (error) {
     console.error('❌ Database connection failed:', error.message)
     console.log('⚠️  Continuing without database verification (LIST-ONLY mode)')
-    return new Set(); // Return empty set - will list all S3 objects
+    return new Set() // Return empty set - will list all S3 objects
   }
 }
 
-async function getS3Objects() {
+async function getS3Objects () {
   console.log('☁️ Listing S3 objects...')
   const objects = []
   let token = null
@@ -77,13 +78,13 @@ async function getS3Objects() {
   return objects
 }
 
-function extractPhotoId(key) {
+function extractPhotoId (key) {
   // Extract UUID from keys like: uuid.webp, uuid-thumb.webp, uuid.mov
   const match = key.match(/^([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/)
   return match ? match[1] : null
 }
 
-async function main() {
+async function main () {
   console.log(`🧹 S3 Cleanup - ${DRY_RUN ? 'DRY RUN' : 'LIVE MODE'}`)
   console.log('📡 Connecting to database...')
 
@@ -106,7 +107,7 @@ async function main() {
       }
     }
 
-    process.exit(0); // Force exit since db is already cleaned in getPhotoIds
+    process.exit(0) // Force exit since db is already cleaned in getPhotoIds
   }
 
   console.log(`📊 Found ${photoIds.size} photos in DB, ${s3Objects.length} objects in S3`)
@@ -139,13 +140,13 @@ async function main() {
 
   if (toDelete.length === 0) {
     console.log('✅ Nothing to delete!')
-    process.exit(0); // Force exit since db is already cleaned in getPhotoIds
+    process.exit(0) // Force exit since db is already cleaned in getPhotoIds
   }
 
   if (DRY_RUN) {
     console.log('Objects that would be deleted:')
     // toDelete.forEach(key => console.log(`  ${key}`))
-    process.exit(0); // Force exit since db is already cleaned in getPhotoIds
+    process.exit(0) // Force exit since db is already cleaned in getPhotoIds
   }
 
   // Delete objects
@@ -154,12 +155,12 @@ async function main() {
       await s3.send(new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: key }))
       console.log(`✓ Deleted: ${key}`)
     } catch (error) {
-      console.error(`✗ Failed to delete ${key}:`, error.message)
+      console.error('✗ Failed to delete:', key, error.message)
     }
   }
 
   console.log('✅ Cleanup complete!')
-  process.exit(0); // Force exit since db is already cleaned in getPhotoIds
+  process.exit(0) // Force exit since db is already cleaned in getPhotoIds
 }
 
 main().catch(console.error).finally(() => {
