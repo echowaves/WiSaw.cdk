@@ -181,7 +181,7 @@ async function generateImageRecognitions(photoId) {
     console.log(`👁️  Generated recognitions for ${photoId}`)
     return metaData
   } catch (error) {
-    console.error(`❌ Error processing ${photoId}:`, error.message)
+    console.error('❌ Error processing %s:', photoId, error.message)
     return null
   }
 }
