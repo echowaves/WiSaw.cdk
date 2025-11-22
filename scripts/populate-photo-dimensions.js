@@ -167,7 +167,7 @@ async function updatePhotoDimensions(photoId, width, height) {
     console.log(`✅ Updated ${photoId} with dimensions ${width}x${height}`)
     return true
   } catch (error) {
-    console.error(`❌ Failed to update dimensions for ${photoId}:`, error.message)
+    console.error('❌ Failed to update dimensions for:', photoId, error.message)
     return false
   }
 }
@@ -184,7 +184,7 @@ async function processPhoto(photo) {
       return 'skipped'
     }
   } catch (error) {
-    console.error(`❌ Error processing photo ${photo.id}:`, error.message)
+    console.error('❌ Error processing photo:', photo.id, error.message)
     return 'error'
   }
 }
