@@ -12,7 +12,7 @@ const args = process.argv.slice(2)
 const envArg = args.find(arg => !arg.startsWith('--'))
 const env = envArg || process.env.NODE_ENV || 'dev'
 
-function loadEnvConfig(envName) {
+function loadEnvConfig (envName) {
   switch (envName) {
     case 'prod':
     case 'production':
@@ -73,7 +73,7 @@ console.log(`🌊 Dry run: ${DRY_RUN ? 'YES' : 'NO'}`)
 console.log(`📦 Batch size: ${BATCH_SIZE}`)
 console.log(`⚡ Concurrent limit: ${CONCURRENT_LIMIT}`)
 
-async function getPhotosWithoutRecognitions() {
+async function getPhotosWithoutRecognitions () {
   const db = getDbConnection()
 
   try {
