@@ -16,7 +16,7 @@ const normalizeImageId = (uri = '') =>
     .replace('/thumb', '')
     .replace(/\//g, '')
 
-function sanitizeImageId(uri = '') {
+function sanitizeImageId (uri = '') {
   const normalized = normalizeImageId(uri)
   return {
     raw: normalized,
@@ -25,7 +25,7 @@ function sanitizeImageId(uri = '') {
   }
 }
 
-function injectMetaTags(html = '', options = {}) {
+function injectMetaTags (html = '', options = {}) {
   const {
     description = '',
     entityLabel = '',
@@ -67,7 +67,7 @@ function injectMetaTags(html = '', options = {}) {
       `
     )
     .replace(
-      `<link rel="canonical" href="https://wisaw.com" data-rh="true"/>`,
+      '<link rel="canonical" href="https://wisaw.com" data-rh="true"/>',
       `<link rel='canonical' href="https://wisaw.com/${safePathSegment}/${safeImageIdUrl}" data-rh="true">`
     )
 }
