@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+import { createRequire } from 'module'
+const require = createRequire(import.meta.url)
+
 const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3')
 const ServerlessClient = require('serverless-postgres')
 const sharp = require('sharp')
