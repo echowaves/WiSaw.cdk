@@ -1,6 +1,6 @@
 /* eslint-env node */
-/* global require, exports */
-const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3') // CommonJS import
+/* global require, exports, console */
+const { S3Client, GetObjectCommand, HeadObjectCommand } = require('@aws-sdk/client-s3') // CommonJS import
 const { sanitizeImageId, injectMetaTags } = require('./utils')
 
 exports.handler = async (event, context, callback) => {
@@ -8,7 +8,7 @@ exports.handler = async (event, context, callback) => {
   // console.log({ context })
   // console.log({event: JSON.stringify(event)})
   const { request } = event.Records[0].cf
-  const { text: imageIdText, url: imageIdUrl } = sanitizeImageId(request.uri)
+  const { text: imageIdText, url: imageIdUrl, raw: imageIdRaw } = sanitizeImageId(request.uri)
 
   // console.log("Received event:", JSON.stringify(event, null, 4))
   // console.log(
@@ -21,6 +21,21 @@ exports.handler = async (event, context, callback) => {
   // callback(null, request)
 
   const client = new S3Client({ region: 'us-east-1' })
+
+  let created = new Date().toISOString()
+  try {
+    const headCommand = new HeadObjectCommand({
+      Bucket: 'wisaw-img-prod',
+      Key: `${imageIdRaw}.mov`
+    })
+    const headData = await client.send(headCommand)
+    if (headData.LastModified) {
+      created = headData.LastModified.toISOString()
+    }
+  } catch (e) {
+    // eslint-disable-next-line no-console, no-undef
+    console.error('Error fetching video metadata:', e)
+  }
 
   const command = new GetObjectCommand({
     Bucket: 'wisaw.com',
@@ -49,7 +64,8 @@ exports.handler = async (event, context, callback) => {
     ogType: 'video',
     pathSegment: 'videos',
     imageIdText,
-    imageIdUrl
+    imageIdUrl,
+    created
   })
 
   const response = {
