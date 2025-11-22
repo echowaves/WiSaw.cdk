@@ -60,13 +60,13 @@ const getDbConnection = () => {
       maxRetries: 2,
       ssl: true,
       connectionTimeoutMillis: 5000,
-      idleTimeoutMillis: 30000,
+      idleTimeoutMillis: 30000
     })
   }
   return dbPool
 }
 
-console.log(`🔧 Starting photo recognition population script`)
+console.log('🔧 Starting photo recognition population script')
 console.log(`📊 Environment: ${env}`)
 console.log(`🪣 S3 Bucket: ${BUCKET_NAME}`)
 console.log(`🌊 Dry run: ${DRY_RUN ? 'YES' : 'NO'}`)
