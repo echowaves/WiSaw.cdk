@@ -11,8 +11,29 @@ const args = process.argv.slice(2)
 const envArg = args.find(arg => !arg.startsWith('--'))
 const env = envArg || process.env.NODE_ENV || 'dev'
 
+function loadEnvConfig(envName) {
+  switch (envName) {
+    case 'prod':
+    case 'production':
+      return require('../.env.prod')
+    case 'staging':
+      return require('../.env.staging')
+    case 'test':
+      return require('../.env.test')
+    case 'dev':
+    case 'development':
+      return require('../.env.dev')
+    default:
+      console.warn(`⚠️  Unknown environment "${envName}", falling back to dev config`)
+      return require('../.env.dev')
+  }
+}
+
 // Load environment-specific config
-const config = require(`../.env.${env}`).config()
+const configModule = loadEnvConfig(env)
+const config = typeof configModule.config === 'function'
+  ? configModule.config()
+  : configModule
 
 // Set NODE_TLS_REJECT_UNAUTHORIZED if specified in config
 if (config.NODE_TLS_REJECT_UNAUTHORIZED) {
