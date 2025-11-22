@@ -14,8 +14,15 @@ const envArg = args.find(arg => !arg.startsWith('--'))
 const env = envArg || process.env.NODE_ENV || 'dev'
 
 // Load environment-specific config (same pattern as your codebase)
-const config = require(`../.env.${env}`).config()
-
+let configModule
+if (env === 'prod' || env === 'production') {
+  configModule = require('../.env.prod')
+} else if (env === 'test') {
+  configModule = require('../.env.test')
+} else {
+  configModule = require('../.env.dev')
+}
+const config = configModule.config()
 // Set NODE_TLS_REJECT_UNAUTHORIZED if specified in config
 if (config.NODE_TLS_REJECT_UNAUTHORIZED) {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = config.NODE_TLS_REJECT_UNAUTHORIZED
