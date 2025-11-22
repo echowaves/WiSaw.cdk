@@ -210,7 +210,7 @@ async function saveRecognitions(photoId, metaData) {
     console.log(`✅ Updated recognitions for ${photoId}`)
     return true
   } catch (error) {
-    console.error(`❌ Failed to update recognitions for ${photoId}:`, error.message)
+    console.error('❌ Failed to update recognitions for %s:', photoId, error.message)
     return false
   }
 }
@@ -259,7 +259,7 @@ async function main() {
       } catch (error) {
         totalResults.errors++
         totalResults.processed++
-        console.error(`❌ Error processing photo ${photo.id}:`, error.message)
+        console.error('❌ Error processing photo %s:', photo.id, error.message)
       }
     }
 
