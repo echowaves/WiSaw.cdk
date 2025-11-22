@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { createRequire } from 'module'
+import process from 'process'
 const require = createRequire(import.meta.url)
 
 const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3')
