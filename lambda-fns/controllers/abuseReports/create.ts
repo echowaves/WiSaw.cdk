@@ -1,9 +1,9 @@
-import moment from "moment"
+import moment from 'moment'
 
-import psql from "../../psql"
+import psql from '../../psql'
 
-export default async function main(photoId: string, uuid: string) {
-  const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
+export default async function main (photoId: string, uuid: string): Promise<any> {
+  const createdAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS')
   await psql.connect()
   const result = (
     await psql.query(`
