@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 /* eslint-env node */
+
 const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3')
 const { RekognitionClient, DetectLabelsCommand, DetectModerationLabelsCommand, DetectTextCommand } = require('@aws-sdk/client-rekognition')
 const ServerlessClient = require('serverless-postgres')
