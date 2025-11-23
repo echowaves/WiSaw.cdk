@@ -48,7 +48,7 @@ function injectMetaTags (html = '', options = {}) {
   let updatedHtml = html
   updatedHtml = updatedHtml.replace(
     /<title>.*?<\/title>/i,
-    `<title>${safePageTitle}</title>`
+    '<title>' + safePageTitle + '</title>'
   )
 
   return updatedHtml
@@ -68,7 +68,7 @@ function injectMetaTags (html = '', options = {}) {
     )
     .replace(
       '<link rel="canonical" href="https://wisaw.com" data-rh="true"/>',
-      `<link rel='canonical' href="https://wisaw.com/${safePathSegment}/${safeImageIdUrl}" data-rh="true">`
+      '<link rel=\'canonical\' href="https://wisaw.com/' + safePathSegment + '/' + safeImageIdUrl + '" data-rh="true">'
     )
 }
 
