@@ -70,6 +70,8 @@ type AppSyncEvent = {
     description: string
     commentId: bigint
     video: boolean
+    width: number
+    height: number
     assetKey: string
     contentType: string
     nickName: string
@@ -92,157 +94,146 @@ type AppSyncEvent = {
   }
 }
 
+interface HandlerDefinition {
+  resolver: (...params: any[]) => Promise<any>
+  getArgs: (args: AppSyncEvent['arguments']) => any[]
+}
+
+const queryHandlers: Record<string, HandlerDefinition> = {
+  generateUploadUrl: {
+    resolver: generateUploadUrl,
+    getArgs: (args) => [args.assetKey, args.contentType]
+  },
+  generateUploadUrlForMessage: {
+    resolver: generateUploadUrlForMessage,
+    getArgs: (args) => [args.uuid, args.photoHash, args.contentType]
+  },
+  zeroMoment: {
+    resolver: zeroMoment,
+    getArgs: () => []
+  },
+  feedByDate: {
+    resolver: feedByDate,
+    getArgs: (args) => [args.daysAgo, args.lat, args.lon, args.batch, args.whenToStop]
+  },
+  feedForWatcher: {
+    resolver: feedForWatcher,
+    getArgs: (args) => [args.uuid, args.pageNumber, args.batch]
+  },
+  feedRecent: {
+    resolver: feedRecent,
+    getArgs: (args) => [args.pageNumber, args.batch]
+  },
+  feedForTextSearch: {
+    resolver: feedForTextSearch,
+    getArgs: (args) => [args.searchTerm, args.pageNumber, args.batch]
+  },
+  getPhotoDetails: {
+    resolver: getPhotoDetails,
+    getArgs: (args) => [args.photoId, args.uuid]
+  },
+  getPhotoAllCurr: {
+    resolver: getPhotoAllCurr,
+    getArgs: (args) => [args.photoId]
+  },
+  getPhotoAllNext: {
+    resolver: getPhotoAllNext,
+    getArgs: (args) => [args.photoId]
+  },
+  getPhotoAllPrev: {
+    resolver: getPhotoAllPrev,
+    getArgs: (args) => [args.photoId]
+  },
+  getFriendshipsList: {
+    resolver: getFriendshipsList,
+    getArgs: (args) => [args.uuid]
+  },
+  getUnreadCountsList: {
+    resolver: getUnreadCountsList,
+    getArgs: (args) => [args.uuid]
+  },
+  getMessagesList: {
+    resolver: getMessagesList,
+    getArgs: (args) => [args.chatUuid, args.lastLoaded]
+  },
+}
+
+const mutationHandlers: Record<string, HandlerDefinition> = {
+  createContactForm: {
+    resolver: createContactForm,
+    getArgs: (args) => [args.uuid, args.description]
+  },
+  createAbuseReport: {
+    resolver: createAbuseReport,
+    getArgs: (args) => [args.photoId, args.uuid]
+  },
+  createPhoto: {
+    resolver: createPhoto,
+    getArgs: (args) => [args.uuid, args.lat, args.lon, args.video, args.width, args.height]
+  },
+  watchPhoto: {
+    resolver: watchPhoto,
+    getArgs: (args) => [args.photoId, args.uuid]
+  },
+  unwatchPhoto: {
+    resolver: unwatchPhoto,
+    getArgs: (args) => [args.photoId, args.uuid]
+  },
+  deletePhoto: {
+    resolver: deletePhoto,
+    getArgs: (args) => [args.photoId, args.uuid]
+  },
+  createComment: {
+    resolver: createComment,
+    getArgs: (args) => [args.photoId, args.uuid, args.description]
+  },
+  deleteComment: {
+    resolver: deleteComment,
+    getArgs: (args) => [args.commentId, args.uuid]
+  },
+  registerSecret: {
+    resolver: registerSecret,
+    getArgs: (args) => [args.uuid, args.nickName, args.secret]
+  },
+  updateSecret: {
+    resolver: updateSecret,
+    getArgs: (args) => [args.uuid, args.nickName, args.secret, args.newSecret]
+  },
+  createFriendship: {
+    resolver: createFriendship,
+    getArgs: (args) => [args.uuid]
+  },
+  acceptFriendshipRequest: {
+    resolver: acceptFriendshipRequest,
+    getArgs: (args) => [args.friendshipUuid, args.uuid]
+  },
+  deleteFriendship: {
+    resolver: deleteFriendship,
+    getArgs: (args) => [args.friendshipUuid]
+  },
+  sendMessage: {
+    resolver: sendMessage,
+    getArgs: (args) => [
+      args.chatUuidArg,
+      args.uuidArg,
+      args.messageUuidArg,
+      args.textArg,
+      args.pendingArg,
+      args.chatPhotoHashArg
+    ]
+  },
+  resetUnreadCount: {
+    resolver: resetUnreadCount,
+    getArgs: (args) => [args.chatUuid, args.uuid]
+  },
+}
+
 exports.main = async (event: AppSyncEvent) => {
-  switch (event.info.fieldName) {
-    // ******************************************************
-    //                       queries
-    // ******************************************************
+  const handler =
+    queryHandlers[event.info.fieldName] || mutationHandlers[event.info.fieldName]
 
-    case 'generateUploadUrl':
-      return await generateUploadUrl(
-        event.arguments.assetKey,
-        event.arguments.contentType,
-      )
-    case 'generateUploadUrlForMessage':
-      return await generateUploadUrlForMessage(
-        event.arguments.uuid,
-        event.arguments.photoHash,
-        event.arguments.contentType,
-      )
+  if (!handler) return null
 
-    case 'zeroMoment':
-      return await zeroMoment()
-
-    case 'feedByDate':
-      return await feedByDate(
-        event.arguments.daysAgo,
-        event.arguments.lat,
-        event.arguments.lon,
-        event.arguments.batch,
-        event.arguments.whenToStop,
-      )
-    case 'feedForWatcher':
-      return await feedForWatcher(
-        event.arguments.uuid,
-        event.arguments.pageNumber,
-        event.arguments.batch,
-      )
-    case 'feedRecent':
-      return await feedRecent(event.arguments.pageNumber, event.arguments.batch)
-    case 'feedForTextSearch':
-      return await feedForTextSearch(
-        event.arguments.searchTerm,
-        event.arguments.pageNumber,
-        event.arguments.batch,
-      )
-    case 'getPhotoDetails':
-      return await getPhotoDetails(
-        event.arguments.photoId,
-        event.arguments.uuid,
-      )
-
-    case 'getPhotoAllCurr':
-      return await getPhotoAllCurr(event.arguments.photoId)
-    case 'getPhotoAllNext':
-      return await getPhotoAllNext(event.arguments.photoId)
-    case 'getPhotoAllPrev':
-      return await getPhotoAllPrev(event.arguments.photoId)
-    case 'getFriendshipsList':
-      return await getFriendshipsList(event.arguments.uuid)
-    case 'getUnreadCountsList':
-      return await getUnreadCountsList(event.arguments.uuid)
-
-    case 'getMessagesList':
-      return await getMessagesList(
-        event.arguments.chatUuid,
-        event.arguments.lastLoaded,
-      )
-
-    // ******************************************************
-    //                       mutations
-    // ******************************************************
-
-    case 'createContactForm':
-      return await createContactForm(
-        event.arguments.uuid,
-        event.arguments.description,
-      )
-    case 'createAbuseReport':
-      return await createAbuseReport(
-        event.arguments.photoId,
-        event.arguments.uuid,
-      )
-    case 'createPhoto':
-      return await createPhoto(
-        event.arguments.uuid,
-        event.arguments.lat,
-        event.arguments.lon,
-        event.arguments.video,
-        event.arguments.width,
-        event.arguments.height,
-      )
-
-    case 'watchPhoto':
-      return await watchPhoto(event.arguments.photoId, event.arguments.uuid)
-    case 'unwatchPhoto':
-      return await unwatchPhoto(event.arguments.photoId, event.arguments.uuid)
-    case 'deletePhoto':
-      return await deletePhoto(event.arguments.photoId, event.arguments.uuid)
-
-    case 'createComment':
-      return await createComment(
-        event.arguments.photoId,
-        event.arguments.uuid,
-        event.arguments.description,
-      )
-    case 'deleteComment':
-      return await deleteComment(
-        event.arguments.commentId,
-        event.arguments.uuid,
-      )
-
-    case 'registerSecret':
-      return await registerSecret(
-        event.arguments.uuid,
-        event.arguments.nickName,
-        event.arguments.secret,
-      )
-    case 'updateSecret':
-      return await updateSecret(
-        event.arguments.uuid,
-        event.arguments.nickName,
-        event.arguments.secret,
-        event.arguments.newSecret,
-      )
-
-    case 'createFriendship':
-      return await createFriendship(event.arguments.uuid)
-    case 'acceptFriendshipRequest':
-      return await acceptFriendshipRequest(
-        event.arguments.friendshipUuid,
-        event.arguments.uuid,
-      )
-    case 'deleteFriendship':
-      return await deleteFriendship(event.arguments.friendshipUuid)
-
-    case 'sendMessage':
-      return await sendMessage(
-        event.arguments.chatUuidArg,
-        event.arguments.uuidArg,
-        event.arguments.messageUuidArg,
-        event.arguments.textArg,
-        event.arguments.pendingArg,
-        event.arguments.chatPhotoHashArg,
-      )
-
-    case 'resetUnreadCount':
-      return await resetUnreadCount(
-        event.arguments.chatUuid,
-        event.arguments.uuid,
-      )
-
-    default:
-      return null
-  }
+  return await handler.resolver(...handler.getArgs(event.arguments))
 }
 
