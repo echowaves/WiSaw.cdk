@@ -56,7 +56,8 @@ get_latest_version() {
     fi
 
     handle_rate_limit "$response"
-    local version=$(echo "$response" | grep -m 1 tag_name | cut -d'"' -f4)
+    local version
+    version=$(echo "$response" | grep -m 1 tag_name | cut -d'"' -f4)
     echo "$version"
 }
 
