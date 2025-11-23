@@ -51,7 +51,7 @@ import resetUnreadCount from './controllers/messages/resetUnreadCount'
 // import Photo from './models/photo'
 // import Message from './models/message'
 
-type AppSyncEvent = {
+interface AppSyncEvent {
   info: {
     fieldName: string
   }
@@ -155,7 +155,7 @@ const queryHandlers: Record<string, HandlerDefinition> = {
   getMessagesList: {
     resolver: getMessagesList,
     getArgs: (args) => [args.chatUuid, args.lastLoaded]
-  },
+  }
 }
 
 const mutationHandlers: Record<string, HandlerDefinition> = {
@@ -225,7 +225,7 @@ const mutationHandlers: Record<string, HandlerDefinition> = {
   resetUnreadCount: {
     resolver: resetUnreadCount,
     getArgs: (args) => [args.chatUuid, args.uuid]
-  },
+  }
 }
 
 exports.main = async (event: AppSyncEvent) => {
