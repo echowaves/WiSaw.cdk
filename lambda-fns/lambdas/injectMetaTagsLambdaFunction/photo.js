@@ -65,8 +65,8 @@ exports.handler = async (event, context, callback) => {
       'content-type': [
         {
           key: 'Content-Type',
-          value: 'text/html',
-        },
+          value: 'text/html'
+        }
       ],
       'access-control-allow-origin': [
         { key: 'Access-Control-Allow-Origin', value: '*' }
@@ -76,9 +76,9 @@ exports.handler = async (event, context, callback) => {
       ],
       'access-control-max-age': [
         { key: 'Access-Control-Max-Age', value: '86400' }
-      ],
+      ]
     },
-    body,
+    body
   }
   // console.log(
   //   ".......................................at the end..............................",
