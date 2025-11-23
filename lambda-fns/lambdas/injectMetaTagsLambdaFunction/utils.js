@@ -55,17 +55,17 @@ function injectMetaTags (html = '', options = {}) {
   return updatedHtml
     .replace(
       '</title>',
-      `</title>
-      <meta property="og:image" content="https://img.wisaw.com/${safeImageIdUrl}.webp" data-rh="true">
-      <meta property="og:description" content="${safeDescription}" data-rh="true">
-      <meta property="og:title" content="${safePageTitle}" data-rh="true">
-      <meta property="og:url" content="https://wisaw.com/${safePathSegment}/${safeImageIdUrl}" data-rh="true">
-      <meta property="og:site_name" content="wisaw.com">
-      <meta property='og:type' content='${safeOgType}' data-rh="true"/>
-      <meta name="twitter:title" content="${safePageTitle}" data-rh="true">
-      <meta name="twitter:card" content="summary_large_image" data-rh="true">
-      <meta name="twitter:image" content="https://img.wisaw.com/${safeImageIdUrl}.webp" data-rh="true">
-      `
+      '</title>\n' +
+      '      <meta property="og:image" content="https://img.wisaw.com/' + safeImageIdUrl + '.webp" data-rh="true">\n' +
+      '      <meta property="og:description" content="' + safeDescription + '" data-rh="true">\n' +
+      '      <meta property="og:title" content="' + safePageTitle + '" data-rh="true">\n' +
+      '      <meta property="og:url" content="https://wisaw.com/' + safePathSegment + '/' + safeImageIdUrl + '" data-rh="true">\n' +
+      '      <meta property="og:site_name" content="wisaw.com">\n' +
+      '      <meta property=\'og:type\' content=\'' + safeOgType + '\' data-rh="true"/>\n' +
+      '      <meta name="twitter:title" content="' + safePageTitle + '" data-rh="true">\n' +
+      '      <meta name="twitter:card" content="summary_large_image" data-rh="true">\n' +
+      '      <meta name="twitter:image" content="https://img.wisaw.com/' + safeImageIdUrl + '.webp" data-rh="true">\n' +
+      '      '
     )
     .replace(
       '<link rel="canonical" href="https://wisaw.com" data-rh="true"/>',
