@@ -41,9 +41,10 @@ function injectMetaTags (html = '', options = {}) {
   const safeOgType = escapeHtmlAttribute(ogType)
   const safePathSegment = escapeHtmlAttribute(pathSegment)
   const safeImageIdUrl = escapeHtmlAttribute(imageIdUrl)
+  const safeImageIdText = escapeHtmlAttribute(imageIdText)
   const safePageTitle = pageTitle
     ? escapeHtmlAttribute(pageTitle)
-    : `wisaw ${safeEntityLabel} ${imageIdText}`
+    : `wisaw ${safeEntityLabel} ${safeImageIdText}`
 
   let updatedHtml = html
   updatedHtml = updatedHtml.replace(
