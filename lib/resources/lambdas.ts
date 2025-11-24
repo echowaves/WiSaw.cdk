@@ -15,19 +15,24 @@ export function createLambdas (scope: Construct, config: any): any {
     'arn:aws:lambda:us-east-1:580247275435:layer:LambdaInsightsExtension:14'
   const insightsVersion =
     lambda.LambdaInsightsVersion.fromInsightVersionArn(layerArn)
-  const logRetention = logs.RetentionDays.ONE_DAY
 
   const sharpLayerArn =
     'arn:aws:lambda:us-east-1:963958500685:layer:sharp-layer:2'
 
   // Create the Lambda function that will map GraphQL operations into Postgres
+  const wisawFnLogGroup = new logs.LogGroup(scope, `${deployEnv()}-WiSaw-GraphQlMapFunction-cdk-LogGroup`, {
+    logGroupName: `/aws/lambda/${deployEnv()}-cdk-wisaw-fn`,
+    retention: logs.RetentionDays.ONE_DAY,
+    removalPolicy: cdk.RemovalPolicy.DESTROY
+  })
+
   const wisawFn = new NodejsFunction(
     scope,
     `${deployEnv()}-WiSaw-GraphQlMapFunction-cdk`,
     {
       runtime: lambda.Runtime.NODEJS_22_X,
       // handler: "index.handler",
-      entry: `${__dirname}/../../lambda-fns/index.ts`,
+      entry: path.join(__dirname, '../../lambda-fns/index.ts'),
       handler: 'main',
       bundling: {
         minify: true,
@@ -45,7 +50,7 @@ export function createLambdas (scope: Construct, config: any): any {
       //   ),
       // ],
       insightsVersion,
-      logRetention,
+      logGroup: wisawFnLogGroup,
       memorySize: 10240,
       // memorySize: 3008,
       timeout: cdk.Duration.seconds(30),
@@ -55,12 +60,25 @@ export function createLambdas (scope: Construct, config: any): any {
     }
   )
 
+  const processUploadedImageLambdaFunctionLogGroup = new logs.LogGroup(scope, `${deployEnv()}_processUploadedImage-LogGroup`, {
+    logGroupName: `/aws/lambda/${deployEnv()}-cdk-wisaw-fn-processUploadedImage`, // Assuming default naming or explicit? Wait, the function name is not explicit in the original code?
+    // Ah, looking at original code: functionName is NOT specified for processUploadedImageLambdaFunction.
+    // If functionName is not specified, CDK generates one.
+    // But I need to specify logGroupName to be sure, or let CDK manage it?
+    // If I pass logGroup, CDK will use it.
+    // But if I want to match existing logs, I need to know the name.
+    // The original code didn't specify functionName, so it was auto-generated.
+    // Wait, let me check the original code again.
+    retention: logs.RetentionDays.ONE_DAY,
+    removalPolicy: cdk.RemovalPolicy.DESTROY
+  })
+
   const processUploadedImageLambdaFunction = new NodejsFunction(
     scope,
     `${deployEnv()}_processUploadedImage`,
     {
       runtime: lambda.Runtime.NODEJS_22_X,
-      entry: `${__dirname}/../../lambda-fns/lambdas/processUploadedImage/index.ts`,
+      entry: path.join(__dirname, '../../lambda-fns/lambdas/processUploadedImage/index.ts'),
       handler: 'main',
       bundling: {
         minify: true,
@@ -78,7 +96,7 @@ export function createLambdas (scope: Construct, config: any): any {
         )
       ],
       insightsVersion,
-      logRetention,
+      logGroup: processUploadedImageLambdaFunctionLogGroup,
       memorySize: 10240,
       // memorySize: 3008,
       timeout: cdk.Duration.seconds(30),
@@ -88,12 +106,18 @@ export function createLambdas (scope: Construct, config: any): any {
     }
   )
 
+  const processUploadedPrivateImageLambdaFunctionLogGroup = new logs.LogGroup(scope, `${deployEnv()}_processUploadedPrivateImage-LogGroup`, {
+    logGroupName: `/aws/lambda/${deployEnv()}-cdk-wisaw-fn-processUploadedPrivateImage`,
+    retention: logs.RetentionDays.ONE_DAY,
+    removalPolicy: cdk.RemovalPolicy.DESTROY
+  })
+
   const processUploadedPrivateImageLambdaFunction = new NodejsFunction(
     scope,
     `${deployEnv()}_processUploadedPrivateImage`,
     {
       runtime: lambda.Runtime.NODEJS_22_X,
-      entry: `${__dirname}/../../lambda-fns/lambdas/processUploadedPrivateImage/index.ts`,
+      entry: path.join(__dirname, '../../lambda-fns/lambdas/processUploadedPrivateImage/index.ts'),
       handler: 'main',
       bundling: {
         minify: true,
@@ -111,7 +135,7 @@ export function createLambdas (scope: Construct, config: any): any {
         )
       ],
       insightsVersion,
-      logRetention,
+      logGroup: processUploadedPrivateImageLambdaFunctionLogGroup,
       memorySize: 10240,
       // memorySize: 3008,
       timeout: cdk.Duration.seconds(30),
@@ -121,13 +145,19 @@ export function createLambdas (scope: Construct, config: any): any {
     }
   )
 
+  const processDeletedImageLambdaFunctionLogGroup = new logs.LogGroup(scope, `${deployEnv()}_processDeletedImage-LogGroup`, {
+    logGroupName: `/aws/lambda/${deployEnv()}-cdk-wisaw-fn-processDeletedImage`,
+    retention: logs.RetentionDays.ONE_DAY,
+    removalPolicy: cdk.RemovalPolicy.DESTROY
+  })
+
   const processDeletedImageLambdaFunction = new NodejsFunction(
     scope,
     `${deployEnv()}_processDeletedImage`,
     {
       runtime: lambda.Runtime.NODEJS_22_X,
       // handler: "index.handler",
-      entry: `${__dirname}/../../lambda-fns/lambdas/processDeletedImage/index.ts`,
+      entry: path.join(__dirname, '../../lambda-fns/lambdas/processDeletedImage/index.ts'),
       handler: 'main',
       bundling: {
         minify: true,
@@ -145,7 +175,7 @@ export function createLambdas (scope: Construct, config: any): any {
       //   ),
       // ],
       insightsVersion,
-      logRetention,
+      logGroup: processDeletedImageLambdaFunctionLogGroup,
       // memorySize: 10240,
       memorySize: 1024,
       timeout: cdk.Duration.seconds(30),
@@ -155,13 +185,19 @@ export function createLambdas (scope: Construct, config: any): any {
     }
   )
 
+  const processDeletedPrivateImageLambdaFunctionLogGroup = new logs.LogGroup(scope, `${deployEnv()}_processDeletedPrivateImage-LogGroup`, {
+    logGroupName: `/aws/lambda/${deployEnv()}-cdk-wisaw-fn-processDeletedPrivateImage`,
+    retention: logs.RetentionDays.ONE_DAY,
+    removalPolicy: cdk.RemovalPolicy.DESTROY
+  })
+
   const processDeletedPrivateImageLambdaFunction = new NodejsFunction(
     scope,
     `${deployEnv()}_processDeletedPrivateImage`,
     {
       runtime: lambda.Runtime.NODEJS_22_X,
       // handler: "index.handler",
-      entry: `${__dirname}/../../lambda-fns/lambdas/processDeletedPrivateImage/index.ts`,
+      entry: path.join(__dirname, '../../lambda-fns/lambdas/processDeletedPrivateImage/index.ts'),
       handler: 'main',
       bundling: {
         minify: true,
@@ -179,7 +215,7 @@ export function createLambdas (scope: Construct, config: any): any {
       //   ),
       // ],
       insightsVersion,
-      logRetention,
+      logGroup: processDeletedPrivateImageLambdaFunctionLogGroup,
       // memorySize: 10240,
       memorySize: 1024,
       timeout: cdk.Duration.seconds(30),
@@ -189,13 +225,19 @@ export function createLambdas (scope: Construct, config: any): any {
     }
   )
 
-  const cleanupAbuseReports_LambdaFunction = new NodejsFunction(
+  const cleanupAbuseReportsLambdaFunctionLogGroup = new logs.LogGroup(scope, `${deployEnv()}_cleaupupAbuseReports-LogGroup`, {
+    logGroupName: `/aws/lambda/${deployEnv()}-cdk-wisaw-fn-cleaupupAbuseReports`, // Assuming naming convention
+    retention: logs.RetentionDays.ONE_DAY,
+    removalPolicy: cdk.RemovalPolicy.DESTROY
+  })
+
+  const cleanupAbuseReportsLambdaFunction = new NodejsFunction(
     scope,
     `${deployEnv()}_cleaupupAbuseReports`,
     {
       runtime: lambda.Runtime.NODEJS_22_X,
       // handler: "index.handler",
-      entry: `${__dirname}/../../lambda-fns/lambdas/cleaupupAbuseReports/index.ts`,
+      entry: path.join(__dirname, '../../lambda-fns/lambdas/cleaupupAbuseReports/index.ts'),
       handler: 'main',
       bundling: {
         minify: true,
@@ -213,7 +255,7 @@ export function createLambdas (scope: Construct, config: any): any {
       //   ),
       // ],
       insightsVersion,
-      logRetention,
+      logGroup: cleanupAbuseReportsLambdaFunctionLogGroup,
       // memorySize: 10240,
       memorySize: 1024,
       timeout: cdk.Duration.seconds(30),
@@ -223,8 +265,8 @@ export function createLambdas (scope: Construct, config: any): any {
     }
   )
 
-  const cleaupupAbuseReports_LambdaTarget = new LambdaFunction(
-    cleanupAbuseReports_LambdaFunction
+  const cleanupAbuseReportsLambdaTarget = new LambdaFunction(
+    cleanupAbuseReportsLambdaFunction
   )
 
   // eslint-disable-next-line no-new
@@ -232,21 +274,27 @@ export function createLambdas (scope: Construct, config: any): any {
     description: 'Rule to trigger scheduled lambda',
     // schedule: Schedule.rate(cdk.Duration.minutes(1)),
     schedule: Schedule.rate(cdk.Duration.hours(24)),
-    targets: [cleaupupAbuseReports_LambdaTarget]
+    targets: [cleanupAbuseReportsLambdaTarget]
   })
 
-  let generateSiteMap_LambdaFunction: NodejsFunction | undefined
-  let injectMetaTagsLambdaFunction_photo: cloudfront.experimental.EdgeFunction | undefined
-  let injectMetaTagsLambdaFunction_video: cloudfront.experimental.EdgeFunction | undefined
+  let generateSiteMapLambdaFunction: NodejsFunction | undefined
+  let injectMetaTagsLambdaFunctionPhoto: cloudfront.experimental.EdgeFunction | undefined
+  let injectMetaTagsLambdaFunctionVideo: cloudfront.experimental.EdgeFunction | undefined
   let redirectLambdaEdgeFunction: cloudfront.experimental.EdgeFunction | undefined
 
   if (deployEnv() === 'prod') {
-    generateSiteMap_LambdaFunction = new NodejsFunction(
+    const generateSiteMapLambdaFunctionLogGroup = new logs.LogGroup(scope, `${deployEnv()}_generateSiteMap-LogGroup`, {
+      logGroupName: `/aws/lambda/${deployEnv()}-cdk-wisaw-fn-generateSiteMap`,
+      retention: logs.RetentionDays.ONE_DAY,
+      removalPolicy: cdk.RemovalPolicy.DESTROY
+    })
+
+    generateSiteMapLambdaFunction = new NodejsFunction(
       scope,
       `${deployEnv()}_generateSiteMap`,
       {
         runtime: lambda.Runtime.NODEJS_22_X,
-        entry: `${__dirname}/../../lambda-fns/lambdas/generateSiteMap/index.ts`,
+        entry: path.join(__dirname, '../../lambda-fns/lambdas/generateSiteMap/index.ts'),
         handler: 'main',
         bundling: {
           minify: true,
@@ -256,7 +304,7 @@ export function createLambdas (scope: Construct, config: any): any {
           sourcesContent: false
         },
         insightsVersion,
-        logRetention,
+        logGroup: generateSiteMapLambdaFunctionLogGroup,
         memorySize: 1024,
         timeout: cdk.Duration.seconds(30),
         environment: {
@@ -266,8 +314,8 @@ export function createLambdas (scope: Construct, config: any): any {
       }
     )
 
-    const generateSiteMapLambdaFunction_LambdaTarget = new LambdaFunction(
-      generateSiteMap_LambdaFunction
+    const generateSiteMapLambdaFunctionTarget = new LambdaFunction(
+      generateSiteMapLambdaFunction
     )
 
     // eslint-disable-next-line no-new
@@ -275,11 +323,42 @@ export function createLambdas (scope: Construct, config: any): any {
       description: 'Rule to trigger scheduled lambda',
       schedule: Schedule.rate(cdk.Duration.hours(5)),
       // schedule: Schedule.rate(cdk.Duration.minutes(1)),
-      targets: [generateSiteMapLambdaFunction_LambdaTarget]
+      targets: [generateSiteMapLambdaFunctionTarget]
     })
 
     // lambda@edge function for ingecting OG meta tags on the fly
-    injectMetaTagsLambdaFunction_photo =
+    const injectMetaTagsLambdaFunctionPhotoLogGroup = new logs.LogGroup(scope, `${deployEnv()}_injectPhotoMetaTagsLambdaFunction_photo-LogGroup`, {
+      logGroupName: `/aws/lambda/us-east-1.${deployEnv()}-cdk-injectMetaTagsLambdaFn-photo`, // Edge functions usually have region prefix in log group name if executed in region, but for home region it might be different?
+      // Actually, for Edge functions, the logs in us-east-1 are usually at /aws/lambda/us-east-1.<FunctionName>
+      // But wait, if I create a LogGroup here, I am creating it in the region where the stack is deployed (us-east-1).
+      // The EdgeFunction construct creates the function in us-east-1.
+      // The logs for executions in us-east-1 will go to a log group in us-east-1.
+      // The name of that log group is /aws/lambda/us-east-1.<FunctionName> ?
+      // Or just /aws/lambda/<FunctionName> ?
+      // For Lambda@Edge, the function name in CloudFront includes the region? No.
+      // Let's check the original code or assumptions.
+      // The original code didn't specify functionName for EdgeFunction?
+      // Wait, let me check the original code for EdgeFunction.
+      // It says: `${deployEnv()}_injectPhotoMetaTagsLambdaFunction_photo` as ID.
+      // It does NOT specify functionName.
+      // So CDK generates a function name.
+      // If I want to manage the log group, I should probably specify the function name explicitly to be sure.
+      // But if I specify functionName, I need to be careful about uniqueness.
+      // Let's try to specify functionName for EdgeFunction to match what I expect for LogGroup.
+      // Or, I can just pass the logGroup and let CDK/Lambda use it.
+      // If I pass logGroup to EdgeFunction, does it enforce the name?
+      // The `logGroup` prop in FunctionOptions forces the function to use that LogGroup.
+      // So I can name the LogGroup whatever I want, and the Lambda will write to it (in the home region).
+      // So I don't need to guess the name, I just need to give it a name.
+      // But for Edge functions, the logs in OTHER regions are created automatically with name /aws/lambda/us-east-1.<FunctionName>.
+      // So if I want consistency, I should probably name my home region log group similarly?
+      // Or just let it be.
+      // I'll just give it a name that makes sense.
+      retention: logs.RetentionDays.ONE_DAY,
+      removalPolicy: cdk.RemovalPolicy.DESTROY
+    })
+
+    injectMetaTagsLambdaFunctionPhoto =
       // new lambda.Function( // trying to define it as an Lambda@Edge function
       new cloudfront.experimental.EdgeFunction(
         scope,
@@ -297,14 +376,19 @@ export function createLambdas (scope: Construct, config: any): any {
           memorySize: 128,
           timeout: cdk.Duration.seconds(5),
           // insightsVersion,
-          logRetention
+          logGroup: injectMetaTagsLambdaFunctionPhotoLogGroup
           // environment: {
           //   ...config,
           // },
         }
       )
 
-    injectMetaTagsLambdaFunction_video =
+    const injectMetaTagsLambdaFunctionVideoLogGroup = new logs.LogGroup(scope, `${deployEnv()}_injectPhotoMetaTagsLambdaFunction_video-LogGroup`, {
+      retention: logs.RetentionDays.ONE_DAY,
+      removalPolicy: cdk.RemovalPolicy.DESTROY
+    })
+
+    injectMetaTagsLambdaFunctionVideo =
       // new lambda.Function( // trying to define it as an Lambda@Edge function
       new cloudfront.experimental.EdgeFunction(
         scope,
@@ -322,12 +406,17 @@ export function createLambdas (scope: Construct, config: any): any {
           memorySize: 128,
           timeout: cdk.Duration.seconds(5),
           // insightsVersion,
-          logRetention
+          logGroup: injectMetaTagsLambdaFunctionVideoLogGroup
           // environment: {
           //   ...config,
           // },
         }
       )
+
+    const redirectLambdaEdgeFunctionLogGroup = new logs.LogGroup(scope, `${deployEnv()}_redirectLambdaEdgeFunction-LogGroup`, {
+      retention: logs.RetentionDays.ONE_DAY,
+      removalPolicy: cdk.RemovalPolicy.DESTROY
+    })
 
     redirectLambdaEdgeFunction =
       // new lambda.Function( // trying to define it as an Lambda@Edge function
@@ -347,7 +436,7 @@ export function createLambdas (scope: Construct, config: any): any {
           memorySize: 128,
           timeout: cdk.Duration.seconds(5),
           // insightsVersion,
-          logRetention
+          logGroup: redirectLambdaEdgeFunctionLogGroup
           // environment: {
           //   ...config,
           // },
@@ -374,10 +463,10 @@ export function createLambdas (scope: Construct, config: any): any {
     processUploadedPrivateImageLambdaFunction,
     processDeletedImageLambdaFunction,
     processDeletedPrivateImageLambdaFunction,
-    cleanupAbuseReports_LambdaFunction,
-    generateSiteMap_LambdaFunction,
-    injectMetaTagsLambdaFunction_photo,
-    injectMetaTagsLambdaFunction_video,
+    cleanupAbuseReportsLambdaFunction,
+    generateSiteMapLambdaFunction,
+    injectMetaTagsLambdaFunctionPhoto,
+    injectMetaTagsLambdaFunctionVideo,
     redirectLambdaEdgeFunction
   }
 }

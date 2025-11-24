@@ -12,8 +12,8 @@ export function createCloudFront (scope: Construct, buckets: any, lambdas: any):
 
   const { webAppBucket, imgBucket } = buckets
   const {
-    injectMetaTagsLambdaFunction_photo,
-    injectMetaTagsLambdaFunction_video,
+    injectMetaTagsLambdaFunctionPhoto,
+    injectMetaTagsLambdaFunctionVideo,
     redirectLambdaEdgeFunction
   } = lambdas
 
@@ -77,7 +77,7 @@ export function createCloudFront (scope: Construct, buckets: any, lambdas: any):
         edgeLambdas: [
           {
             eventType: cloudfront.LambdaEdgeEventType.ORIGIN_REQUEST,
-            functionVersion: injectMetaTagsLambdaFunction_photo.currentVersion,
+            functionVersion: injectMetaTagsLambdaFunctionPhoto.currentVersion,
             includeBody: true
           },
           {
@@ -98,7 +98,7 @@ export function createCloudFront (scope: Construct, buckets: any, lambdas: any):
         edgeLambdas: [
           {
             eventType: cloudfront.LambdaEdgeEventType.ORIGIN_REQUEST,
-            functionVersion: injectMetaTagsLambdaFunction_video.currentVersion,
+            functionVersion: injectMetaTagsLambdaFunctionVideo.currentVersion,
             includeBody: true
           },
           {

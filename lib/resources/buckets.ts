@@ -1,4 +1,3 @@
-import * as cdk from 'aws-cdk-lib'
 import * as s3 from 'aws-cdk-lib/aws-s3'
 import * as s3n from 'aws-cdk-lib/aws-s3-notifications'
 import { Construct } from 'constructs'
@@ -11,9 +10,9 @@ export function createBuckets (scope: Construct, lambdas: any): any {
     processDeletedImageLambdaFunction,
     processUploadedPrivateImageLambdaFunction,
     processDeletedPrivateImageLambdaFunction,
-    generateSiteMap_LambdaFunction,
-    injectMetaTagsLambdaFunction_photo,
-    injectMetaTagsLambdaFunction_video,
+    generateSiteMapLambdaFunction,
+    injectMetaTagsLambdaFunctionPhoto,
+    injectMetaTagsLambdaFunctionVideo,
     redirectLambdaEdgeFunction
   } = lambdas
 
@@ -103,21 +102,21 @@ export function createBuckets (scope: Construct, lambdas: any): any {
     )
 
     // Grant the Lambda function permissions to read and write to the S3 bucket
-    if (generateSiteMap_LambdaFunction) {
-      webAppBucket.grantReadWrite(generateSiteMap_LambdaFunction)
+    if (generateSiteMapLambdaFunction !== undefined) {
+      webAppBucket.grantReadWrite(generateSiteMapLambdaFunction)
     }
 
-    if (injectMetaTagsLambdaFunction_photo) {
-      webAppBucket.grantRead(injectMetaTagsLambdaFunction_photo)
-      imgBucket.grantReadWrite(injectMetaTagsLambdaFunction_photo)
+    if (injectMetaTagsLambdaFunctionPhoto !== undefined) {
+      webAppBucket.grantRead(injectMetaTagsLambdaFunctionPhoto)
+      imgBucket.grantReadWrite(injectMetaTagsLambdaFunctionPhoto)
     }
 
-    if (injectMetaTagsLambdaFunction_video) {
-      webAppBucket.grantRead(injectMetaTagsLambdaFunction_video)
-      imgBucket.grantReadWrite(injectMetaTagsLambdaFunction_video)
+    if (injectMetaTagsLambdaFunctionVideo !== undefined) {
+      webAppBucket.grantRead(injectMetaTagsLambdaFunctionVideo)
+      imgBucket.grantReadWrite(injectMetaTagsLambdaFunctionVideo)
     }
 
-    if (redirectLambdaEdgeFunction) {
+    if (redirectLambdaEdgeFunction !== undefined) {
       webAppBucket.grantRead(redirectLambdaEdgeFunction)
     }
   }
