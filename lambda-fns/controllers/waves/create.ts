@@ -16,7 +16,7 @@ export default async function main (
   await psql.connect()
   const result = await psql.query(`
     INSERT INTO "Waves" (
-      "id", "name", "description", "createdBy", "createdAt", "updatedAt"
+      "waveUuid", "name", "description", "createdBy", "createdAt", "updatedAt"
     ) VALUES (
       $1, $2, $3, $4, $5, $6
     ) RETURNING *

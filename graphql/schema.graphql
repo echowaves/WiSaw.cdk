@@ -97,7 +97,7 @@ type Secret {
 }
 
 type Wave {
-  id: String!
+  waveUuid: String!
   name: String!
   createdBy: String!
   createdAt: AWSDateTime!
@@ -232,7 +232,7 @@ getMessagesList(
   ): WaveFeed
 
   listWavePhotos(
-    waveId: String!
+    waveUuid: String!
     pageNumber: Int!
     batch: String!
   ): PhotoFeed
@@ -329,18 +329,18 @@ type Mutation {
   ): Wave!
 
   deleteWave(
-    waveId: String!
+    waveUuid: String!
     uuid: String!
   ): Boolean!
 
   addPhotoToWave(
-    waveId: String!
+    waveUuid: String!
     photoId: String!
     uuid: String!
   ): Boolean!
 
   removePhotoFromWave(
-    waveId: String!
+    waveUuid: String!
     photoId: String!
   ): Boolean!
 }

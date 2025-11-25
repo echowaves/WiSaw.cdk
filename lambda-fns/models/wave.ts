@@ -1,5 +1,5 @@
 export class Wave {
-  id: string
+  waveUuid: string
   name: string
   description: string
   createdBy: string

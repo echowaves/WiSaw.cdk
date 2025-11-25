@@ -98,7 +98,7 @@ interface AppSyncEvent {
     photoHash: string
     pendingArg: boolean
     chatPhotoHashArg: string
-    waveId: string
+    waveUuid: string
     name: string
   }
 }
@@ -171,7 +171,7 @@ const queryHandlers: Record<string, HandlerDefinition> = {
   },
   listWavePhotos: {
     resolver: listWavePhotos,
-    getArgs: (args) => [args.waveId, args.pageNumber, args.batch]
+    getArgs: (args) => [args.waveUuid, args.pageNumber, args.batch]
   }
 }
 
@@ -249,15 +249,15 @@ const mutationHandlers: Record<string, HandlerDefinition> = {
   },
   deleteWave: {
     resolver: deleteWave,
-    getArgs: (args) => [args.waveId, args.uuid]
+    getArgs: (args) => [args.waveUuid, args.uuid]
   },
   addPhotoToWave: {
     resolver: addPhotoToWave,
-    getArgs: (args) => [args.waveId, args.photoId, args.uuid]
+    getArgs: (args) => [args.waveUuid, args.photoId, args.uuid]
   },
   removePhotoFromWave: {
     resolver: removePhotoFromWave,
-    getArgs: (args) => [args.waveId, args.photoId]
+    getArgs: (args) => [args.waveUuid, args.photoId]
   }
 }
 

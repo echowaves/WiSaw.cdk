@@ -7,7 +7,7 @@ import psql from '../../psql'
 import { Wave } from '../../models/wave'
 
 export default async function main (
-  waveId: string,
+  waveUuid: string,
   photoId: string,
   uuid: string
 ): Promise<Wave> {
@@ -18,8 +18,8 @@ export default async function main (
 
   await psql.query(`
     INSERT INTO "WavePhotos" (
-      "wave_id",
-      "photo_id",
+      "waveUuid",
+      "photoId",
       "createdBy",
       "createdAt",
       "updatedAt"
@@ -29,9 +29,9 @@ export default async function main (
       $3,
       $4,
       $5
-    ) ON CONFLICT ("wave_id", "photo_id") DO NOTHING
+    ) ON CONFLICT ("waveUuid", "photoId") DO NOTHING
   `, [
-    waveId,
+    waveUuid,
     photoId,
     uuid,
     createdAt,
@@ -41,8 +41,8 @@ export default async function main (
   // Fetch the wave to return
   const result = await psql.query(`
     SELECT * FROM "Waves"
-    WHERE "id" = $1
-  `, [waveId])
+    WHERE "waveUuid" = $1
+  `, [waveUuid])
 
   await psql.clean()
 

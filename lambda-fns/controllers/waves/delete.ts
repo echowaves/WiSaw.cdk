@@ -7,7 +7,7 @@ export default async function main (
   await psql.connect()
   await psql.query(`
     DELETE FROM "Waves"
-    WHERE "id" = $1 AND "createdBy" = $2
+    WHERE "waveUuid" = $1 AND "createdBy" = $2
   `, [waveUuid, uuid])
   await psql.clean()
 

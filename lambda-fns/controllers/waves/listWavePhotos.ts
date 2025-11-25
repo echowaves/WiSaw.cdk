@@ -5,7 +5,7 @@ import psql from '../../psql'
 import Photo from '../../models/photo'
 
 export default async function main (
-  waveId: string,
+  waveUuid: string,
   pageNumber: number,
   batch: string
 ): Promise<{
@@ -21,14 +21,14 @@ export default async function main (
   const query = `
     SELECT P.*
     FROM "Photos" P
-    JOIN "WavePhotos" WP ON P.id = WP."photo_id"
-    WHERE WP."wave_id" = $1
+    JOIN "WavePhotos" WP ON P.id = WP."photoId"
+    WHERE WP."waveUuid" = $1
     ORDER BY WP."createdAt" DESC
     LIMIT ${limit}
     OFFSET ${offset}
   `
 
-  const results = (await psql.query(query, [waveId])).rows
+  const results = (await psql.query(query, [waveUuid])).rows
   await psql.clean()
 
   const photos = results.map((row: any) => plainToClass(Photo, row))
