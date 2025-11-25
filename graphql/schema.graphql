@@ -96,6 +96,20 @@ type Secret {
   updatedAt: AWSDateTime!
 }
 
+type Wave {
+  id: String!
+  name: String!
+  createdBy: String!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+type WaveFeed {
+  waves: [Wave]
+  batch: String!
+  noMoreData: Boolean!
+}
+
 type Friendship {
   friendshipUuid: String!
   uuid1: String! 
@@ -206,10 +220,22 @@ type Query {
 
 
 
-  getMessagesList(
+getMessagesList(
      chatUuid: String!
      lastLoaded: AWSDateTime!
   ): [Message]!
+
+  listWaves(
+    pageNumber: Int!
+    batch: String!
+    createdBy: String # Optional filter
+  ): WaveFeed
+
+  listWavePhotos(
+    waveId: String!
+    pageNumber: Int!
+    batch: String!
+  ): PhotoFeed
 }
 
 # ... ******************************************************
@@ -296,9 +322,32 @@ type Mutation {
     uuid: String!
   ): String! #returns current date time
 
+  createWave(
+    name: String!
+    description: String!
+    uuid: String! # createdBy
+  ): Wave!
+
+  deleteWave(
+    waveId: String!
+    uuid: String!
+  ): Boolean!
+
+  addPhotoToWave(
+    waveId: String!
+    photoId: String!
+    uuid: String!
+  ): Boolean!
+
+  removePhotoFromWave(
+    waveId: String!
+    photoId: String!
+  ): Boolean!
+}
+
   # helloWorld(helloMessage: String!): String!
    
-}
+
 
 # ... ******************************************************
 # ...                    subscriptions

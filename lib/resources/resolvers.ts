@@ -17,6 +17,8 @@ export function createResolvers (scope: Construct, api: appsync.GraphqlApi, lamb
     { typeName: 'Query', fieldName: 'getFriendshipsList' },
     { typeName: 'Query', fieldName: 'getUnreadCountsList' },
     { typeName: 'Query', fieldName: 'getMessagesList' },
+    { typeName: 'Query', fieldName: 'listWaves' },
+    { typeName: 'Query', fieldName: 'listWavePhotos' },
 
     { typeName: 'Mutation', fieldName: 'createContactForm' },
     { typeName: 'Mutation', fieldName: 'createAbuseReport' },
@@ -32,7 +34,11 @@ export function createResolvers (scope: Construct, api: appsync.GraphqlApi, lamb
     { typeName: 'Mutation', fieldName: 'acceptFriendshipRequest' },
     { typeName: 'Mutation', fieldName: 'deleteFriendship' },
     { typeName: 'Mutation', fieldName: 'sendMessage' },
-    { typeName: 'Mutation', fieldName: 'resetUnreadCount' }
+    { typeName: 'Mutation', fieldName: 'resetUnreadCount' },
+    { typeName: 'Mutation', fieldName: 'createWave' },
+    { typeName: 'Mutation', fieldName: 'deleteWave' },
+    { typeName: 'Mutation', fieldName: 'addPhotoToWave' },
+    { typeName: 'Mutation', fieldName: 'removePhotoFromWave' }
   ]
   fields.forEach(({ typeName, fieldName }) =>
     lambdaDs.createResolver(`${typeName}-${fieldName}-Resolver`, {

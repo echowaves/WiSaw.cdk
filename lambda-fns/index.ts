@@ -21,6 +21,13 @@ import getUnreadCountsList from './controllers/friendships/getUnreadCountsList'
 
 import getMessagesList from './controllers/messages/getMessagesList'
 
+import createWave from './controllers/waves/create'
+import deleteWave from './controllers/waves/delete'
+import listWaves from './controllers/waves/listWaves'
+import addPhotoToWave from './controllers/waves/addPhoto'
+import removePhotoFromWave from './controllers/waves/removePhoto'
+import listWavePhotos from './controllers/waves/listWavePhotos'
+
 // ******************************************************
 //                       mutations
 // ******************************************************
@@ -91,6 +98,8 @@ interface AppSyncEvent {
     photoHash: string
     pendingArg: boolean
     chatPhotoHashArg: string
+    waveId: string
+    name: string
   }
 }
 
@@ -155,6 +164,14 @@ const queryHandlers: Record<string, HandlerDefinition> = {
   getMessagesList: {
     resolver: getMessagesList,
     getArgs: (args) => [args.chatUuid, args.lastLoaded]
+  },
+  listWaves: {
+    resolver: listWaves,
+    getArgs: (args) => [args.pageNumber, args.batch]
+  },
+  listWavePhotos: {
+    resolver: listWavePhotos,
+    getArgs: (args) => [args.waveId, args.pageNumber, args.batch]
   }
 }
 
@@ -225,14 +242,30 @@ const mutationHandlers: Record<string, HandlerDefinition> = {
   resetUnreadCount: {
     resolver: resetUnreadCount,
     getArgs: (args) => [args.chatUuid, args.uuid]
+  },
+  createWave: {
+    resolver: createWave,
+    getArgs: (args) => [args.name, args.description, args.uuid]
+  },
+  deleteWave: {
+    resolver: deleteWave,
+    getArgs: (args) => [args.waveId, args.uuid]
+  },
+  addPhotoToWave: {
+    resolver: addPhotoToWave,
+    getArgs: (args) => [args.waveId, args.photoId, args.uuid]
+  },
+  removePhotoFromWave: {
+    resolver: removePhotoFromWave,
+    getArgs: (args) => [args.waveId, args.photoId]
   }
 }
 
 exports.main = async (event: AppSyncEvent) => {
   const handler =
-    queryHandlers[event.info.fieldName] || mutationHandlers[event.info.fieldName]
+    queryHandlers[event.info.fieldName] ?? mutationHandlers[event.info.fieldName]
 
-  if (!handler) return null
+  if (handler === undefined) return null
 
   return await handler.resolver(...handler.getArgs(event.arguments))
 }

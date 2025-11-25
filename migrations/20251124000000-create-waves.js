@@ -6,7 +6,7 @@ module.exports = {
     // Create Waves table
     console.log('📝 Step 1: Creating Waves table...')
     await queryInterface.createTable('Waves', {
-      wave_uuid: {
+      id: {
         type: Sequelize.UUID,
         primaryKey: true,
         allowNull: false
@@ -14,6 +14,10 @@ module.exports = {
       name: {
         type: Sequelize.STRING(255),
         allowNull: false
+      },
+      description: {
+        type: Sequelize.TEXT,
+        allowNull: true
       },
       createdBy: {
         type: Sequelize.UUID,
@@ -40,12 +44,12 @@ module.exports = {
     // Create WavePhotos table
     console.log('📝 Step 3: Creating WavePhotos table...')
     await queryInterface.createTable('WavePhotos', {
-      wave_uuid: {
+      wave_id: {
         type: Sequelize.UUID,
         allowNull: false,
         references: {
           model: 'Waves',
-          key: 'wave_uuid'
+          key: 'id'
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
@@ -77,14 +81,14 @@ module.exports = {
     // Add composite primary key for WavePhotos
     console.log('📝 Step 4: Adding composite primary key to WavePhotos...')
     await queryInterface.addConstraint('WavePhotos', {
-      fields: ['wave_uuid', 'photo_id'],
+      fields: ['wave_id', 'photo_id'],
       type: 'primary key',
       name: 'WavePhotos_pkey'
     })
 
     // Add indexes for WavePhotos
     console.log('📝 Step 5: Adding indexes to WavePhotos...')
-    await queryInterface.addIndex('WavePhotos', ['wave_uuid'])
+    await queryInterface.addIndex('WavePhotos', ['wave_id'])
     await queryInterface.addIndex('WavePhotos', ['photo_id'])
 
     console.log('✅ Migration completed successfully: Waves and WavePhotos tables created')

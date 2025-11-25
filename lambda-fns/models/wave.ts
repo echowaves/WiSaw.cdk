@@ -1,9 +1,8 @@
-class Wave {
-  wave_uuid: string
+export class Wave {
+  id: string
   name: string
+  description: string
   createdBy: string
   createdAt: string
   updatedAt: string
 }
-
-export default Wave
