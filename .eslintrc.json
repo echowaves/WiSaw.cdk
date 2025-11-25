@@ -2,5 +2,15 @@
   "extends": "./node_modules/ts-standard/eslintrc.json",
   "parserOptions": {
     "project": "./tsconfig.json"
+  },
+  "env": {
+    "node": true
+  },
+  "globals": {
+    "module": "readonly",
+    "console": "readonly"
+  },
+  "rules": {
+    "no-console": "off"
   }
 }
