@@ -1,3 +1,4 @@
+/* eslint-disable */
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     console.log('🔄 Starting migration: Create Waves and WavePhotos tables')
@@ -58,6 +59,10 @@ module.exports = {
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
+      },
+      createdBy: {
+        type: Sequelize.UUID,
+        allowNull: false
       },
       createdAt: {
         allowNull: false,
