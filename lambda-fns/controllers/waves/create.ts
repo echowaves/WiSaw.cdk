@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid'
+import { v4 as uuidv4, validate as uuidValidate } from 'uuid'
 import moment from 'moment'
 import psql from '../../psql'
 import { Wave } from '../../models/wave'
@@ -9,6 +9,13 @@ export default async function main (
   description: string,
   uuid: string
 ): Promise<Wave> {
+  if (!uuidValidate(uuid)) {
+    throw new Error('Wrong UUID format for uuid')
+  }
+  if (name.trim().length === 0) {
+    throw new Error('Unable to save empty wave name.')
+  }
+
   const waveUuid = uuidv4()
   const createdAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS')
   const updatedAt = createdAt

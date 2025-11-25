@@ -1,6 +1,7 @@
 import psql from '../../psql'
 import { Wave } from '../../models/wave'
 import { plainToClass } from 'class-transformer'
+import { validate as uuidValidate } from 'uuid'
 
 export default async function main (
   pageNumber: number,
@@ -11,6 +12,10 @@ export default async function main (
     batch: string
     noMoreData: boolean
   }> {
+  if (createdBy !== undefined && createdBy !== null && !uuidValidate(createdBy)) {
+    throw new Error('Wrong UUID format for createdBy')
+  }
+
   const limit = 20
   const offset = pageNumber * limit
 

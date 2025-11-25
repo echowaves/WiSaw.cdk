@@ -1,4 +1,5 @@
 import moment from 'moment'
+import { validate as uuidValidate } from 'uuid'
 
 import { plainToClass } from 'class-transformer'
 
@@ -11,6 +12,16 @@ export default async function main (
   photoId: string,
   uuid: string
 ): Promise<Wave> {
+  if (!uuidValidate(waveUuid)) {
+    throw new Error('Wrong UUID format for waveUuid')
+  }
+  if (!uuidValidate(photoId)) {
+    throw new Error('Wrong UUID format for photoId')
+  }
+  if (!uuidValidate(uuid)) {
+    throw new Error('Wrong UUID format for uuid')
+  }
+
   await psql.connect()
 
   const createdAt = moment().format('YYYY-MM-DD HH:mm:ss')

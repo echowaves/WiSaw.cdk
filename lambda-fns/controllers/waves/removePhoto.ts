@@ -1,4 +1,5 @@
 import { plainToClass } from 'class-transformer'
+import { validate as uuidValidate } from 'uuid'
 
 import psql from '../../psql'
 
@@ -8,6 +9,13 @@ export default async function main (
   waveUuid: string,
   photoId: string
 ): Promise<Wave> {
+  if (!uuidValidate(waveUuid)) {
+    throw new Error('Wrong UUID format for waveUuid')
+  }
+  if (!uuidValidate(photoId)) {
+    throw new Error('Wrong UUID format for photoId')
+  }
+
   await psql.connect()
 
   await psql.query(`

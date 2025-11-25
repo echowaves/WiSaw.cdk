@@ -1,4 +1,5 @@
 import { plainToClass } from 'class-transformer'
+import { validate as uuidValidate } from 'uuid'
 
 import psql from '../../psql'
 
@@ -13,6 +14,10 @@ export default async function main (
     batch: string
     noMoreData: boolean
   }> {
+  if (!uuidValidate(waveUuid)) {
+    throw new Error('Wrong UUID format for waveUuid')
+  }
+
   const limit = 20
   const offset = pageNumber * limit
 
