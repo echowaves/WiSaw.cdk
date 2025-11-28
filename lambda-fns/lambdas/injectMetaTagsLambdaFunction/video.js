@@ -70,7 +70,8 @@ exports.handler = async (event, context, callback) => {
     imageIdText,
     imageIdUrl,
     created,
-    duration
+    duration,
+    videoUrl: `https://img.wisaw.com/${imageIdRaw}.mov`
   })
 
   const response = {

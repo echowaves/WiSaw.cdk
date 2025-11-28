@@ -33,7 +33,8 @@ function injectMetaTags (html = '', options = {}) {
     pathSegment = '',
     imageIdText = '',
     imageIdUrl = '',
-    pageTitle = ''
+    pageTitle = '',
+    videoUrl = ''
   } = options
 
   const safeDescription = escapeHtmlAttribute(description)
@@ -52,10 +53,7 @@ function injectMetaTags (html = '', options = {}) {
     '<title>' + safePageTitle + '</title>'
   )
 
-  return updatedHtml
-    .replace(
-      '</title>',
-      '</title>\n' +
+  let metaTags = '</title>\n' +
       '      <meta property="og:image" content="https://img.wisaw.com/' + safeImageIdUrl + '.webp" data-rh="true">\n' +
       '      <meta property="og:description" content="' + safeDescription + '" data-rh="true">\n' +
       '      <meta property="og:title" content="' + safePageTitle + '" data-rh="true">\n' +
@@ -64,8 +62,19 @@ function injectMetaTags (html = '', options = {}) {
       '      <meta property=\'og:type\' content=\'' + safeOgType + '\' data-rh="true"/>\n' +
       '      <meta name="twitter:title" content="' + safePageTitle + '" data-rh="true">\n' +
       '      <meta name="twitter:card" content="summary_large_image" data-rh="true">\n' +
-      '      <meta name="twitter:image" content="https://img.wisaw.com/' + safeImageIdUrl + '.webp" data-rh="true">\n' +
-      '      '
+      '      <meta name="twitter:image" content="https://img.wisaw.com/' + safeImageIdUrl + '.webp" data-rh="true">\n'
+
+  if (videoUrl) {
+    const safeVideoUrl = escapeHtmlAttribute(videoUrl)
+    metaTags += '      <meta property="og:video" content="' + safeVideoUrl + '" data-rh="true">\n'
+  }
+
+  metaTags += '      '
+
+  return updatedHtml
+    .replace(
+      '</title>',
+      metaTags
     )
     .replace(
       '<link rel="canonical" href="https://wisaw.com" data-rh="true"/>',
