@@ -91,11 +91,55 @@ module.exports = {
     await queryInterface.addIndex('WavePhotos', ['waveUuid'])
     await queryInterface.addIndex('WavePhotos', ['photoId'])
 
-    console.log('✅ Migration completed successfully: Waves and WavePhotos tables created')
+    // Create WaveUsers table
+    console.log('📝 Step 6: Creating WaveUsers table...')
+    await queryInterface.createTable('WaveUsers', {
+      waveUuid: {
+        type: Sequelize.UUID,
+        allowNull: false,
+        references: {
+          model: 'Waves',
+          key: 'waveUuid'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
+      },
+      uuid: {
+        type: Sequelize.UUID,
+        allowNull: false
+      },
+      createdAt: {
+        allowNull: false,
+        type: Sequelize.DATE
+      },
+      updatedAt: {
+        allowNull: false,
+        type: Sequelize.DATE
+      }
+    })
+
+    // Add composite primary key for WaveUsers
+    console.log('📝 Step 7: Adding composite primary key to WaveUsers...')
+    await queryInterface.addConstraint('WaveUsers', {
+      fields: ['waveUuid', 'uuid'],
+      type: 'primary key',
+      name: 'WaveUsers_pkey'
+    })
+
+    // Add indexes for WaveUsers
+    console.log('📝 Step 8: Adding indexes to WaveUsers...')
+    await queryInterface.addIndex('WaveUsers', ['waveUuid'])
+    await queryInterface.addIndex('WaveUsers', ['uuid'])
+
+    console.log('✅ Migration completed successfully: Waves, WavePhotos and WaveUsers tables created')
   },
 
   down: async (queryInterface) => {
-    console.log('🔄 Starting rollback: Dropping Waves and WavePhotos tables')
+    console.log('🔄 Starting rollback: Dropping Waves, WavePhotos and WaveUsers tables')
+
+    // Drop WaveUsers table
+    console.log('📝 Step 0: Dropping WaveUsers table...')
+    await queryInterface.dropTable('WaveUsers')
 
     // Drop WavePhotos table
     console.log('📝 Step 1: Dropping WavePhotos table...')

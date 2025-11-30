@@ -28,6 +28,15 @@ export default async function main (
       $1, $2, $3, $4, $5, $6
     ) RETURNING *
   `, [waveUuid, name, description, uuid, createdAt, updatedAt])
+
+  await psql.query(`
+    INSERT INTO "WaveUsers" (
+      "waveUuid", "uuid", "createdAt", "updatedAt"
+    ) VALUES (
+      $1, $2, $3, $4
+    )
+  `, [waveUuid, uuid, createdAt, updatedAt])
+
   await psql.clean()
 
   return plainToClass(Wave, result.rows[0])

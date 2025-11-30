@@ -99,6 +99,7 @@ type Secret {
 type Wave {
   waveUuid: String!
   name: String!
+  description: String
   createdBy: String!
   createdAt: AWSDateTime!
   updatedAt: AWSDateTime!
