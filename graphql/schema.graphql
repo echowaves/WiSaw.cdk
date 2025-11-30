@@ -180,20 +180,24 @@ type Query {
     lon: Float!
     batch: String!
     whenToStop: AWSDateTime!
+    waveUuid: String
     ): PhotoFeed
   feedForWatcher(
     uuid: String!
     pageNumber: Int!
     batch: String!
+    waveUuid: String
     ): PhotoFeed
   feedRecent(    
     pageNumber: Int!
     batch: String!
+    waveUuid: String
     ): PhotoFeed
   feedForTextSearch(
       searchTerm: String!
       pageNumber: Int!
       batch: String!
+      waveUuid: String
     ): PhotoFeed
 
   getPhotoDetails(
@@ -232,11 +236,7 @@ getMessagesList(
     uuid: String # Optional filter
   ): WaveFeed
 
-  listWavePhotos(
-    waveUuid: String!
-    pageNumber: Int!
-    batch: String!
-  ): PhotoFeed
+
 }
 
 # ... ******************************************************

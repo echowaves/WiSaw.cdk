@@ -1,25 +1,46 @@
 import psql from '../../psql'
-import {plainToClass,} from 'class-transformer'
+import { plainToClass } from 'class-transformer'
 import Photo from '../../models/photo'
 
-export default async function main(
+export default async function main (
   searchTerm: string,
   pageNumber: number,
   batch: string,
-) {
-
+  waveUuid?: string
+): Promise<{
+    photos: Photo[]
+    batch: string
+    noMoreData: boolean
+  }> {
   const limit = 100
   const offset = pageNumber * limit
 
   await psql.connect()
   try {
-    const results =
-      (await psql.query(`
+    let query = `
           SELECT
             row_number() OVER (ORDER BY id desc) + ${offset} as row_number,
             p.*
           FROM "Photos" p
+    `
+
+    if (waveUuid !== undefined) {
+      query += `
+        JOIN "WavePhotos" wp ON p.id = wp."photoId"
+      `
+    }
+
+    query += `
           WHERE active = true
+    `
+
+    if (waveUuid !== undefined) {
+      query += `
+        AND wp."waveUuid" = '${waveUuid}'
+      `
+    }
+
+    query += `
             AND "id" in (
                 SELECT "photoId"
                 FROM "Recognitions"
@@ -34,7 +55,10 @@ export default async function main(
           ORDER BY id desc
           LIMIT ${limit}
           OFFSET ${offset}
-        `)
+    `
+
+    const results =
+      (await psql.query(query)
       ).rows
     await psql.clean()
 
@@ -42,23 +66,17 @@ export default async function main(
     // console.log({slicedRezults: results.slice(0, -2) })// remove 2 last elements
     const photos = results.map((photo: any) => plainToClass(Photo, photo))
 
-    let noMoreData = false
-
-    if( photos.length < limit ) {
-      noMoreData = true
-    }
-
     return {
       photos,
       batch,
-      noMoreData: true, // for now limitind to 1 batch
+      noMoreData: true // for now limitind to 1 batch
     }
-  } catch(err) {
+  } catch (err) {
     await psql.clean()
   }
   return {
-    photos: {},
+    photos: [],
     batch,
-    noMoreData: true,
+    noMoreData: true
   }
 }

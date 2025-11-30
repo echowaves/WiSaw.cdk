@@ -26,7 +26,6 @@ import deleteWave from './controllers/waves/delete'
 import listWaves from './controllers/waves/listWaves'
 import addPhotoToWave from './controllers/waves/addPhoto'
 import removePhotoFromWave from './controllers/waves/removePhoto'
-import listWavePhotos from './controllers/waves/listWavePhotos'
 
 // ******************************************************
 //                       mutations
@@ -123,19 +122,19 @@ const queryHandlers: Record<string, HandlerDefinition> = {
   },
   feedByDate: {
     resolver: feedByDate,
-    getArgs: (args) => [args.daysAgo, args.lat, args.lon, args.batch, args.whenToStop]
+    getArgs: (args) => [args.daysAgo, args.lat, args.lon, args.batch, args.whenToStop, args.waveUuid]
   },
   feedForWatcher: {
     resolver: feedForWatcher,
-    getArgs: (args) => [args.uuid, args.pageNumber, args.batch]
+    getArgs: (args) => [args.uuid, args.pageNumber, args.batch, args.waveUuid]
   },
   feedRecent: {
     resolver: feedRecent,
-    getArgs: (args) => [args.pageNumber, args.batch]
+    getArgs: (args) => [args.pageNumber, args.batch, args.waveUuid]
   },
   feedForTextSearch: {
     resolver: feedForTextSearch,
-    getArgs: (args) => [args.searchTerm, args.pageNumber, args.batch]
+    getArgs: (args) => [args.searchTerm, args.pageNumber, args.batch, args.waveUuid]
   },
   getPhotoDetails: {
     resolver: getPhotoDetails,
@@ -168,10 +167,6 @@ const queryHandlers: Record<string, HandlerDefinition> = {
   listWaves: {
     resolver: listWaves,
     getArgs: (args) => [args.pageNumber, args.batch, args.uuid]
-  },
-  listWavePhotos: {
-    resolver: listWavePhotos,
-    getArgs: (args) => [args.waveUuid, args.pageNumber, args.batch]
   }
 }
 

@@ -1,28 +1,54 @@
 import psql from '../../psql'
-import {plainToClass,} from 'class-transformer'
+import { plainToClass } from 'class-transformer'
 import Photo from '../../models/photo'
 
 // import AbuseReport from '../../models/abuseReport'
 
-export default async function main(
+export default async function main (
   pageNumber: number,
   batch: string,
-) {
+  waveUuid?: string
+): Promise<{
+    photos: Photo[]
+    batch: string
+    noMoreData: boolean
+  }> {
   const limit = 20
   const offset = pageNumber * limit
   // console.log({uuid})
   await psql.connect()
-  const results =
-  (await psql.query(`
-    SELECT      
-      *
-    FROM "Photos" 
+
+  let query = `
+    SELECT
+      "Photos".*
+    FROM "Photos"
+  `
+
+  if (waveUuid !== undefined) {
+    query += `
+      JOIN "WavePhotos" ON "Photos".id = "WavePhotos"."photoId"
+    `
+  }
+
+  query += `
     WHERE
       active = true
-    ORDER BY "updatedAt" DESC
+  `
+
+  if (waveUuid !== undefined) {
+    query += `
+      AND "WavePhotos"."waveUuid" = '${waveUuid}'
+    `
+  }
+
+  query += `
+    ORDER BY "Photos"."updatedAt" DESC
     LIMIT ${limit}
     OFFSET ${offset}
-    `)
+  `
+
+  const results =
+  (await psql.query(query)
   ).rows
   await psql.clean()
 
@@ -32,13 +58,13 @@ export default async function main(
 
   let noMoreData = false
 
-  if( photos.length < limit ) {
+  if (photos.length < limit) {
     noMoreData = true
   }
 
   return {
     photos,
     batch,
-    noMoreData,
+    noMoreData
   }
 }
