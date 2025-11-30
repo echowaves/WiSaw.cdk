@@ -6,14 +6,14 @@ import { validate as uuidValidate } from 'uuid'
 export default async function main (
   pageNumber: number,
   batch: string,
-  createdBy?: string
+  uuid?: string
 ): Promise<{
     waves: Wave[]
     batch: string
     noMoreData: boolean
   }> {
-  if (createdBy !== undefined && createdBy !== null && !uuidValidate(createdBy)) {
-    throw new Error('Wrong UUID format for createdBy')
+  if (uuid !== undefined && uuid !== null && !uuidValidate(uuid)) {
+    throw new Error('Wrong UUID format for uuid')
   }
 
   const limit = 20
@@ -22,17 +22,18 @@ export default async function main (
   await psql.connect()
 
   let query = `
-    SELECT * FROM "Waves"
+    SELECT DISTINCT "Waves".* FROM "Waves"
   `
   const params = []
 
-  if (createdBy !== undefined && createdBy !== null) {
-    query += ' WHERE "createdBy" = $1'
-    params.push(createdBy)
+  if (uuid !== undefined && uuid !== null) {
+    query += ' JOIN "WavePhotos" ON "Waves"."waveUuid" = "WavePhotos"."waveUuid"'
+    query += ' WHERE "WavePhotos"."createdBy" = $1'
+    params.push(uuid)
   }
 
   query += `
-    ORDER BY "updatedAt" DESC
+    ORDER BY "Waves"."updatedAt" DESC
     LIMIT ${limit}
     OFFSET ${offset}
   `

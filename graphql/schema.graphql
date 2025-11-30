@@ -229,7 +229,7 @@ getMessagesList(
   listWaves(
     pageNumber: Int!
     batch: String!
-    createdBy: String # Optional filter
+    uuid: String # Optional filter
   ): WaveFeed
 
   listWavePhotos(

@@ -167,7 +167,7 @@ const queryHandlers: Record<string, HandlerDefinition> = {
   },
   listWaves: {
     resolver: listWaves,
-    getArgs: (args) => [args.pageNumber, args.batch]
+    getArgs: (args) => [args.pageNumber, args.batch, args.uuid]
   },
   listWavePhotos: {
     resolver: listWavePhotos,
