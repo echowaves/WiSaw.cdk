@@ -84,6 +84,18 @@ const _cleanupTables = async ({ photoId }: { photoId: string }) => {
   }
   // console.log(`_cleanupTables ended 2: ${photoId}`)
 
+  try {
+    await psql.query(`
+        DELETE from "WavePhotos"
+                    WHERE
+                    "photoId" = '${photoId}'
+                    `)
+    //
+  } catch (err) {
+    console.error('Error cleaning up WavePhotos')
+    console.error({ err })
+  }
+
 
   
 
