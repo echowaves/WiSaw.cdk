@@ -36,6 +36,7 @@ export function createResolvers (scope: Construct, api: appsync.GraphqlApi, lamb
     { typeName: 'Mutation', fieldName: 'sendMessage' },
     { typeName: 'Mutation', fieldName: 'resetUnreadCount' },
     { typeName: 'Mutation', fieldName: 'createWave' },
+    { typeName: 'Mutation', fieldName: 'updateWave' },
     { typeName: 'Mutation', fieldName: 'deleteWave' },
     { typeName: 'Mutation', fieldName: 'addPhotoToWave' },
     { typeName: 'Mutation', fieldName: 'removePhotoFromWave' }

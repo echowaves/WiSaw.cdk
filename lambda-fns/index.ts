@@ -22,6 +22,7 @@ import getUnreadCountsList from './controllers/friendships/getUnreadCountsList'
 import getMessagesList from './controllers/messages/getMessagesList'
 
 import createWave from './controllers/waves/create'
+import updateWave from './controllers/waves/update'
 import deleteWave from './controllers/waves/delete'
 import listWaves from './controllers/waves/listWaves'
 import addPhotoToWave from './controllers/waves/addPhoto'
@@ -241,6 +242,10 @@ const mutationHandlers: Record<string, HandlerDefinition> = {
   createWave: {
     resolver: createWave,
     getArgs: (args) => [args.name, args.description, args.uuid]
+  },
+  updateWave: {
+    resolver: updateWave,
+    getArgs: (args) => [args.waveUuid, args.uuid, args.name, args.description]
   },
   deleteWave: {
     resolver: deleteWave,

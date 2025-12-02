@@ -50,9 +50,7 @@ module.exports = {
         references: {
           model: 'Waves',
           key: 'waveUuid'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        }
       },
       photoId: {
         type: Sequelize.UUID,
@@ -60,9 +58,7 @@ module.exports = {
         references: {
           model: 'Photos',
           key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        }
       },
       createdBy: {
         type: Sequelize.UUID,
@@ -100,9 +96,7 @@ module.exports = {
         references: {
           model: 'Waves',
           key: 'waveUuid'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        }
       },
       uuid: {
         type: Sequelize.UUID,

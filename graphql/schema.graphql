@@ -233,7 +233,7 @@ getMessagesList(
   listWaves(
     pageNumber: Int!
     batch: String!
-    uuid: String # Optional filter
+    uuid: String!
   ): WaveFeed
 
 
@@ -333,6 +333,13 @@ type Mutation {
     waveUuid: String!
     uuid: String!
   ): Boolean!
+
+  updateWave(
+    waveUuid: String!
+    uuid: String!
+    name: String!
+    description: String
+  ): Wave!
 
   addPhotoToWave(
     waveUuid: String!
