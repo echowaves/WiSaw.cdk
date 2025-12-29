@@ -37,12 +37,12 @@ export default async function main(
       )
       returning *
       `, [
-        photoId,
-        uuid,
-        description,
-        createdAt,
-        createdAt
-      ])
+      photoId,
+      uuid,
+      description,
+      createdAt,
+      createdAt
+    ])
   ).rows[0]
   await psql.clean()
 
@@ -50,11 +50,11 @@ export default async function main(
   // Run photo update operations sequentially to avoid race conditions
   // with the shared database connection and ensure updatedAt is properly set
   await _updateCommentsCount(photoId)
-  await _updateLastComment(photoId)
-  
+
   await Promise.all([
+    _updateLastComment(photoId),
     watch(photoId, uuid),
-    _notifyAllWatchers(photoId),
+    _notifyAllWatchers(photoId)
   ])
 
   return comment
