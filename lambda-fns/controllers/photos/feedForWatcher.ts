@@ -21,7 +21,7 @@ export default async function main (
 
   let query = `
     SELECT
-      row_number() OVER (ORDER BY w."watchedAt" DESC) + ${offset} as row_number,
+      row_number() OVER (ORDER BY p."updatedAt" DESC) + ${offset} as row_number,
       p.*
     FROM "Photos" p
     INNER JOIN "Watchers" w
@@ -47,7 +47,7 @@ export default async function main (
   }
 
   query += `
-    ORDER BY w."watchedAt" DESC
+    ORDER BY p."updatedAt" DESC
     LIMIT ${limit}
     OFFSET ${offset}
   `
