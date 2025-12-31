@@ -111,6 +111,14 @@ type WaveFeed {
   noMoreData: Boolean!
 }
 
+type PhotoLocation {
+  lat: Float!
+  lng: Float!
+  photoCount: Int!
+  oldestPhotoDate: AWSDateTime!
+  newestPhotoDate: AWSDateTime!
+}
+
 type Friendship {
   friendshipUuid: String!
   uuid1: String! 
@@ -235,6 +243,11 @@ getMessagesList(
     batch: String!
     uuid: String!
   ): WaveFeed
+
+  listPhotoLocations(
+    uuid: String!
+    radius: Int
+  ): [PhotoLocation]!
 
 
 }

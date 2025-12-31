@@ -19,6 +19,7 @@ export function createResolvers (scope: Construct, api: appsync.GraphqlApi, lamb
     { typeName: 'Query', fieldName: 'getMessagesList' },
     { typeName: 'Query', fieldName: 'listWaves' },
     { typeName: 'Query', fieldName: 'listWavePhotos' },
+    { typeName: 'Query', fieldName: 'listPhotoLocations' },
 
     { typeName: 'Mutation', fieldName: 'createContactForm' },
     { typeName: 'Mutation', fieldName: 'createAbuseReport' },

@@ -25,6 +25,7 @@ import createWave from './controllers/waves/create'
 import updateWave from './controllers/waves/update'
 import deleteWave from './controllers/waves/delete'
 import listWaves from './controllers/waves/listWaves'
+import listPhotoLocations from './controllers/waves/listPhotoLocations'
 import addPhotoToWave from './controllers/waves/addPhoto'
 import removePhotoFromWave from './controllers/waves/removePhoto'
 
@@ -100,6 +101,7 @@ interface AppSyncEvent {
     chatPhotoHashArg: string
     waveUuid: string
     name: string
+    radius: number
   }
 }
 
@@ -168,6 +170,10 @@ const queryHandlers: Record<string, HandlerDefinition> = {
   listWaves: {
     resolver: listWaves,
     getArgs: (args) => [args.pageNumber, args.batch, args.uuid]
+  },
+  listPhotoLocations: {
+    resolver: listPhotoLocations,
+    getArgs: (args) => [args.uuid, args.radius]
   }
 }
 
