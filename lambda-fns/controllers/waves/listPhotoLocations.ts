@@ -3,7 +3,7 @@ import { validate as uuidValidate } from 'uuid'
 
 interface PhotoLocation {
   lat: number
-  lng: number
+  lon: number
   photoCount: number
   oldestPhotoDate: string
   newestPhotoDate: string
@@ -43,7 +43,7 @@ export default async function main (
     )
     SELECT
       AVG(ST_Y(location)) AS lat,
-      AVG(ST_X(location)) AS lng,
+      AVG(ST_X(location)) AS lon,
       COUNT(*) AS "photoCount",
       MIN("createdAt") AS "oldestPhotoDate",
       MAX("createdAt") AS "newestPhotoDate"
@@ -57,7 +57,7 @@ export default async function main (
 
   const locations: PhotoLocation[] = results.map((row: any) => ({
     lat: parseFloat(row.lat),
-    lng: parseFloat(row.lng),
+    lon: parseFloat(row.lon),
     photoCount: parseInt(row.photoCount, 10),
     oldestPhotoDate: row.oldestPhotoDate,
     newestPhotoDate: row.newestPhotoDate

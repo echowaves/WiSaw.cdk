@@ -101,6 +101,8 @@ type Wave {
   name: String!
   description: String
   createdBy: String!
+  location: AWSJSON
+  radius: Int
   createdAt: AWSDateTime!
   updatedAt: AWSDateTime!
 }
@@ -113,7 +115,7 @@ type WaveFeed {
 
 type PhotoLocation {
   lat: Float!
-  lng: Float!
+  lon: Float!
   photoCount: Int!
   oldestPhotoDate: AWSDateTime!
   newestPhotoDate: AWSDateTime!
@@ -340,6 +342,9 @@ type Mutation {
     name: String!
     description: String!
     uuid: String! # createdBy
+    lat: Float
+    lon: Float
+    radius: Int
   ): Wave!
 
   deleteWave(
@@ -352,6 +357,9 @@ type Mutation {
     uuid: String!
     name: String!
     description: String
+    lat: Float
+    lon: Float
+    radius: Int
   ): Wave!
 
   addPhotoToWave(

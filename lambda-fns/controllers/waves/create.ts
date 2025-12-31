@@ -7,7 +7,10 @@ import { plainToClass } from 'class-transformer'
 export default async function main (
   name: string,
   description: string,
-  uuid: string
+  uuid: string,
+  lat?: number,
+  lon?: number,
+  radius?: number
 ): Promise<Wave> {
   if (!uuidValidate(uuid)) {
     throw new Error('Wrong UUID format for uuid')
@@ -21,13 +24,30 @@ export default async function main (
   const updatedAt = createdAt
 
   await psql.connect()
-  const result = await psql.query(`
-    INSERT INTO "Waves" (
-      "waveUuid", "name", "description", "createdBy", "createdAt", "updatedAt"
-    ) VALUES (
-      $1, $2, $3, $4, $5, $6
-    ) RETURNING *
-  `, [waveUuid, name, description, uuid, createdAt, updatedAt])
+
+  // Build query based on whether location is provided
+  const hasLocation = lat !== undefined && lon !== undefined
+  const query = hasLocation
+    ? `
+      INSERT INTO "Waves" (
+        "waveUuid", "name", "description", "createdBy", "location", "radius", "createdAt", "updatedAt"
+      ) VALUES (
+        $1, $2, $3, $4, ST_MakePoint($5, $6), $7, $8, $9
+      ) RETURNING *
+    `
+    : `
+      INSERT INTO "Waves" (
+        "waveUuid", "name", "description", "createdBy", "createdAt", "updatedAt"
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6
+      ) RETURNING *
+    `
+
+  const params = hasLocation
+    ? [waveUuid, name, description, uuid, lon, lat, radius ?? 50, createdAt, updatedAt]
+    : [waveUuid, name, description, uuid, createdAt, updatedAt]
+
+  const result = await psql.query(query, params)
 
   await psql.query(`
     INSERT INTO "WaveUsers" (
