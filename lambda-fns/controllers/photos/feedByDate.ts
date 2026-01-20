@@ -43,7 +43,7 @@ async function _retrievePhotos (currentDate: moment.Moment, daysAgo: number, lat
   }
 
   query += `
-    ORDER BY distance
+    ORDER BY "Photos"."createdAt" DESC
     LIMIT 1000
     OFFSET 0
   `
