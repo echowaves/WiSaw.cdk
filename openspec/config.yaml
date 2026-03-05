@@ -1,20 +1,11 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  Tech stack: TypeScript, AWS CDK, AWS AppSync (GraphQL), PostgreSQL + PostGIS, AWS Lambda, Node.js
+  Package manager: npm
+  Dependency versioning: ALL dependencies in package.json MUST use exact versions (no ^ or ~ prefixes).
+  When adding or updating any dependency, always pin to the exact version (e.g. "express": "4.18.2", not "^4.18.2").
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+rules:
+  tasks:
+    - When any task involves adding or updating npm dependencies, always use exact version numbers (no ^ or ~) in package.json.
