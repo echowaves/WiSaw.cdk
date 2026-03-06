@@ -31,6 +31,7 @@ export async function main(event: any = {}, context: any) {
 
 const command = new GetObjectCommand(input);
 const { Body } = await client.send(command);
+if (Body == null) throw new Error('S3 GetObject returned empty body for key: ' + String(name))
 
 const image = await Body.transformToByteArray();
 

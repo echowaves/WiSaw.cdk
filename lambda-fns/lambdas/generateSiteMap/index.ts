@@ -14,7 +14,7 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
   smStream.write({ url: "/terms" })
 
 
-  let videos, photos
+  let videos, photos: any[] | undefined
   
   await psql.connect()
 
@@ -39,7 +39,7 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
 
   await psql.clean()
 
-  console.log('photos.length:', photos.length)
+  console.log('photos.length:', photos?.length)
   // console.log('videos.length:', videos.length)
 
   photos?.forEach((photo: any) => {

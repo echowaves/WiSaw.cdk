@@ -1,4 +1,4 @@
-import type { QueryResult } from 'pg'
+import type { QueryResult, QueryResultRow } from 'pg'
 import ServerlessClient from 'serverless-postgres'
 const { env } = process
 
@@ -8,7 +8,7 @@ type ConnectionHealthStatus = 'unknown' | 'healthy' | 'unhealthy'
 
 interface ServerlessClientLike {
   connect: () => Promise<void>
-  query: (query: string, values?: readonly unknown[]) => Promise<QueryResult>
+  query: (query: string, values?: readonly unknown[]) => Promise<QueryResult<any>>
   clean: () => Promise<unknown>
   end: () => Promise<void>
   setConfig?: (config: ServerlessConfig) => void
@@ -95,7 +95,7 @@ class ManagedServerlessClient {
     await this.runHealthCheck(true)
   }
 
-  async query<T = unknown> (
+  async query<T extends QueryResultRow = any> (
     queryText: string,
     values?: readonly unknown[]
   ): Promise<QueryResult<T>> {
