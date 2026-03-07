@@ -9,6 +9,8 @@ context: |
 rules:
   tasks:
     - When any task involves adding or updating npm dependencies, always use exact version numbers (no ^ or ~) in package.json.
+  dependencies:
+    - Do not add any new dependencies to the project unless the user explicitly requests or approves it. Solve problems using existing dependencies and built-in APIs first.  
   security:
     - ".env* files must NEVER be committed to version control. They are listed in .gitignore and must stay there."
     - "Secrets, credentials, API keys, tokens, passwords, and any other sensitive values found in .env* files must NEVER be copied, referenced, or hardcoded into any versioned file (source code, config, documentation, specs, tasks, proposals, etc.)."
