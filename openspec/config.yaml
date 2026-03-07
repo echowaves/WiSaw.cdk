@@ -9,6 +9,10 @@ context: |
 rules:
   tasks:
     - When any task involves adding or updating npm dependencies, always use exact version numbers (no ^ or ~) in package.json.
+    - Always write code in a modular fashion, separating concerns into different files and components.
+    - Always include error handling and loading states for asynchronous operations (e.g., data fetching,
+    
+
   dependencies:
     - Do not add any new dependencies to the project unless the user explicitly requests or approves it. Solve problems using existing dependencies and built-in APIs first.  
   security:
