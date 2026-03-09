@@ -59,14 +59,14 @@ Key existing infrastructure:
 **Rationale**: The existing schema supports the feature fully. The `WavePhotos` junction table with `ON CONFLICT DO NOTHING` makes inserts idempotent.
 
 ### 7. Lambda timeout and memory allocation
-**Decision**: Set timeout to 120 seconds and memory to 512MB. A user with 10,000 photos would produce a manageable number of clusters, and the heaviest operations are the initial SQL query and sequential Nominatim calls.
-**Rationale**: The SQL clustering is O(n log n) in PostGIS. Reverse geocoding is sequential at 1/sec but bounded by the number of clusters (typically 10–100, not 10,000). 512MB is sufficient for JSON manipulation in Node.js.
+**Decision**: Set timeout to 300 seconds and memory to 512MB. A user with 10,000 photos would produce a manageable number of clusters, and the heaviest operations are the initial SQL query and sequential Nominatim calls.
+**Rationale**: The SQL clustering is O(n log n) in PostGIS. Reverse geocoding is sequential at 1/sec but bounded by the number of clusters (typically 10–200). 300s provides headroom for power users with many distinct clusters. 512MB is sufficient for JSON manipulation in Node.js.
 
 ## Risks / Trade-offs
 
 - **[Nominatim rate limiting]** → Mitigated by processing clusters sequentially with 1-second delays between geocoding calls. Cluster count is small (not per-photo).
 - **[Nominatim unavailability]** → Mitigated by falling back to coordinate-based names (e.g., "40.7°N 74.0°W, Jun 2024") if geocoding fails.
-- **[Very large photo sets]** → Mitigated by 120s Lambda timeout. If a user has 100k+ photos, the SQL query might be slow. Could add pagination in a future iteration, but this is an edge case for the current user base.
+- **[Very large photo sets]** → Mitigated by 300s Lambda timeout. If a user has 100k+ photos, the SQL query might be slow. Could add pagination in a future iteration, but this is an edge case for the current user base.
 - **[Duplicate wave names]** → If a user runs auto-group, takes more photos at the same place, and runs again, a second wave with a similar name could be created. Acceptable since waves have UUIDs and users can rename/delete.
 - **[Nominatim usage policy]** → Nominatim requires a User-Agent header and has a usage policy. Mitigated by setting a descriptive User-Agent and keeping request volume low (batch, not real-time).
 

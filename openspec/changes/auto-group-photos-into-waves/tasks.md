@@ -21,4 +21,4 @@
 
 ## 4. CDK Lambda Configuration
 
-- [ ] 4.1 Configure the main AppSync Lambda with adequate timeout (120s) for auto-grouping, or verify the current timeout is sufficient
+- [ ] 4.1 Configure the main AppSync Lambda with adequate timeout (300s) for auto-grouping, or verify the current timeout is sufficient
