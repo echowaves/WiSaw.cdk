@@ -10,6 +10,7 @@ rules:
   tasks:
     - When any task involves adding or updating npm dependencies, always use exact version numbers (no ^ or ~) in package.json.
     - Always write code in a modular fashion, separating concerns into different files and components.
+    - Lambda controller file names must match the corresponding GraphQL field name declared in schema.graphql (e.g., the mutation "autoGroupPhotosIntoWaves" must be implemented in a file named "autoGroupPhotosIntoWaves.ts").
     - Always include error handling and loading states for asynchronous operations (e.g., data fetching,
     
 

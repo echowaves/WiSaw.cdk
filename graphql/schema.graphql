@@ -121,6 +121,11 @@ type PhotoLocation {
   newestPhotoDate: AWSDateTime!
 }
 
+type AutoGroupResult {
+  wavesCreated: Int!
+  photosGrouped: Int!
+}
+
 type Friendship {
   friendshipUuid: String!
   uuid1: String! 
@@ -372,6 +377,10 @@ type Mutation {
     waveUuid: String!
     photoId: String!
   ): Boolean!
+
+  autoGroupPhotosIntoWaves(
+    uuid: String!
+  ): AutoGroupResult!
 }
 
   # helloWorld(helloMessage: String!): String!

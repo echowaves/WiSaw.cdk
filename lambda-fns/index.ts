@@ -28,6 +28,7 @@ import listWaves from './controllers/waves/listWaves'
 import listPhotoLocations from './controllers/waves/listPhotoLocations'
 import addPhotoToWave from './controllers/waves/addPhoto'
 import removePhotoFromWave from './controllers/waves/removePhoto'
+import autoGroupPhotosIntoWaves from './controllers/waves/autoGroupPhotosIntoWaves'
 
 // ******************************************************
 //                       mutations
@@ -264,6 +265,10 @@ const mutationHandlers: Record<string, HandlerDefinition> = {
   removePhotoFromWave: {
     resolver: removePhotoFromWave,
     getArgs: (args) => [args.waveUuid, args.photoId]
+  },
+  autoGroupPhotosIntoWaves: {
+    resolver: autoGroupPhotosIntoWaves,
+    getArgs: (args) => [args.uuid]
   }
 }
 

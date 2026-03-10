@@ -40,7 +40,8 @@ export function createResolvers (scope: Construct, api: appsync.GraphqlApi, lamb
     { typeName: 'Mutation', fieldName: 'updateWave' },
     { typeName: 'Mutation', fieldName: 'deleteWave' },
     { typeName: 'Mutation', fieldName: 'addPhotoToWave' },
-    { typeName: 'Mutation', fieldName: 'removePhotoFromWave' }
+    { typeName: 'Mutation', fieldName: 'removePhotoFromWave' },
+    { typeName: 'Mutation', fieldName: 'autoGroupPhotosIntoWaves' }
   ]
   fields.forEach(({ typeName, fieldName }) =>
     lambdaDs.createResolver(`${typeName}-${fieldName}-Resolver`, {
