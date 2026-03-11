@@ -122,6 +122,8 @@ type PhotoLocation {
 }
 
 type AutoGroupResult {
+  waveUuid: String
+  name: String
   photosGrouped: Int!
   photosRemaining: Int!
   hasMore: Boolean!

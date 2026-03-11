@@ -4,6 +4,8 @@ import moment from 'moment'
 import psql from '../../psql'
 
 interface AutoGroupResult {
+  waveUuid: string | null
+  name: string | null
   photosGrouped: number
   photosRemaining: number
   hasMore: boolean
@@ -163,7 +165,7 @@ export default async function main (uuid: string): Promise<AutoGroupResult> {
 
   if (photos.length === 0) {
     await psql.clean()
-    return { photosGrouped: 0, photosRemaining: 0, hasMore: false }
+    return { waveUuid: null, name: null, photosGrouped: 0, photosRemaining: 0, hasMore: false }
   }
 
   // Group by spatial cluster_id
@@ -245,6 +247,8 @@ export default async function main (uuid: string): Promise<AutoGroupResult> {
   await psql.clean()
 
   return {
+    waveUuid,
+    name: waveName,
     photosGrouped: cluster.photos.length,
     photosRemaining,
     hasMore: photosRemaining > 0
