@@ -140,10 +140,10 @@ export default async function main (uuid: string): Promise<AutoGroupResult> {
     WITH photo_clusters AS (
       SELECT
         "Photos".id,
-        ST_Y("Photos".location) AS lat,
-        ST_X("Photos".location) AS lon,
+        ST_Y("Photos".location::geometry) AS lat,
+        ST_X("Photos".location::geometry) AS lon,
         "Photos"."createdAt",
-        ST_ClusterDBSCAN("Photos".location, eps := $2, minpoints := 1) OVER () AS cluster_id
+        ST_ClusterDBSCAN("Photos".location::geometry, eps := $2, minpoints := 1) OVER () AS cluster_id
       FROM "Photos"
       LEFT JOIN "WavePhotos" ON "Photos".id = "WavePhotos"."photoId"
       WHERE "Photos".uuid = $1

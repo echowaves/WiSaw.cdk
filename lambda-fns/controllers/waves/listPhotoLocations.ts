@@ -34,7 +34,7 @@ export default async function main (
         "Photos".id,
         "Photos".location,
         "Photos"."createdAt",
-        ST_ClusterDBSCAN(location, eps := $2, minpoints := 1) OVER () AS cluster_id
+        ST_ClusterDBSCAN(location::geometry, eps := $2, minpoints := 1) OVER () AS cluster_id
       FROM "Photos"
       LEFT JOIN "WavePhotos" ON "Photos".id = "WavePhotos"."photoId"
       WHERE "Photos".uuid = $1
@@ -42,8 +42,8 @@ export default async function main (
         AND "WavePhotos"."photoId" IS NULL
     )
     SELECT
-      AVG(ST_Y(location)) AS lat,
-      AVG(ST_X(location)) AS lon,
+      AVG(ST_Y(location::geometry)) AS lat,
+      AVG(ST_X(location::geometry)) AS lon,
       COUNT(*) AS "photoCount",
       MIN("createdAt") AS "oldestPhotoDate",
       MAX("createdAt") AS "newestPhotoDate"
