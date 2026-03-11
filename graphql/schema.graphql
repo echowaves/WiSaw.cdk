@@ -122,8 +122,9 @@ type PhotoLocation {
 }
 
 type AutoGroupResult {
-  wavesCreated: Int!
   photosGrouped: Int!
+  photosRemaining: Int!
+  hasMore: Boolean!
 }
 
 type Friendship {

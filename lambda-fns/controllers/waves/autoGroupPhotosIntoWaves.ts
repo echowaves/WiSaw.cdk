@@ -4,8 +4,9 @@ import moment from 'moment'
 import psql from '../../psql'
 
 interface AutoGroupResult {
-  wavesCreated: number
   photosGrouped: number
+  photosRemaining: number
+  hasMore: boolean
 }
 
 interface ClusteredPhoto {
@@ -26,11 +27,6 @@ interface TemporalCluster {
 
 const SPATIAL_EPSILON = 50 * 0.009 // ~50km in degrees
 const TEMPORAL_GAP_DAYS = 30
-const NOMINATIM_DELAY_MS = 1000
-
-async function sleep (ms: number): Promise<void> {
-  await new Promise(resolve => setTimeout(resolve, ms))
-}
 
 async function reverseGeocode (lat: number, lon: number): Promise<string | null> {
   return await new Promise((resolve) => {
@@ -167,7 +163,7 @@ export default async function main (uuid: string): Promise<AutoGroupResult> {
 
   if (photos.length === 0) {
     await psql.clean()
-    return { wavesCreated: 0, photosGrouped: 0 }
+    return { photosGrouped: 0, photosRemaining: 0, hasMore: false }
   }
 
   // Group by spatial cluster_id
@@ -187,67 +183,70 @@ export default async function main (uuid: string): Promise<AutoGroupResult> {
     allTemporalClusters.push(...splitByTemporalGaps(clusterPhotos))
   }
 
-  // Geocode and create waves
-  let wavesCreated = 0
-  let photosGrouped = 0
-  const geocodeCache = new Map<string, string | null>()
+  // Sort by earliest date ascending and process only the first (oldest) cluster
+  allTemporalClusters.sort(
+    (a, b) => new Date(a.earliestDate).getTime() - new Date(b.earliestDate).getTime()
+  )
+  const cluster = allTemporalClusters[0]
 
-  for (const cluster of allTemporalClusters) {
-    // Geocode the centroid (with caching for nearby locations)
-    const cacheKey = `${cluster.centroidLat.toFixed(1)},${cluster.centroidLon.toFixed(1)}`
-    let locationName: string | null
+  // Geocode the centroid
+  const locationName = await reverseGeocode(cluster.centroidLat, cluster.centroidLon)
 
-    if (geocodeCache.has(cacheKey)) {
-      locationName = geocodeCache.get(cacheKey) ?? null
-    } else {
-      locationName = await reverseGeocode(cluster.centroidLat, cluster.centroidLon)
-      geocodeCache.set(cacheKey, locationName)
-      await sleep(NOMINATIM_DELAY_MS)
-    }
+  // Build wave name
+  const earliest = moment(cluster.earliestDate)
+  const latest = moment(cluster.latestDate)
+  const dateRange = formatDateRange(earliest, latest)
+  const location = locationName ?? formatCoordinateName(cluster.centroidLat, cluster.centroidLon)
+  const waveName = `${location}, ${dateRange}`
 
-    // Build wave name
-    const earliest = moment(cluster.earliestDate)
-    const latest = moment(cluster.latestDate)
-    const dateRange = formatDateRange(earliest, latest)
-    const location = locationName ?? formatCoordinateName(cluster.centroidLat, cluster.centroidLon)
-    const waveName = `${location}, ${dateRange}`
+  // Create wave
+  const waveUuid = uuidv4()
+  const now = moment().format('YYYY-MM-DD HH:mm:ss.SSS')
 
-    // Create wave
-    const waveUuid = uuidv4()
-    const now = moment().format('YYYY-MM-DD HH:mm:ss.SSS')
+  await psql.query(`
+    INSERT INTO "Waves" (
+      "waveUuid", "name", "description", "createdBy",
+      "location", "radius", "createdAt", "updatedAt"
+    ) VALUES (
+      $1, $2, $3, $4,
+      ST_MakePoint($5, $6), $7, $8, $9
+    )
+  `, [waveUuid, waveName, '', uuid, cluster.centroidLon, cluster.centroidLat, 50, now, now])
 
+  // Add user to wave
+  await psql.query(`
+    INSERT INTO "WaveUsers" (
+      "waveUuid", "uuid", "createdAt", "updatedAt"
+    ) VALUES ($1, $2, $3, $4)
+  `, [waveUuid, uuid, now, now])
+
+  // Associate all photos with the wave
+  for (const photo of cluster.photos) {
     await psql.query(`
-      INSERT INTO "Waves" (
-        "waveUuid", "name", "description", "createdBy",
-        "location", "radius", "createdAt", "updatedAt"
-      ) VALUES (
-        $1, $2, $3, $4,
-        ST_MakePoint($5, $6), $7, $8, $9
-      )
-    `, [waveUuid, waveName, '', uuid, cluster.centroidLon, cluster.centroidLat, 50, now, now])
-
-    // Add user to wave
-    await psql.query(`
-      INSERT INTO "WaveUsers" (
-        "waveUuid", "uuid", "createdAt", "updatedAt"
-      ) VALUES ($1, $2, $3, $4)
-    `, [waveUuid, uuid, now, now])
-
-    // Associate all photos with the wave
-    for (const photo of cluster.photos) {
-      await psql.query(`
-        INSERT INTO "WavePhotos" (
-          "waveUuid", "photoId", "createdBy", "createdAt", "updatedAt"
-        ) VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT ("waveUuid", "photoId") DO NOTHING
-      `, [waveUuid, photo.id, uuid, now, now])
-    }
-
-    wavesCreated++
-    photosGrouped += cluster.photos.length
+      INSERT INTO "WavePhotos" (
+        "waveUuid", "photoId", "createdBy", "createdAt", "updatedAt"
+      ) VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT ("waveUuid", "photoId") DO NOTHING
+    `, [waveUuid, photo.id, uuid, now, now])
   }
+
+  // Count remaining ungrouped photos
+  const remainingResult = await psql.query(`
+    SELECT COUNT(*)::int AS count
+    FROM "Photos"
+    LEFT JOIN "WavePhotos" ON "Photos".id = "WavePhotos"."photoId"
+    WHERE "Photos".uuid = $1
+      AND "Photos".active = true
+      AND "WavePhotos"."photoId" IS NULL
+      AND "Photos".location IS NOT NULL
+  `, [uuid])
+  const photosRemaining: number = remainingResult.rows[0].count
 
   await psql.clean()
 
-  return { wavesCreated, photosGrouped }
+  return {
+    photosGrouped: cluster.photos.length,
+    photosRemaining,
+    hasMore: photosRemaining > 0
+  }
 }
