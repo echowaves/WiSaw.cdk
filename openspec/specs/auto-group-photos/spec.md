@@ -35,18 +35,46 @@ The system SHALL only process active photos that are NOT already associated with
 
 #### Scenario: Idempotent re-invocation
 - **WHEN** `autoGroupPhotosIntoWaves(uuid)` is invoked a second time after a previous successful run with no new photos
-- **THEN** no new waves SHALL be created and the result SHALL indicate zero waves created
+- **THEN** no new waves SHALL be created and the result SHALL indicate zero photos grouped
 
 ### Requirement: Auto-group creates a wave for each cluster
-The system SHALL create one Wave record per final cluster (after spatial + temporal sub-clustering). The Wave SHALL be owned by the requesting user (`createdBy = uuid`), SHALL have its location set to the centroid of the cluster's photos, and SHALL have the user auto-added to `WaveUsers`.
+The system SHALL create **at most one** Wave record per invocation of `autoGroupPhotosIntoWaves(uuid)`. It SHALL run the full clustering pipeline (spatial DBSCAN + temporal gap splitting), sort the resulting temporal clusters by `earliestDate` ascending, and create a Wave for only the **first** (oldest) cluster. The Wave SHALL be owned by the requesting user (`createdBy = uuid`), SHALL have its location set to the centroid of the cluster's photos, and SHALL have the user auto-added to `WaveUsers`. The mutation result SHALL include the created wave's `waveUuid` and `name`. When no ungrouped photos exist, `waveUuid` and `name` SHALL be null. After creating the wave, the system SHALL count remaining ungrouped photos and return `hasMore` and `photosRemaining` so the client can call again.
 
-#### Scenario: Wave created for a cluster
-- **WHEN** a cluster of 15 photos near Brooklyn, NY is identified
-- **THEN** a Wave SHALL be created with `createdBy` set to the user's UUID, `location` set to the centroid via `ST_MakePoint`, and a `WaveUsers` record inserted for the user
+#### Scenario: One wave created per invocation
+- **WHEN** `autoGroupPhotosIntoWaves(uuid)` is invoked and clustering produces 5 temporal clusters
+- **THEN** exactly one Wave SHALL be created for the cluster with the oldest `earliestDate`
+
+#### Scenario: Wave created for oldest cluster
+- **WHEN** clusters exist from 2023, 2024, and 2025
+- **THEN** the 2023 cluster SHALL be processed first
 
 #### Scenario: All cluster photos associated with the wave
 - **WHEN** a Wave is created for a cluster
 - **THEN** a `WavePhotos` record SHALL be inserted for every photo in that cluster
+
+#### Scenario: Result includes wave identity
+- **WHEN** `autoGroupPhotosIntoWaves` creates a wave
+- **THEN** the result SHALL include `waveUuid` (the UUID of the created wave) and `name` (the generated wave name)
+
+#### Scenario: No wave created returns null identity
+- **WHEN** `autoGroupPhotosIntoWaves` is called and the user has no ungrouped photos with locations
+- **THEN** the result SHALL have `waveUuid: null` and `name: null`
+
+#### Scenario: Result indicates more photos remain
+- **WHEN** a wave is created and ungrouped photos still exist
+- **THEN** the result SHALL have `hasMore: true` and `photosRemaining` set to the count of remaining ungrouped photos
+
+#### Scenario: Result indicates completion
+- **WHEN** a wave is created and no ungrouped photos remain afterward
+- **THEN** the result SHALL have `hasMore: false` and `photosRemaining: 0`
+
+#### Scenario: No ungrouped photos exist
+- **WHEN** `autoGroupPhotosIntoWaves(uuid)` is invoked and no ungrouped photos exist
+- **THEN** the result SHALL have `photosGrouped: 0`, `hasMore: false`, and `photosRemaining: 0`
+
+#### Scenario: Idempotent re-invocation
+- **WHEN** `autoGroupPhotosIntoWaves(uuid)` is invoked a second time after all photos have been grouped with no new photos
+- **THEN** no new waves SHALL be created and the result SHALL indicate zero photos grouped with `hasMore: false`
 
 ### Requirement: Auto-group names waves using reverse geocoding and date range
 The system SHALL name each auto-created wave using the pattern `"<Location>, <DateRange>"` where Location is the city or area name from reverse geocoding the cluster centroid, and DateRange reflects the timespan of photos in the cluster.
@@ -83,12 +111,23 @@ The system SHALL use the OpenStreetMap Nominatim API (`https://nominatim.openstr
 - **THEN** the system SHALL wait at least 1 second between consecutive Nominatim API calls
 
 ### Requirement: Auto-group returns a summary result
-The mutation SHALL return an object indicating how many waves were created and how many photos were grouped.
+The mutation SHALL return an `AutoGroupResult` object including `photosGrouped: Int!` (photos grouped in this invocation), `photosRemaining: Int!` (ungrouped photos remaining), `hasMore: Boolean!` (whether the client should call again), `waveUuid: String` (UUID of created wave, null if none), and `name: String` (name of created wave, null if none).
 
 #### Scenario: Successful grouping result
-- **WHEN** `autoGroupPhotosIntoWaves(uuid)` creates 5 waves covering 87 photos
-- **THEN** the result SHALL contain `{ wavesCreated: 5, photosGrouped: 87 }`
+- **WHEN** `autoGroupPhotosIntoWaves(uuid)` creates a wave covering 15 photos with 50 remaining
+- **THEN** the result SHALL contain `{ photosGrouped: 15, photosRemaining: 50, hasMore: true, waveUuid: "<uuid>", name: "<name>" }`
 
 #### Scenario: No ungrouped photos
 - **WHEN** `autoGroupPhotosIntoWaves(uuid)` is invoked but the user has no ungrouped photos
-- **THEN** the result SHALL contain `{ wavesCreated: 0, photosGrouped: 0 }`
+- **THEN** the result SHALL contain `{ photosGrouped: 0, photosRemaining: 0, hasMore: false, waveUuid: null, name: null }`
+
+### Requirement: AutoGroupResult includes continuation fields
+The `AutoGroupResult` GraphQL type SHALL include `photosRemaining: Int!` (count of ungrouped photos after this invocation) and `hasMore: Boolean!` (whether the client should call again).
+
+#### Scenario: GraphQL type shape
+- **WHEN** the client queries `autoGroupPhotosIntoWaves`
+- **THEN** the response SHALL include `photosGrouped`, `photosRemaining`, `hasMore`, `waveUuid`, and `name`
+
+#### Scenario: Client loops until done
+- **WHEN** the client calls `autoGroupPhotosIntoWaves` and receives `hasMore: true`
+- **THEN** the client SHALL call again to process the next cluster
