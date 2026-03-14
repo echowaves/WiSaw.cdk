@@ -32,8 +32,10 @@ async function reverseGeocode (lat: number, lon: number): Promise<string | null>
     })
     const response = await geoClient.send(command)
     const item = response.ResultItems?.[0]
-    if (item?.Title != null && item.Title.length > 0) {
-      return item.Title
+    if (item?.Address != null) {
+      const addr = item.Address
+      const name = addr.Locality ?? addr.District ?? addr.SubRegion?.Name ?? addr.Region?.Name ?? addr.Country?.Name ?? null
+      return name
     }
     return null
   } catch {
@@ -195,7 +197,7 @@ export default async function main (uuid: string): Promise<AutoGroupResult> {
   const anchorLat = anchor.lat
   const anchorLon = anchor.lon
 
-  // Walk forward from the beginning, collecting photos within 50km of anchor or locationless
+  // Walk forward, collecting photos within 100km of anchor or locationless; skip outliers
   const collected: Photo[] = []
   for (const photo of photos) {
     if (photo.lat == null || photo.lon == null) {
@@ -205,10 +207,8 @@ export default async function main (uuid: string): Promise<AutoGroupResult> {
       const distance = haversineDistance(anchorLat, anchorLon, photo.lat, photo.lon)
       if (distance <= DISTANCE_THRESHOLD_KM) {
         collected.push(photo)
-      } else {
-        // Location break — stop
-        break
       }
+      // Out-of-range photos are skipped, left ungrouped for future processing
     }
   }
 
