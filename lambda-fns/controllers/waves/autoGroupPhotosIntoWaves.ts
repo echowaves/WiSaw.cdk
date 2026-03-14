@@ -9,27 +9,17 @@ interface AutoGroupResult {
   photosGrouped: number
   photosRemaining: number
   hasMore: boolean
-  isNewWave: boolean
 }
 
-interface ClusteredPhoto {
+interface Photo {
   id: string
-  lat: number
-  lon: number
+  lat: number | null
+  lon: number | null
   createdAt: string
-  cluster_id: number
 }
 
-interface TemporalCluster {
-  photos: ClusteredPhoto[]
-  centroidLat: number
-  centroidLon: number
-  earliestDate: string
-  latestDate: string
-}
-
-const SPATIAL_EPSILON = 50 * 0.009 // ~50km in degrees
-const TEMPORAL_GAP_DAYS = 30
+const DISTANCE_THRESHOLD_KM = 50
+const MAX_PHOTOS_PER_WAVE = 1000
 
 async function reverseGeocode (lat: number, lon: number): Promise<string | null> {
   return await new Promise((resolve) => {
@@ -80,113 +70,16 @@ function formatDateRange (earliest: moment.Moment, latest: moment.Moment): strin
   return `${earliest.format('MMM YYYY')} – ${latest.format('MMM YYYY')}`
 }
 
-function splitByTemporalGaps<T extends { createdAt: string }> (photos: T[]): T[][] {
-  if (photos.length === 0) return []
-
-  const sorted = [...photos].sort(
-    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-  )
-
-  const groups: T[][] = []
-  let current: T[] = [sorted[0]]
-
-  for (let i = 1; i < sorted.length; i++) {
-    const prev = new Date(sorted[i - 1].createdAt).getTime()
-    const curr = new Date(sorted[i].createdAt).getTime()
-    const gapDays = (curr - prev) / (1000 * 60 * 60 * 24)
-
-    if (gapDays > TEMPORAL_GAP_DAYS) {
-      groups.push(current)
-      current = [sorted[i]]
-    } else {
-      current.push(sorted[i])
-    }
-  }
-  groups.push(current)
-
-  return groups
-}
-
-function buildTemporalCluster (photos: ClusteredPhoto[]): TemporalCluster {
-  const latSum = photos.reduce((s, p) => s + p.lat, 0)
-  const lonSum = photos.reduce((s, p) => s + p.lon, 0)
-  const dates = photos.map(p => new Date(p.createdAt).getTime())
-
-  return {
-    photos,
-    centroidLat: latSum / photos.length,
-    centroidLon: lonSum / photos.length,
-    earliestDate: new Date(Math.min(...dates)).toISOString(),
-    latestDate: new Date(Math.max(...dates)).toISOString()
-  }
-}
-
-async function countRemainingUngrouped (uuid: string): Promise<number> {
-  const result = await psql.query(`
-    SELECT COUNT(*)::int AS count
-    FROM "Photos"
-    LEFT JOIN "WavePhotos" ON "Photos".id = "WavePhotos"."photoId"
-    WHERE "Photos".uuid = $1
-      AND "Photos".active = true
-      AND "WavePhotos"."photoId" IS NULL
-  `, [uuid])
-  return result.rows[0].count
-}
-
-async function assignPhotosToNearestWave (uuid: string, photoIds: string[]): Promise<number> {
-  const wavesResult = await psql.query(`
-    SELECT w."waveUuid", MIN(p."createdAt") AS "earliestDate", MAX(p."createdAt") AS "latestDate"
-    FROM "Waves" w
-    INNER JOIN "WaveUsers" wu ON w."waveUuid" = wu."waveUuid"
-    LEFT JOIN "WavePhotos" wp ON w."waveUuid" = wp."waveUuid"
-    LEFT JOIN "Photos" p ON wp."photoId" = p.id
-    WHERE wu."uuid" = $1
-    GROUP BY w."waveUuid"
-  `, [uuid])
-
-  if (wavesResult.rows.length === 0) {
-    return 0
-  }
-
-  const waves = wavesResult.rows.map((row: any) => {
-    const earliest = new Date(row.earliestDate).getTime()
-    const latest = new Date(row.latestDate).getTime()
-    return {
-      waveUuid: row.waveUuid as string,
-      midpoint: (earliest + latest) / 2
-    }
-  })
-
-  const photosResult = await psql.query(`
-    SELECT id, "createdAt" FROM "Photos" WHERE id = ANY($1)
-  `, [photoIds])
-
-  const now = moment().format('YYYY-MM-DD HH:mm:ss.SSS')
-  let assigned = 0
-
-  for (const photo of photosResult.rows) {
-    const photoTime = new Date(photo.createdAt).getTime()
-    let nearestWaveUuid = waves[0].waveUuid
-    let nearestDistance = Math.abs(photoTime - waves[0].midpoint)
-
-    for (let i = 1; i < waves.length; i++) {
-      const distance = Math.abs(photoTime - waves[i].midpoint)
-      if (distance < nearestDistance) {
-        nearestDistance = distance
-        nearestWaveUuid = waves[i].waveUuid
-      }
-    }
-
-    await psql.query(`
-      INSERT INTO "WavePhotos" (
-        "waveUuid", "photoId", "createdBy", "createdAt", "updatedAt"
-      ) VALUES ($1, $2, $3, $4, $5)
-      ON CONFLICT ("waveUuid", "photoId") DO NOTHING
-    `, [nearestWaveUuid, photo.id, uuid, now, now])
-    assigned++
-  }
-
-  return assigned
+function haversineDistance (lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371
+  const toRad = (deg: number): number => deg * Math.PI / 180
+  const dLat = toRad(lat2 - lat1)
+  const dLon = toRad(lon2 - lon1)
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c
 }
 
 async function createWaveAndAssign (
@@ -243,197 +136,120 @@ export default async function main (uuid: string): Promise<AutoGroupResult> {
 
   await psql.connect()
 
-  // Spatial clustering of ungrouped photos (only those with location)
-  const clusterQuery = `
-    WITH photo_clusters AS (
-      SELECT
-        "Photos".id,
-        ST_Y("Photos".location::geometry) AS lat,
-        ST_X("Photos".location::geometry) AS lon,
-        "Photos"."createdAt",
-        ST_ClusterDBSCAN("Photos".location::geometry, eps := $2, minpoints := 1) OVER () AS cluster_id
-      FROM "Photos"
-      LEFT JOIN "WavePhotos" ON "Photos".id = "WavePhotos"."photoId"
-      WHERE "Photos".uuid = $1
-        AND "Photos".active = true
-        AND "WavePhotos"."photoId" IS NULL
-        AND "Photos".location IS NOT NULL
-    )
-    SELECT id, lat, lon, "createdAt", cluster_id
-    FROM photo_clusters
-    ORDER BY cluster_id, "createdAt"
-  `
-
-  const clusterResult = await psql.query(clusterQuery, [uuid, SPATIAL_EPSILON])
-  const photos: ClusteredPhoto[] = clusterResult.rows.map((row: any) => ({
-    id: row.id,
-    lat: parseFloat(row.lat),
-    lon: parseFloat(row.lon),
-    createdAt: row.createdAt,
-    cluster_id: parseInt(row.cluster_id, 10)
-  }))
-
-  // If located photos found, process them
-  if (photos.length > 0) {
-    // Group by spatial cluster_id
-    const spatialClusters = new Map<number, ClusteredPhoto[]>()
-    for (const photo of photos) {
-      const existing = spatialClusters.get(photo.cluster_id)
-      if (existing != null) {
-        existing.push(photo)
-      } else {
-        spatialClusters.set(photo.cluster_id, [photo])
-      }
-    }
-
-    // For each spatial cluster, split by temporal gaps
-    const allTemporalClusters: TemporalCluster[] = []
-    for (const clusterPhotos of spatialClusters.values()) {
-      const temporalGroups = splitByTemporalGaps(clusterPhotos)
-      for (const group of temporalGroups) {
-        allTemporalClusters.push(buildTemporalCluster(group))
-      }
-    }
-
-    // Sort by earliest date ascending and process only the oldest cluster
-    allTemporalClusters.sort(
-      (a, b) => new Date(a.earliestDate).getTime() - new Date(b.earliestDate).getTime()
-    )
-    const cluster = allTemporalClusters[0]
-
-    // Geocode the oldest cluster (one HTTP call max per invocation)
-    const locationName = await reverseGeocode(cluster.centroidLat, cluster.centroidLon)
-
-    if (locationName != null) {
-      // Geocoding succeeded — create a named wave
-      const earliest = moment(cluster.earliestDate)
-      const latest = moment(cluster.latestDate)
-      const dateRange = formatDateRange(earliest, latest)
-      const waveName = `${locationName}, ${dateRange}`
-
-      const photoIds = cluster.photos.map(p => p.id)
-      const waveUuid = await createWaveAndAssign(
-        waveName, uuid, photoIds,
-        cluster.centroidLon, cluster.centroidLat
-      )
-
-      const photosRemaining = await countRemainingUngrouped(uuid)
-      await psql.clean()
-
-      return {
-        waveUuid,
-        name: waveName,
-        photosGrouped: cluster.photos.length,
-        photosRemaining,
-        hasMore: photosRemaining > 0,
-        isNewWave: true
-      }
-    }
-
-    // Geocoding failed — try to absorb into an existing wave
-    const photoIds = cluster.photos.map(p => p.id)
-    const assigned = await assignPhotosToNearestWave(uuid, photoIds)
-
-    if (assigned > 0) {
-      const photosRemaining = await countRemainingUngrouped(uuid)
-      await psql.clean()
-
-      return {
-        waveUuid: null,
-        name: null,
-        photosGrouped: assigned,
-        photosRemaining,
-        hasMore: photosRemaining > 0,
-        isNewWave: false
-      }
-    }
-
-    // No existing waves — create "Uncategorized" catch-all as last resort
-    const earliest = moment(cluster.earliestDate)
-    const latest = moment(cluster.latestDate)
-    const dateRange = formatDateRange(earliest, latest)
-    const waveName = `Uncategorized, ${dateRange}`
-
-    const waveUuid = await createWaveAndAssign(waveName, uuid, photoIds, null, null)
-
-    const photosRemaining = await countRemainingUngrouped(uuid)
-    await psql.clean()
-
-    return {
-      waveUuid,
-      name: waveName,
-      photosGrouped: cluster.photos.length,
-      photosRemaining,
-      hasMore: photosRemaining > 0,
-      isNewWave: true
-    }
-  }
-
-  // No located photos — handle locationless ungrouped photos
-  const locationlessResult = await psql.query(`
-    SELECT "Photos".id, "Photos"."createdAt"
+  // Query up to 1000 oldest ungrouped photos (with and without location)
+  const photosResult = await psql.query(`
+    SELECT
+      "Photos".id,
+      ST_Y("Photos".location::geometry) AS lat,
+      ST_X("Photos".location::geometry) AS lon,
+      "Photos"."createdAt"
     FROM "Photos"
     LEFT JOIN "WavePhotos" ON "Photos".id = "WavePhotos"."photoId"
     WHERE "Photos".uuid = $1
       AND "Photos".active = true
       AND "WavePhotos"."photoId" IS NULL
-      AND "Photos".location IS NULL
-  `, [uuid])
+    ORDER BY "Photos"."createdAt" ASC
+    LIMIT $2
+  `, [uuid, MAX_PHOTOS_PER_WAVE])
 
-  if (locationlessResult.rows.length === 0) {
-    await psql.clean()
-    return { waveUuid: null, name: null, photosGrouped: 0, photosRemaining: 0, hasMore: false, isNewWave: false }
-  }
-
-  const locationlessPhotos: Array<{ id: string, createdAt: string }> = locationlessResult.rows.map((row: any) => ({
+  const photos: Photo[] = photosResult.rows.map((row: any) => ({
     id: row.id,
+    lat: row.lat != null ? parseFloat(row.lat) : null,
+    lon: row.lon != null ? parseFloat(row.lon) : null,
     createdAt: row.createdAt
   }))
 
-  // Try to absorb into existing waves
-  const photoIds = locationlessPhotos.map(p => p.id)
-  const assigned = await assignPhotosToNearestWave(uuid, photoIds)
-
-  if (assigned > 0) {
-    const photosRemaining = await countRemainingUngrouped(uuid)
+  // Nothing to process
+  if (photos.length === 0) {
     await psql.clean()
-    return {
-      waveUuid: null,
-      name: null,
-      photosGrouped: assigned,
-      photosRemaining,
-      hasMore: false,
-      isNewWave: false
-    }
+    return { waveUuid: null, name: null, photosGrouped: 0, photosRemaining: 0, hasMore: false }
   }
 
-  // No existing waves — create catch-all waves with temporal splitting
-  const temporalGroups = splitByTemporalGaps(locationlessPhotos)
-  let totalGrouped = 0
-  let lastWaveUuid: string | null = null
-  let lastWaveName: string | null = null
+  // Find anchor = first photo with a location
+  const anchor = photos.find(p => p.lat != null && p.lon != null)
 
-  for (const group of temporalGroups) {
-    const dates = group.map(p => new Date(p.createdAt).getTime())
-    const earliest = moment(new Date(Math.min(...dates)))
-    const latest = moment(new Date(Math.max(...dates)))
+  // All locationless — create single "Uncategorized" wave
+  if (anchor == null || anchor.lat == null || anchor.lon == null) {
+    const photoIds = photos.map(p => p.id)
+    const earliest = moment(photos[0].createdAt)
+    const latest = moment(photos[photos.length - 1].createdAt)
     const dateRange = formatDateRange(earliest, latest)
     const waveName = `Uncategorized, ${dateRange}`
 
-    const groupPhotoIds = group.map(p => p.id)
-    lastWaveUuid = await createWaveAndAssign(waveName, uuid, groupPhotoIds, null, null)
-    lastWaveName = waveName
-    totalGrouped += group.length
+    const waveUuid = await createWaveAndAssign(waveName, uuid, photoIds, null, null)
+
+    const remainResult = await psql.query(`
+      SELECT COUNT(*)::int AS count
+      FROM "Photos"
+      LEFT JOIN "WavePhotos" ON "Photos".id = "WavePhotos"."photoId"
+      WHERE "Photos".uuid = $1
+        AND "Photos".active = true
+        AND "WavePhotos"."photoId" IS NULL
+    `, [uuid])
+    const photosRemaining = remainResult.rows[0].count
+
+    await psql.clean()
+    return {
+      waveUuid,
+      name: waveName,
+      photosGrouped: photoIds.length,
+      photosRemaining,
+      hasMore: photosRemaining > 0
+    }
   }
 
-  const photosRemaining = await countRemainingUngrouped(uuid)
+  const anchorLat = anchor.lat
+  const anchorLon = anchor.lon
+
+  // Walk forward from the beginning, collecting photos within 50km of anchor or locationless
+  const collected: Photo[] = []
+  for (const photo of photos) {
+    if (photo.lat == null || photo.lon == null) {
+      // Locationless — include
+      collected.push(photo)
+    } else {
+      const distance = haversineDistance(anchorLat, anchorLon, photo.lat, photo.lon)
+      if (distance <= DISTANCE_THRESHOLD_KM) {
+        collected.push(photo)
+      } else {
+        // Location break — stop
+        break
+      }
+    }
+  }
+
+  // Geocode the anchor
+  const locationName = await reverseGeocode(anchorLat, anchorLon)
+
+  const earliest = moment(collected[0].createdAt)
+  const latest = moment(collected[collected.length - 1].createdAt)
+  const dateRange = formatDateRange(earliest, latest)
+  const waveName = locationName != null
+    ? `${locationName}, ${dateRange}`
+    : `Uncategorized, ${dateRange}`
+
+  const photoIds = collected.map(p => p.id)
+  const waveUuid = await createWaveAndAssign(
+    waveName, uuid, photoIds,
+    anchorLon, anchorLat
+  )
+
+  const remainResult = await psql.query(`
+    SELECT COUNT(*)::int AS count
+    FROM "Photos"
+    LEFT JOIN "WavePhotos" ON "Photos".id = "WavePhotos"."photoId"
+    WHERE "Photos".uuid = $1
+      AND "Photos".active = true
+      AND "WavePhotos"."photoId" IS NULL
+  `, [uuid])
+  const photosRemaining = remainResult.rows[0].count
+
   await psql.clean()
   return {
-    waveUuid: lastWaveUuid,
-    name: lastWaveName,
-    photosGrouped: totalGrouped,
+    waveUuid,
+    name: waveName,
+    photosGrouped: collected.length,
     photosRemaining,
-    hasMore: false,
-    isNewWave: true
+    hasMore: photosRemaining > 0
   }
 }
