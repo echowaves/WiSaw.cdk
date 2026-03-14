@@ -34,8 +34,14 @@ async function reverseGeocode (lat: number, lon: number): Promise<string | null>
     const item = response.ResultItems?.[0]
     if (item?.Address != null) {
       const addr = item.Address
-      const name = addr.Locality ?? addr.District ?? addr.SubRegion?.Name ?? addr.Region?.Name ?? addr.Country?.Name ?? null
-      return name
+      const city = addr.Locality ?? addr.District ?? addr.SubRegion?.Name ?? null
+      const isUS = addr.Country?.Code2 === 'US'
+      const qualifier = isUS ? addr.Region?.Name : addr.Country?.Name
+
+      if (city != null && qualifier != null) {
+        return `${city}, ${qualifier}`
+      }
+      return city ?? qualifier ?? addr.Region?.Name ?? addr.Country?.Name ?? null
     }
     return null
   } catch {
