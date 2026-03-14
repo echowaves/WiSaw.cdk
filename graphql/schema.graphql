@@ -103,6 +103,7 @@ type Wave {
   createdBy: String!
   location: AWSJSON
   radius: Int
+  photos: [String]
   createdAt: AWSDateTime!
   updatedAt: AWSDateTime!
 }

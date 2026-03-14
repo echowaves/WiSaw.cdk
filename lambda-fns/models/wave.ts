@@ -5,6 +5,7 @@ export class Wave {
   createdBy: string
   location: object
   radius: number
+  photos: string[]
   createdAt: string
   updatedAt: string
 }
