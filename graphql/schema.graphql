@@ -127,6 +127,7 @@ type AutoGroupResult {
   photosGrouped: Int!
   photosRemaining: Int!
   hasMore: Boolean!
+  isNewWave: Boolean!
 }
 
 type Friendship {
