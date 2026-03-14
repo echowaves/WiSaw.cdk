@@ -18,7 +18,7 @@ interface Photo {
   createdAt: string
 }
 
-const DISTANCE_THRESHOLD_KM = 50
+const DISTANCE_THRESHOLD_KM = 100
 const MAX_PHOTOS_PER_WAVE = 1000
 
 async function reverseGeocode (lat: number, lon: number): Promise<string | null> {
@@ -98,7 +98,7 @@ async function createWaveAndAssign (
         $1, $2, $3, $4,
         ST_MakePoint($5, $6), $7, $8, $9
       )
-    `, [waveUuid, waveName, '', uuid, lon, lat, 50, now, now])
+    `, [waveUuid, waveName, '', uuid, lon, lat, 100, now, now])
   } else {
     await psql.query(`
       INSERT INTO "Waves" (
@@ -108,7 +108,7 @@ async function createWaveAndAssign (
         $1, $2, $3, $4,
         NULL, $5, $6, $7
       )
-    `, [waveUuid, waveName, '', uuid, 50, now, now])
+    `, [waveUuid, waveName, '', uuid, 100, now, now])
   }
 
   await psql.query(`
