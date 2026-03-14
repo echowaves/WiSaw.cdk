@@ -35,19 +35,27 @@ export default async function main (
   const waveUuids = results.map((row: any) => row.waveUuid)
 
   let photosByWave: Record<string, string[]> = {}
+  let countByWave: Record<string, number> = {}
   if (waveUuids.length > 0) {
     const photosQuery = `
-      SELECT "WavePhotos"."waveUuid", "Photos"."id"
-      FROM "WavePhotos"
-      JOIN "Photos" ON "Photos"."id" = "WavePhotos"."photoId"
-      WHERE "WavePhotos"."waveUuid" = ANY($1)
-      AND "Photos"."active" = true
-      ORDER BY "Photos"."createdAt" DESC
+      SELECT "waveUuid", "id", "total_count"
+      FROM (
+        SELECT "WavePhotos"."waveUuid",
+               "Photos"."id",
+               ROW_NUMBER() OVER (PARTITION BY "WavePhotos"."waveUuid" ORDER BY "Photos"."createdAt" DESC) AS row_num,
+               COUNT(*) OVER (PARTITION BY "WavePhotos"."waveUuid") AS total_count
+        FROM "WavePhotos"
+        JOIN "Photos" ON "Photos"."id" = "WavePhotos"."photoId"
+        WHERE "WavePhotos"."waveUuid" = ANY($1)
+        AND "Photos"."active" = true
+      ) ranked
+      WHERE row_num <= 5
     `
     const photosResults = (await psql.query(photosQuery, [waveUuids])).rows
     for (const photo of photosResults) {
       if (!photosByWave[photo.waveUuid]) {
         photosByWave[photo.waveUuid] = []
+        countByWave[photo.waveUuid] = parseInt(photo.total_count, 10)
       }
       photosByWave[photo.waveUuid].push(
         `https://${process.env.S3_IMAGES}/${photo.id}-thumb.webp`
@@ -60,6 +68,7 @@ export default async function main (
   const waves = results.map((row: any) => {
     const wave = plainToClass(Wave, row)
     wave.photos = photosByWave[wave.waveUuid] || []
+    wave.photosCount = countByWave[wave.waveUuid] || 0
     return wave
   })
   const noMoreData = waves.length < limit
