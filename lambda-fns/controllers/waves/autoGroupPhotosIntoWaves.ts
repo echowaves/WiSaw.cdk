@@ -1,4 +1,4 @@
-import https from 'https'
+import { GeoPlacesClient, ReverseGeocodeCommand } from '@aws-sdk/client-geo-places'
 import { v4 as uuidv4, validate as uuidValidate } from 'uuid'
 import moment from 'moment'
 import psql from '../../psql'
@@ -21,36 +21,30 @@ interface Photo {
 const DISTANCE_THRESHOLD_KM = 100
 const MAX_PHOTOS_PER_WAVE = 1000
 
-async function reverseGeocode (lat: number, lon: number): Promise<string | null> {
-  return await new Promise((resolve) => {
-    const url = `https://nominatim.openstreetmap.org/reverse?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&zoom=10&format=json&accept-language=en`
-    const options = {
-      headers: {
-        'User-Agent': 'WiSaw-App/1.0 (https://wisaw.com)'
-      }
-    }
+const geoClient = new GeoPlacesClient({})
 
-    https.get(url, options, (res) => {
-      let data = ''
-      res.on('data', (chunk: Buffer) => { data += chunk.toString() })
-      res.on('end', () => {
-        try {
-          const json = JSON.parse(data)
-          const address = json.address
-          if (address != null) {
-            const name = address.city ?? address.town ?? address.village ?? address.county ?? address.state ?? null
-            resolve(name)
-          } else {
-            resolve(null)
-          }
-        } catch {
-          resolve(null)
-        }
-      })
-    }).on('error', () => {
-      resolve(null)
+async function reverseGeocode (lat: number, lon: number): Promise<string | null> {
+  try {
+    const command = new ReverseGeocodeCommand({
+      QueryPosition: [lon, lat],
+      Language: 'en',
+      MaxResults: 1
     })
-  })
+    const response = await geoClient.send(command)
+    const item = response.ResultItems?.[0]
+    if (item?.Title != null && item.Title.length > 0) {
+      return item.Title
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+function formatCoordinates (lat: number, lon: number): string {
+  const latDir = lat >= 0 ? 'N' : 'S'
+  const lonDir = lon >= 0 ? 'E' : 'W'
+  return `${Math.abs(lat).toFixed(1)}°${latDir}, ${Math.abs(lon).toFixed(1)}°${lonDir}`
 }
 
 function formatDateRange (earliest: moment.Moment, latest: moment.Moment): string {
@@ -174,7 +168,7 @@ export default async function main (uuid: string): Promise<AutoGroupResult> {
     const earliest = moment(photos[0].createdAt)
     const latest = moment(photos[photos.length - 1].createdAt)
     const dateRange = formatDateRange(earliest, latest)
-    const waveName = `Uncategorized, ${dateRange}`
+    const waveName = dateRange
 
     const waveUuid = await createWaveAndAssign(waveName, uuid, photoIds, null, null)
 
@@ -226,7 +220,7 @@ export default async function main (uuid: string): Promise<AutoGroupResult> {
   const dateRange = formatDateRange(earliest, latest)
   const waveName = locationName != null
     ? `${locationName}, ${dateRange}`
-    : `Uncategorized, ${dateRange}`
+    : `${formatCoordinates(anchorLat, anchorLon)}, ${dateRange}`
 
   const photoIds = collected.map(p => p.id)
   const waveUuid = await createWaveAndAssign(

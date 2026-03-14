@@ -1,4 +1,5 @@
 import * as cdk from 'aws-cdk-lib'
+import * as iam from 'aws-cdk-lib/aws-iam'
 import { Construct } from 'constructs'
 import { config, deployEnv } from './utilities/config'
 import { createDatabase } from './resources/database'
@@ -30,6 +31,12 @@ export class WiSawCdkStack extends cdk.Stack {
     // ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Grant access to the database from the Lambda function
     database.grantConnect(wisawFn, config.username)
+
+    // Grant access to AWS Location Service for reverse geocoding
+    wisawFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['geo-places:ReverseGeocode'],
+      resources: ['*']
+    }))
 
     // Set the new Lambda function as a data source for the AppSync API
     const lambdaDs = api.addLambdaDataSource('lambdaDatasource', wisawFn)
