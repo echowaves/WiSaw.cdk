@@ -21,5 +21,5 @@ export default async function main (uuid: string): Promise<number> {
 
   await psql.clean()
 
-  return result.count
+  return result?.count ?? 0
 }
