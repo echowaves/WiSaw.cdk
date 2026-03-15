@@ -261,6 +261,9 @@ getMessagesList(
     radius: Int
   ): [PhotoLocation]!
 
+  getUngroupedPhotosCount(
+    uuid: String!
+  ): Int!
 
 }
 

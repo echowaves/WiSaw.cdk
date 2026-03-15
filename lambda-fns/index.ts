@@ -26,6 +26,7 @@ import updateWave from './controllers/waves/update'
 import deleteWave from './controllers/waves/delete'
 import listWaves from './controllers/waves/listWaves'
 import listPhotoLocations from './controllers/waves/listPhotoLocations'
+import getUngroupedPhotosCount from './controllers/waves/getUngroupedPhotosCount'
 import addPhotoToWave from './controllers/waves/addPhoto'
 import removePhotoFromWave from './controllers/waves/removePhoto'
 import autoGroupPhotosIntoWaves from './controllers/waves/autoGroupPhotosIntoWaves'
@@ -175,6 +176,10 @@ const queryHandlers: Record<string, HandlerDefinition> = {
   listPhotoLocations: {
     resolver: listPhotoLocations,
     getArgs: (args) => [args.uuid, args.radius]
+  },
+  getUngroupedPhotosCount: {
+    resolver: getUngroupedPhotosCount,
+    getArgs: (args) => [args.uuid]
   }
 }
 

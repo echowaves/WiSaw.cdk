@@ -2,6 +2,7 @@
   "standard.engine": "ts-standard",
   "editor.formatOnSave": false,
   "chat.tools.terminal.autoApprove": {
-    "openspec": true
+    "openspec": true,
+    "cp": true
   }
 }
