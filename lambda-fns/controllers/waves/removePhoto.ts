@@ -4,6 +4,7 @@ import { validate as uuidValidate } from 'uuid'
 import psql from '../../psql'
 
 import { Wave } from '../../models/wave'
+import { _updatePhotosCount } from './_updatePhotosCount'
 
 export default async function main (
   waveUuid: string,
@@ -25,6 +26,8 @@ export default async function main (
     waveUuid,
     photoId
   ])
+
+  await _updatePhotosCount(waveUuid)
 
   // Fetch the wave to return
   const result = await psql.query(`

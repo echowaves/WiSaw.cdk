@@ -1,4 +1,5 @@
 import psql from "../../psql"
+import { _updatePhotosCount } from "../../controllers/waves/_updatePhotosCount"
 
 import { DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3"
 
@@ -84,13 +85,23 @@ const _cleanupTables = async ({ photoId }: { photoId: string }) => {
   }
   // console.log(`_cleanupTables ended 2: ${photoId}`)
 
+  let affectedWaveUuids: string[] = []
   try {
+    const waveResult = await psql.query(`
+      SELECT DISTINCT "waveUuid" FROM "WavePhotos"
+      WHERE "photoId" = $1
+    `, [photoId])
+    affectedWaveUuids = waveResult.rows.map((r: any) => r.waveUuid)
+
     await psql.query(`
         DELETE from "WavePhotos"
                     WHERE
-                    "photoId" = '${photoId}'
-                    `)
-    //
+                    "photoId" = $1
+                    `, [photoId])
+
+    for (const waveUuid of affectedWaveUuids) {
+      await _updatePhotosCount(waveUuid)
+    }
   } catch (err) {
     console.error('Error cleaning up WavePhotos')
     console.error({ err })

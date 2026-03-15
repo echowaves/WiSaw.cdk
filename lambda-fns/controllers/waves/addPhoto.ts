@@ -2,6 +2,7 @@ import moment from 'moment'
 import { validate as uuidValidate } from 'uuid'
 
 import psql from '../../psql'
+import { _updatePhotosCount } from './_updatePhotosCount'
 
 export default async function main (
   waveUuid: string,
@@ -44,7 +45,7 @@ export default async function main (
     createdAt,
     updatedAt
   ])
-
+  await _updatePhotosCount(waveUuid)
   await psql.clean()
 
   return true

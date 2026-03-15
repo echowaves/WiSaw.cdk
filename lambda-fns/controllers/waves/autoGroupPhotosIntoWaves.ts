@@ -2,6 +2,7 @@ import { GeoPlacesClient, ReverseGeocodeCommand } from '@aws-sdk/client-geo-plac
 import { v4 as uuidv4, validate as uuidValidate } from 'uuid'
 import moment from 'moment'
 import psql from '../../psql'
+import { _updatePhotosCount } from './_updatePhotosCount'
 
 interface AutoGroupResult {
   waveUuid: string | null
@@ -127,6 +128,8 @@ async function createWaveAndAssign (
       ON CONFLICT ("waveUuid", "photoId") DO NOTHING
     `, [waveUuid, photoId, uuid, now, now])
   }
+
+  await _updatePhotosCount(waveUuid)
 
   return waveUuid
 }
