@@ -40,15 +40,15 @@ The system SHALL allow the Wave creator to delete a Wave.
 ---
 
 ### Requirement: List Waves for a user
-The system SHALL return a paginated list of Waves that a given UUID is a member of, ordered by most recently updated. Each wave SHALL include up to 5 thumbnail URLs of its most recent active photos and a total count of all active photos.
+The system SHALL return a paginated list of Waves that a given UUID is a member of, ordered by most recently updated. Each wave SHALL include up to 5 thumbnail URLs of its most recent active photos and `photosCount` read directly from the persisted column.
 
 #### Scenario: Waves listed with photo URLs limited to 5
 - **WHEN** `listWaves(pageNumber, batch, uuid)` is called
 - **THEN** each Wave in the response SHALL include a `photos` field containing at most 5 thumbnail URLs (`https://${S3_IMAGES}/${photoId}-thumb.webp`) for the most recent active photos, ordered by `createdAt` descending
 
-#### Scenario: Waves listed with photosCount
+#### Scenario: Waves listed with photosCount from column
 - **WHEN** `listWaves(pageNumber, batch, uuid)` is called
-- **THEN** each Wave in the response SHALL include a `photosCount` field with the total number of active photos associated with that wave
+- **THEN** each Wave in the response SHALL include `photosCount` from the `Waves` table column (not computed at query time)
 
 #### Scenario: Wave with no photos
 - **WHEN** a Wave has no associated photos in `WavePhotos` or all its photos are inactive
@@ -65,20 +65,24 @@ The system SHALL return a paginated list of Waves that a given UUID is a member 
 ---
 
 ### Requirement: Add a photo to a Wave
-The system SHALL allow a Wave member to associate an existing photo with a Wave.
+The system SHALL allow a Wave member to associate an existing photo with a Wave. After the association is created, the system SHALL update the wave's `photosCount` to reflect the current number of active photos.
 
 #### Scenario: Photo added to Wave
 - **WHEN** `addPhotoToWave(waveUuid, photoId, uuid)` is called
-- **THEN** a `WavePhotos` record is created linking the photo to the Wave and `true` is returned
+- **THEN** a `WavePhotos` record is created linking the photo to the Wave, the wave's `photosCount` is recalculated, and `true` is returned
+
+#### Scenario: Duplicate photo add is idempotent
+- **WHEN** `addPhotoToWave` is called for a photo already in the wave
+- **THEN** the insert is ignored (ON CONFLICT DO NOTHING), `photosCount` is recalculated, and `true` is returned
 
 ---
 
 ### Requirement: Remove a photo from a Wave
-The system SHALL allow removal of a photo from a Wave.
+The system SHALL allow removal of a photo from a Wave. After the removal, the system SHALL update the wave's `photosCount`.
 
 #### Scenario: Photo removed from Wave
 - **WHEN** `removePhotoFromWave(waveUuid, photoId)` is called
-- **THEN** the `WavePhotos` record is deleted and `true` is returned
+- **THEN** the `WavePhotos` record is deleted, the wave's `photosCount` is recalculated, and `true` is returned
 
 ---
 
@@ -92,12 +96,21 @@ The system SHALL accept an optional `waveUuid` on all feed queries to restrict r
 ---
 
 ### Requirement: Auto-group photos into waves mutation
-The system SHALL expose an `autoGroupPhotosIntoWaves(uuid)` GraphQL mutation that triggers automatic grouping of a user's ungrouped photos into waves.
+The system SHALL expose an `autoGroupPhotosIntoWaves(uuid)` GraphQL mutation that triggers automatic grouping of a user's ungrouped photos into waves. After each wave is populated, the system SHALL update its `photosCount`.
 
 #### Scenario: Mutation invoked
 - **WHEN** `autoGroupPhotosIntoWaves(uuid: String!)` is called via GraphQL
-- **THEN** the system SHALL execute the auto-grouping logic for the specified user and return an `AutoGroupResult` containing `wavesCreated` and `photosGrouped`
+- **THEN** the system SHALL execute the auto-grouping logic for the specified user, update `photosCount` for each populated wave, and return an `AutoGroupResult` containing `wavesCreated` and `photosGrouped`
 
 #### Scenario: AutoGroupResult type
 - **WHEN** the mutation completes
 - **THEN** the result SHALL conform to the GraphQL type `AutoGroupResult { wavesCreated: Int!, photosGrouped: Int! }`
+
+---
+
+### Requirement: Photo deletion cleans up wave associations
+The system SHALL remove `WavePhotos` records when a photo is deleted. After cleanup, the system SHALL update `photosCount` for all affected waves.
+
+#### Scenario: Deleted photo removed from waves
+- **WHEN** a photo is deleted and its `WavePhotos` records are removed
+- **THEN** `photosCount` is recalculated for each wave that contained the photo
