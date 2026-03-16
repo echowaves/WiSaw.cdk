@@ -8,6 +8,7 @@ import zeroMoment from './controllers/photos/zeroMoment'
 import feedByDate from './controllers/photos/feedByDate'
 import feedForTextSearch from './controllers/photos/feedForTextSearch'
 import feedForWatcher from './controllers/photos/feedForWatcher'
+import feedForWave from './controllers/photos/feedForWave'
 import feedRecent from './controllers/photos/feedRecent'
 
 import getPhotoDetails from './controllers/photos/getPhotoDetails'
@@ -127,19 +128,23 @@ const queryHandlers: Record<string, HandlerDefinition> = {
   },
   feedByDate: {
     resolver: feedByDate,
-    getArgs: (args) => [args.daysAgo, args.lat, args.lon, args.batch, args.whenToStop, args.waveUuid]
+    getArgs: (args) => [args.daysAgo, args.lat, args.lon, args.batch, args.whenToStop]
   },
   feedForWatcher: {
     resolver: feedForWatcher,
-    getArgs: (args) => [args.uuid, args.pageNumber, args.batch, args.waveUuid]
+    getArgs: (args) => [args.uuid, args.pageNumber, args.batch]
+  },
+  feedForWave: {
+    resolver: feedForWave,
+    getArgs: (args) => [args.waveUuid, args.pageNumber, args.batch]
   },
   feedRecent: {
     resolver: feedRecent,
-    getArgs: (args) => [args.pageNumber, args.batch, args.waveUuid]
+    getArgs: (args) => [args.pageNumber, args.batch]
   },
   feedForTextSearch: {
     resolver: feedForTextSearch,
-    getArgs: (args) => [args.searchTerm, args.pageNumber, args.batch, args.waveUuid]
+    getArgs: (args) => [args.searchTerm, args.pageNumber, args.batch]
   },
   getPhotoDetails: {
     resolver: getPhotoDetails,

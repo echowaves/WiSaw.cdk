@@ -5,8 +5,7 @@ import Photo from '../../models/photo'
 export default async function main (
   searchTerm: string,
   pageNumber: number,
-  batch: string,
-  waveUuid?: string
+  batch: string
 ): Promise<{
     photos: Photo[]
     batch: string
@@ -17,30 +16,13 @@ export default async function main (
 
   await psql.connect()
   try {
-    let query = `
+    const query = `
           SELECT
             row_number() OVER (ORDER BY id desc) + ${offset} as row_number,
             p.*
           FROM "Photos" p
-    `
-
-    if (waveUuid !== undefined) {
-      query += `
-        JOIN "WavePhotos" wp ON p.id = wp."photoId"
-      `
-    }
-
-    query += `
           WHERE active = true
-    `
 
-    if (waveUuid !== undefined) {
-      query += `
-        AND wp."waveUuid" = '${waveUuid}'
-      `
-    }
-
-    query += `
             AND "id" in (
                 SELECT "photoId"
                 FROM "Recognitions"

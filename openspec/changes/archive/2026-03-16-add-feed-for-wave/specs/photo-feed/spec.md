@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Feed by date and location
 The system SHALL return photos from a sliding date window centered on a location, ordered by creation time descending.
@@ -46,11 +46,16 @@ The system SHALL search photo recognitions and comments for a plain-English quer
 - **WHEN** `feedForTextSearch` is called with a term present in comments
 - **THEN** photos whose active comments contain that term are included in the results
 
----
+## REMOVED Requirements
 
-### Requirement: Feed pagination batch token
-The system SHALL accept and echo back an opaque `batch` string that clients use to correlate paginated request sets.
+### Requirement: Feed filtered by Wave (feedByDate)
+**Reason**: Wave filtering extracted to dedicated `feedForWave` query.
+**Migration**: Use `feedForWave(waveUuid, pageNumber, batch)` instead of passing `waveUuid` to `feedByDate`.
 
-#### Scenario: Batch token is echoed unchanged
-- **WHEN** any feed query is called with an arbitrary `batch` string
-- **THEN** the `PhotoFeed` response contains the same `batch` value passed in
+### Requirement: Watcher feed filtered by Wave
+**Reason**: Wave filtering extracted to dedicated `feedForWave` query.
+**Migration**: Use `feedForWave(waveUuid, pageNumber, batch)` instead of passing `waveUuid` to `feedForWatcher`.
+
+### Requirement: Text search filtered by Wave
+**Reason**: Wave filtering extracted to dedicated `feedForWave` query.
+**Migration**: Use `feedForWave(waveUuid, pageNumber, batch)` instead of passing `waveUuid` to `feedForTextSearch`.

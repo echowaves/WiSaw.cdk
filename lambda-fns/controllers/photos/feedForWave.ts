@@ -1,11 +1,10 @@
+import { validate as uuidValidate } from 'uuid'
 import psql from '../../psql'
 import { plainToClass } from 'class-transformer'
 import Photo from '../../models/photo'
 
-// import AbuseReport from '../../models/abuseReport'
-
 export default async function main (
-  uuid: string,
+  waveUuid: string,
   pageNumber: number,
   batch: string
 ): Promise<{
@@ -13,9 +12,13 @@ export default async function main (
     batch: string
     noMoreData: boolean
   }> {
+  if (!uuidValidate(waveUuid)) {
+    throw new Error('Wrong UUID format for waveUuid')
+  }
+
   const limit = 100
   const offset = pageNumber * limit
-  // console.log({uuid})
+
   await psql.connect()
 
   const query = `
@@ -23,10 +26,10 @@ export default async function main (
       row_number() OVER (ORDER BY p."updatedAt" DESC) + ${offset} as row_number,
       p.*
     FROM "Photos" p
-    INNER JOIN "Watchers" w
-      ON p.id = w."photoId"
+    INNER JOIN "WavePhotos" wp
+      ON p.id = wp."photoId"
     WHERE
-      w.uuid = '${uuid}'
+      wp."waveUuid" = $1
     AND p.active = true
     ORDER BY p."updatedAt" DESC
     LIMIT ${limit}
@@ -34,12 +37,10 @@ export default async function main (
   `
 
   const results =
-  (await psql.query(query)
+  (await psql.query(query, [waveUuid])
   ).rows
   await psql.clean()
 
-  // console.log({results})
-  // console.log({slicedRezults: results.slice(0, -2) })// remove 2 last elements
   const photos = results.map((photo: any) => plainToClass(Photo, photo))
 
   let noMoreData = false

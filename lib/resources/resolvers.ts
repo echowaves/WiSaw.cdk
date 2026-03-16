@@ -8,6 +8,7 @@ export function createResolvers (scope: Construct, api: appsync.GraphqlApi, lamb
     { typeName: 'Query', fieldName: 'zeroMoment' },
     { typeName: 'Query', fieldName: 'feedByDate' },
     { typeName: 'Query', fieldName: 'feedForWatcher' },
+    { typeName: 'Query', fieldName: 'feedForWave' },
     { typeName: 'Query', fieldName: 'feedRecent' },
     { typeName: 'Query', fieldName: 'feedForTextSearch' },
     { typeName: 'Query', fieldName: 'getPhotoDetails' },

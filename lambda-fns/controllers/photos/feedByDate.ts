@@ -4,8 +4,8 @@ import psql from '../../psql'
 import { plainToClass } from 'class-transformer'
 import Photo from '../../models/photo'
 
-async function _retrievePhotos (currentDate: moment.Moment, daysAgo: number, lat: number, lon: number, waveUuid?: string): Promise<Photo[]> {
-  let query = `
+async function _retrievePhotos (currentDate: moment.Moment, daysAgo: number, lat: number, lon: number): Promise<Photo[]> {
+  const query = `
     SELECT
     "Photos".*
     , ST_Distance(
@@ -15,14 +15,6 @@ async function _retrievePhotos (currentDate: moment.Moment, daysAgo: number, lat
     , row_number()  OVER (ORDER BY "Photos"."createdAt" DESC) + (100*${daysAgo}) as row_number
   
     FROM "Photos"
-  `
-  if (waveUuid !== undefined) {
-    query += `
-      JOIN "WavePhotos" ON "Photos".id = "WavePhotos"."photoId"
-    `
-  }
-
-  query += `
     WHERE
         "Photos"."createdAt" >= '${currentDate
           .clone()
@@ -34,15 +26,7 @@ async function _retrievePhotos (currentDate: moment.Moment, daysAgo: number, lat
       .subtract(daysAgo, 'days')
       .format('YYYY-MM-DD HH:mm:ss.SSS')}'
     AND active = true
-  `
-
-  if (waveUuid !== undefined) {
-    query += `
-      AND "WavePhotos"."waveUuid" = '${waveUuid}'
-    `
-  }
-
-  query += `
+  
     ORDER BY "Photos"."createdAt" DESC
     LIMIT 1000
     OFFSET 0
@@ -63,8 +47,7 @@ export default async function main (
   lat: number,
   lon: number,
   batch: string,
-  whenToStop: string,
-  waveUuid?: string
+  whenToStop: string
 ): Promise<{
     photos: Photo[]
     batch: string
@@ -79,7 +62,7 @@ export default async function main (
   // call _retrievePhotos 10 times for 10 conscutive days in parallel
   const photos = (
     await Promise.all(
-      [...Array(arraySize)].map(async (_, i) => await _retrievePhotos(currentDate, daysAgo * arraySize + i, lat, lon, waveUuid))
+      [...Array(arraySize)].map(async (_, i) => await _retrievePhotos(currentDate, daysAgo * arraySize + i, lat, lon))
     )
   ).flat(1)
 
