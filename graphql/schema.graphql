@@ -53,6 +53,8 @@ type PhotoDetails {
   comments: [Comment]
   recognitions: [Recognition]
   isPhotoWatched: Boolean!
+  waveName: String
+  waveUuid: String
 }
 
 type PhotoAll {

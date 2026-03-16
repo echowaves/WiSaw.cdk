@@ -21,6 +21,15 @@ export default async function main (
 
   await psql.connect()
 
+  const existing = (await psql.query(`
+    SELECT "waveUuid" FROM "WavePhotos" WHERE "photoId" = $1 LIMIT 1
+  `, [photoId])).rows[0]
+
+  if (existing != null && existing.waveUuid !== waveUuid) {
+    await psql.clean()
+    throw new Error('Photo is already in a wave')
+  }
+
   const createdAt = moment().format('YYYY-MM-DD HH:mm:ss')
   const updatedAt = createdAt
 
