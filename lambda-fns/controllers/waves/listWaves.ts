@@ -3,10 +3,22 @@ import { Wave } from '../../models/wave'
 import { plainToClass } from 'class-transformer'
 import { validate as uuidValidate } from 'uuid'
 
+const ALLOWED_SORT_FIELDS: Record<string, string> = {
+  createdAt: '"createdAt"',
+  updatedAt: '"updatedAt"'
+}
+
+const ALLOWED_DIRECTIONS: Record<string, string> = {
+  asc: 'ASC',
+  desc: 'DESC'
+}
+
 export default async function main (
   pageNumber: number,
   batch: string,
-  uuid: string
+  uuid: string,
+  sortBy?: string,
+  sortDirection?: string
 ): Promise<{
     waves: Wave[]
     batch: string
@@ -19,13 +31,22 @@ export default async function main (
   const limit = 20
   const offset = pageNumber * limit
 
+  const sortField = ALLOWED_SORT_FIELDS[sortBy ?? 'updatedAt']
+  if (sortField == null) {
+    throw new Error('Invalid sort field')
+  }
+  const direction = ALLOWED_DIRECTIONS[sortDirection ?? 'desc']
+  if (direction == null) {
+    throw new Error('Invalid sort direction')
+  }
+
   await psql.connect()
 
   const query = `
     SELECT DISTINCT "Waves".* FROM "Waves"
     JOIN "WaveUsers" ON "Waves"."waveUuid" = "WaveUsers"."waveUuid"
     WHERE "WaveUsers"."uuid" = $1
-    ORDER BY "Waves"."updatedAt" DESC
+    ORDER BY "Waves".${sortField} ${direction}
     LIMIT ${limit}
     OFFSET ${offset}
   `

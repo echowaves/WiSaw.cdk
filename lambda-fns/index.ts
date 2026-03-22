@@ -108,6 +108,8 @@ interface AppSyncEvent {
     radius: number
     targetWaveUuid: string
     sourceWaveUuid: string
+    sortBy: string
+    sortDirection: string
   }
 }
 
@@ -179,7 +181,7 @@ const queryHandlers: Record<string, HandlerDefinition> = {
   },
   listWaves: {
     resolver: listWaves,
-    getArgs: (args) => [args.pageNumber, args.batch, args.uuid]
+    getArgs: (args) => [args.pageNumber, args.batch, args.uuid, args.sortBy, args.sortDirection]
   },
   listPhotoLocations: {
     resolver: listPhotoLocations,

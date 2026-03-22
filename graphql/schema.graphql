@@ -257,6 +257,8 @@ getMessagesList(
     pageNumber: Int!
     batch: String!
     uuid: String!
+    sortBy: String
+    sortDirection: String
   ): WaveFeed
 
   listPhotoLocations(
