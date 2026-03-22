@@ -392,6 +392,14 @@ type Mutation {
   autoGroupPhotosIntoWaves(
     uuid: String!
   ): AutoGroupResult!
+
+  mergeWaves(
+    targetWaveUuid: String!
+    sourceWaveUuid: String!
+    uuid: String!
+    name: String
+    description: String
+  ): Wave!
 }
 
   # helloWorld(helloMessage: String!): String!

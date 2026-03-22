@@ -31,6 +31,7 @@ import getUngroupedPhotosCount from './controllers/waves/getUngroupedPhotosCount
 import addPhotoToWave from './controllers/waves/addPhoto'
 import removePhotoFromWave from './controllers/waves/removePhoto'
 import autoGroupPhotosIntoWaves from './controllers/waves/autoGroupPhotosIntoWaves'
+import mergeWaves from './controllers/waves/mergeWaves'
 
 // ******************************************************
 //                       mutations
@@ -105,6 +106,8 @@ interface AppSyncEvent {
     waveUuid: string
     name: string
     radius: number
+    targetWaveUuid: string
+    sourceWaveUuid: string
   }
 }
 
@@ -279,6 +282,10 @@ const mutationHandlers: Record<string, HandlerDefinition> = {
   autoGroupPhotosIntoWaves: {
     resolver: autoGroupPhotosIntoWaves,
     getArgs: (args) => [args.uuid]
+  },
+  mergeWaves: {
+    resolver: mergeWaves,
+    getArgs: (args) => [args.targetWaveUuid, args.sourceWaveUuid, args.uuid, args.name, args.description]
   }
 }
 
@@ -290,4 +297,3 @@ exports.main = async (event: AppSyncEvent) => {
 
   return await handler.resolver(...handler.getArgs(event.arguments))
 }
-
