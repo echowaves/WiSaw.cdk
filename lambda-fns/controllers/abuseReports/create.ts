@@ -1,8 +1,13 @@
 import moment from 'moment'
 
 import psql from '../../psql'
+import { isValidPhotoId } from '../../utilities/isValidPhotoId'
 
 export default async function main (photoId: string, uuid: string): Promise<any> {
+  if (!isValidPhotoId(photoId)) {
+    throw new Error('Wrong UUID format for photoId')
+  }
+
   const createdAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS')
   await psql.connect()
   const result = (

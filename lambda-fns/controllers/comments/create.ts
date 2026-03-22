@@ -1,6 +1,7 @@
 import moment from "moment"
 
 import psql from "../../psql"
+import { isValidPhotoId } from '../../utilities/isValidPhotoId'
 
 import { _updateCommentsCount } from "./_updateCommentsCount"
 import { _updateLastComment } from "./_updateLastComment"
@@ -13,6 +14,10 @@ export default async function main(
   uuid: string,
   description: string,
 ) {
+  if (!isValidPhotoId(photoId)) {
+    throw new Error('Wrong UUID format for photoId')
+  }
+
   const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
 
   if (description.trim().length === 0) {

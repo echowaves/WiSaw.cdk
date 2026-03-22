@@ -1,6 +1,7 @@
 import { validate as uuidValidate } from 'uuid'
 
 import psql from '../../psql'
+import { isValidPhotoId } from '../../utilities/isValidPhotoId'
 
 import { _updatePhotosCount } from './_updatePhotosCount'
 
@@ -11,7 +12,7 @@ export default async function main (
   if (!uuidValidate(waveUuid)) {
     throw new Error('Wrong UUID format for waveUuid')
   }
-  if (!uuidValidate(photoId)) {
+  if (!isValidPhotoId(photoId)) {
     throw new Error('Wrong UUID format for photoId')
   }
 
