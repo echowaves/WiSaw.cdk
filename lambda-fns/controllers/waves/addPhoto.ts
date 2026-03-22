@@ -27,8 +27,10 @@ export default async function main (
   `, [photoId])).rows[0]
 
   if (existing != null && existing.waveUuid !== waveUuid) {
-    await psql.clean()
-    throw new Error('Photo is already in a wave')
+    await psql.query(`
+      DELETE FROM "WavePhotos" WHERE "waveUuid" = $1 AND "photoId" = $2
+    `, [existing.waveUuid, photoId])
+    await _updatePhotosCount(existing.waveUuid)
   }
 
   const createdAt = moment().format('YYYY-MM-DD HH:mm:ss')
