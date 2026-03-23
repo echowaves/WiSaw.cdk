@@ -56,35 +56,9 @@ const _deleteUpload = async ({
 }
 
 const _cleanupTables = async ({ photoId }: { photoId: string }) => {
-  // console.log(`_cleanupTables started: ${photoId}`)
-
   await psql.connect()
-  try {
-    await psql.query(`
-                    DELETE from "Photos"
-                    WHERE
-                    id = '${photoId}'
-                    `)
-    //
-  } catch (err) {
-    console.error("Error de-activating photo")
-    console.error({ err })
-  }
-  // console.log(`_cleanupTables ended 1: ${photoId}`)
 
-  try {
-    await psql.query(`
-        DELETE from "Watchers"
-                    WHERE
-                    "photoId" = '${photoId}'
-                    `)
-    //
-  } catch (err) {
-    console.error("Error cleaning up Watchers")
-    console.error({ err })
-  }
-  // console.log(`_cleanupTables ended 2: ${photoId}`)
-
+  // Delete dependent tables first to satisfy FK constraints (WavePhotos.photoId → Photos.id)
   let affectedWaveUuids: string[] = []
   try {
     const waveResult = await psql.query(`
@@ -94,10 +68,9 @@ const _cleanupTables = async ({ photoId }: { photoId: string }) => {
     affectedWaveUuids = waveResult.rows.map((r: any) => r.waveUuid)
 
     await psql.query(`
-        DELETE from "WavePhotos"
-                    WHERE
-                    "photoId" = $1
-                    `, [photoId])
+      DELETE from "WavePhotos"
+      WHERE "photoId" = $1
+    `, [photoId])
 
     for (const waveUuid of affectedWaveUuids) {
       await _updatePhotosCount(waveUuid)
@@ -107,35 +80,46 @@ const _cleanupTables = async ({ photoId }: { photoId: string }) => {
     console.error({ err })
   }
 
-
-  
+  try {
+    await psql.query(`
+      DELETE from "Watchers"
+      WHERE "photoId" = $1
+    `, [photoId])
+  } catch (err) {
+    console.error("Error cleaning up Watchers")
+    console.error({ err })
+  }
 
   try {
     await psql.query(`
-                    DELETE from "Recognitions"
-                    WHERE
-                    "photoId" = '${photoId}'
-                    `)
-    //
+      DELETE from "Recognitions"
+      WHERE "photoId" = $1
+    `, [photoId])
   } catch (err) {
     console.error("Error cleaning up Recognitions")
     console.error({ err })
   }
-  // console.log(`_cleanupTables ended 3: ${photoId}`)
 
-    try {
+  try {
     await psql.query(`
-                    DELETE from "Comments"
-                    WHERE
-                    "photoId" = '${photoId}'
-                    `)
-    //
+      DELETE from "Comments"
+      WHERE "photoId" = $1
+    `, [photoId])
   } catch (err) {
     console.error("Error cleaning up Comments")
     console.error({ err })
   }
-  // console.log(`_cleanupTables ended 3: ${photoId}`)
+
+  // Delete Photos last — all FK dependencies are now removed
+  try {
+    await psql.query(`
+      DELETE from "Photos"
+      WHERE id = $1
+    `, [photoId])
+  } catch (err) {
+    console.error("Error deleting photo")
+    console.error({ err })
+  }
 
   await psql.clean()
-  // console.log(`_cleanupTables ended: ${photoId}`)
 }
