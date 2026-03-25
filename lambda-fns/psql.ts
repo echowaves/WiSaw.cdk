@@ -321,6 +321,7 @@ class ManagedServerlessClient {
 
 const psql = new ManagedServerlessClient({
   ...env,
+  user: env.username, // pg expects 'user', not Sequelize's 'username'
   delayMs: 3000,
   maxRetries: 3,
   ssl: true,
