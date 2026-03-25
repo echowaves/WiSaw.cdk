@@ -50,3 +50,18 @@ The dispatcher SHALL define an `AppSyncEvent` interface with `info.fieldName` (s
 #### Scenario: Arguments interface covers all GraphQL fields
 - **WHEN** a new GraphQL operation introduces a new argument
 - **THEN** the argument SHALL be added as a property to `AppSyncEvent['arguments']` with the appropriate TypeScript type
+
+### Requirement: AppSync resolver mapping must be registered in CDK
+Every GraphQL query and mutation field that is handled by the Lambda dispatcher SHALL have a corresponding `{ typeName, fieldName }` entry in the resolver fields array in `lib/resources/resolvers.ts`. The `createResolvers` function iterates this array and calls `lambdaDs.createResolver()` for each entry, which creates the AppSync resolver mapping that connects the GraphQL field to the Lambda data source. Without this entry, AppSync will not invoke the Lambda for that field, even if the handler is registered in `lambda-fns/index.ts`.
+
+#### Scenario: New query resolver registered in CDK
+- **WHEN** a new GraphQL query is added to `graphql/schema.graphql` and a handler is registered in `queryHandlers`
+- **THEN** a corresponding `{ typeName: 'Query', fieldName: '<fieldName>' }` entry SHALL be added to the fields array in `lib/resources/resolvers.ts`
+
+#### Scenario: New mutation resolver registered in CDK
+- **WHEN** a new GraphQL mutation is added to `graphql/schema.graphql` and a handler is registered in `mutationHandlers`
+- **THEN** a corresponding `{ typeName: 'Mutation', fieldName: '<fieldName>' }` entry SHALL be added to the fields array in `lib/resources/resolvers.ts`
+
+#### Scenario: Missing CDK resolver mapping
+- **WHEN** a handler exists in `lambda-fns/index.ts` but no corresponding entry exists in `lib/resources/resolvers.ts`
+- **THEN** AppSync will NOT invoke the Lambda for that field, and the operation will fail silently or return null to the client
