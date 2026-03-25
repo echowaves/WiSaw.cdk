@@ -45,6 +45,7 @@ const CONNECTION_ERROR_PATTERNS = [
   /closed the connection unexpectedly/i
 ]
 
+const DEFAULT_MAX_CONNECTIONS = 20
 const DEFAULT_HEALTH_CHECK_INTERVAL_MS = 30000
 const DEFAULT_HEALTH_CHECK_TIMEOUT_MS = 5000
 const DEFAULT_MAX_LIFETIME_MS = 10 * 60 * 1000
@@ -65,6 +66,7 @@ class ManagedServerlessClient {
   private readonly baseConfig: ServerlessConfig
   private readonly healthCheckIntervalMs: number
   private readonly healthCheckTimeoutMs: number
+  private readonly maxConnections: number
   private readonly maxLifetimeMs: number
   private readonly debugEnabled: boolean
   private healthStatus: ConnectionHealthStatus = 'unknown'
@@ -75,6 +77,10 @@ class ManagedServerlessClient {
 
   constructor (config: ServerlessConfig) {
     this.baseConfig = { ...config }
+    this.maxConnections = parsePositiveInt(
+      env.PG_MAX_CONNECTIONS,
+      DEFAULT_MAX_CONNECTIONS
+    )
     this.client = this.createClient()
     this.healthCheckIntervalMs = parsePositiveInt(
       env.PG_HEALTH_CHECK_INTERVAL_MS,
@@ -152,7 +158,7 @@ class ManagedServerlessClient {
   }
 
   private createClient (): ServerlessClientLike {
-    return new ServerlessClientClass({ ...this.baseConfig })
+    return new ServerlessClientClass({ ...this.baseConfig, maxConnections: this.maxConnections })
   }
 
   private hasActiveClient (): boolean {
@@ -315,7 +321,6 @@ class ManagedServerlessClient {
 const psql = new ManagedServerlessClient({
   ...env,
   delayMs: 3000,
-  maxConnections: 80,
   maxRetries: 3,
   ssl: true,
   processCountCacheEnabled: true,
