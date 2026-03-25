@@ -107,7 +107,6 @@ class ManagedServerlessClient {
     traceLog('psql.query:START', { query: queryText.substring(0, 200).replace(/\n/g, ' ') })
     await this.ensureConnected()
     try {
-      await this.runHealthCheck()
       const result = await this.client.query(queryText, values)
       traceLog('psql.query:END', { duration: `${Date.now() - start}ms`, rows: result.rowCount ?? 0 })
       return result as QueryResult<T>
