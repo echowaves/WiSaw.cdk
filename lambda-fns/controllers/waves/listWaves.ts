@@ -5,7 +5,8 @@ import { validate as uuidValidate } from 'uuid'
 
 const ALLOWED_SORT_FIELDS: Record<string, string> = {
   createdAt: '"createdAt"',
-  updatedAt: '"updatedAt"'
+  updatedAt: '"updatedAt"',
+  name: '"name"'
 }
 
 const ALLOWED_DIRECTIONS: Record<string, string> = {
@@ -18,7 +19,8 @@ export default async function main (
   batch: string,
   uuid: string,
   sortBy?: string,
-  sortDirection?: string
+  sortDirection?: string,
+  searchTerm?: string
 ): Promise<{
     waves: Wave[]
     batch: string
@@ -42,16 +44,24 @@ export default async function main (
 
   await psql.connect()
 
+  const params: any[] = [uuid]
+  let searchClause = ''
+  if (searchTerm && searchTerm.trim().length > 0) {
+    params.push(`%${searchTerm.trim()}%`)
+    searchClause = `AND ("Waves"."name" ILIKE $2 OR "Waves"."description" ILIKE $2)`
+  }
+
   const query = `
     SELECT DISTINCT "Waves".* FROM "Waves"
     JOIN "WaveUsers" ON "Waves"."waveUuid" = "WaveUsers"."waveUuid"
     WHERE "WaveUsers"."uuid" = $1
+    ${searchClause}
     ORDER BY "Waves".${sortField} ${direction}
     LIMIT ${limit}
     OFFSET ${offset}
   `
 
-  const results = (await psql.query(query, [uuid])).rows
+  const results = (await psql.query(query, params)).rows
 
   const waveUuids = results.map((row: any) => row.waveUuid)
 

@@ -259,6 +259,7 @@ getMessagesList(
     uuid: String!
     sortBy: String
     sortDirection: String
+    searchTerm: String
   ): WaveFeed
 
   listPhotoLocations(
