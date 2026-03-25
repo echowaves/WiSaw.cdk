@@ -1,6 +1,7 @@
 import moment from "moment"
  
 import psql from "../../psql"
+import { traceLog } from '../../utilities/trace'
 
 
 import { DetectLabelsCommand, DetectModerationLabelsCommand, DetectTextCommand, RekognitionClient } from "@aws-sdk/client-rekognition"
@@ -11,6 +12,8 @@ const sharp = require("sharp")
 
 // eslint-disable-next-line import/prefer-default-export
 export async function main(event: any = {}, context: any) {
+  const _traceStart = Date.now()
+  traceLog('processUploadedImage:START')
   // // define all the thumbnails that we want
   // const widths = {
   //   300: '-thumbnail x300', // converting to the height of 300
@@ -63,6 +66,7 @@ export async function main(event: any = {}, context: any) {
   // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!   ended 4   photoId: ${photoId}`)
 
   // cb(null, 'success everything')
+  traceLog('processUploadedImage:END', { duration: `${Date.now() - _traceStart}ms` })
   return true
 }
 

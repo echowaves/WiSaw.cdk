@@ -1,9 +1,12 @@
 import psql from "../../psql"
+import { traceLog } from '../../utilities/trace'
 
 import { DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3"
 
 // eslint-disable-next-line import/prefer-default-export
 export async function main(event: any = {}, context: any) {
+  const _traceStart = Date.now()
+  traceLog('processDeletedPrivateImage:START')
   const record = event.Records[0]
   const name = record.s3.object.key
 
@@ -18,6 +21,7 @@ export async function main(event: any = {}, context: any) {
   ])
 
   // cb(null, 'success everything')
+  traceLog('processDeletedPrivateImage:END', { duration: `${Date.now() - _traceStart}ms` })
   return true
 }
 

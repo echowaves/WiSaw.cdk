@@ -1,5 +1,6 @@
 import type { QueryResult, QueryResultRow } from 'pg'
 import ServerlessClient from 'serverless-postgres'
+import { traceLog } from './utilities/trace'
 const { env } = process
 
 type ServerlessConfig = Record<string, unknown>
@@ -91,18 +92,24 @@ class ManagedServerlessClient {
   }
 
   async connect (): Promise<void> {
+    const start = Date.now()
+    traceLog('psql.connect:START')
     await this.ensureConnected()
     await this.runHealthCheck(true)
+    traceLog('psql.connect:END', { duration: `${Date.now() - start}ms` })
   }
 
   async query<T extends QueryResultRow = any> (
     queryText: string,
     values?: readonly unknown[]
   ): Promise<QueryResult<T>> {
+    const start = Date.now()
+    traceLog('psql.query:START', { query: queryText.substring(0, 200).replace(/\n/g, ' ') })
     await this.ensureConnected()
     try {
       await this.runHealthCheck()
       const result = await this.client.query(queryText, values)
+      traceLog('psql.query:END', { duration: `${Date.now() - start}ms`, rows: result.rowCount ?? 0 })
       return result as QueryResult<T>
     } catch (error) {
       if (this.isConnectionError(error)) {
@@ -110,8 +117,10 @@ class ManagedServerlessClient {
         await this.ensureConnected()
         await this.runHealthCheck(true)
         const retryResult = await this.client.query(queryText, values)
+        traceLog('psql.query:END', { duration: `${Date.now() - start}ms`, rows: retryResult.rowCount ?? 0, retried: true })
         return retryResult as QueryResult<T>
       }
+      traceLog('psql.query:ERROR', { duration: `${Date.now() - start}ms`, error: String(error) })
       throw error
     }
   }
@@ -120,8 +129,11 @@ class ManagedServerlessClient {
     if (!this.hasActiveClient()) {
       return
     }
+    const start = Date.now()
+    traceLog('psql.clean:START')
     try {
       await this.client.clean()
+      traceLog('psql.clean:END', { duration: `${Date.now() - start}ms` })
     } catch (error) {
       if (this.isConnectionError(error)) {
         await this.handleConnectionFailure(error as Error)

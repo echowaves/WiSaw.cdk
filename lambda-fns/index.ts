@@ -1,6 +1,7 @@
 // ******************************************************
 //                       queries
 // ******************************************************
+import { traceWrap } from './utilities/trace'
 import generateUploadUrlForMessage from './controllers/messages/generateUploadUrlForMessage'
 import generateUploadUrl from './controllers/photos/generateUploadUrl'
 import zeroMoment from './controllers/photos/zeroMoment'
@@ -297,5 +298,7 @@ exports.main = async (event: AppSyncEvent) => {
 
   if (handler === undefined) return null
 
-  return await handler.resolver(...handler.getArgs(event.arguments))
+  return await traceWrap('handler', async () => {
+    return await handler.resolver(...handler.getArgs(event.arguments))
+  }, { fieldName: event.info.fieldName })
 }

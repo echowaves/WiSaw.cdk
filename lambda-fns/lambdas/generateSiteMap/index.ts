@@ -1,12 +1,15 @@
 const { SitemapStream, streamToPromise } = require("sitemap")
 
 import psql from "../../psql"
+import { traceLog } from '../../utilities/trace'
 
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3"; // ES Modules import
 
 
 // eslint-disable-next-line import/prefer-default-export
 export async function main(event: any = {}, context: any /*, cb: any*/) {
+  const _traceStart = Date.now()
+  traceLog('generateSiteMap:START')
   const smStream = new SitemapStream({ hostname: "https://wisaw.com" })
   smStream.write({ url: "/", changefreq: "daily" })
   smStream.write({ url: "/about" })
@@ -89,5 +92,6 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
 
   // console.log('done')
 
+  traceLog('generateSiteMap:END', { duration: `${Date.now() - _traceStart}ms` })
   return true
 }

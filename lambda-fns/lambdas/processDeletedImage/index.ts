@@ -1,10 +1,13 @@
 import psql from "../../psql"
+import { traceLog } from '../../utilities/trace'
 import { _updatePhotosCount } from "../../controllers/waves/_updatePhotosCount"
 
 import { DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3"
 
 // eslint-disable-next-line import/prefer-default-export
 export async function main(event: any = {}, context: any) {
+  const _traceStart = Date.now()
+  traceLog('processDeletedImage:START')
   const record = event.Records[0]
   const name = record.s3.object.key
   console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!deleting name: ${name}`)
@@ -25,6 +28,7 @@ export async function main(event: any = {}, context: any) {
   console.error("Error processing deleted image")
   console.error({ err })  
 }
+  traceLog('processDeletedImage:END', { duration: `${Date.now() - _traceStart}ms` })
   return true
 }
 
