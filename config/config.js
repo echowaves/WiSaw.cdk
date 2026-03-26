@@ -1,7 +1,11 @@
 /* eslint-env node */
 /* global require, module */
 
+const fs = require('fs')
+const path = require('path')
+
 const SAMPLE_ENV_PATH = '../.env.sample'
+const rdsCa = fs.readFileSync(path.join(__dirname, '../lambda-fns/certs/global-bundle.pem'), 'utf8')
 
 const loadEnvConfig = (envKey) => {
   const loadWithFallback = (loaderFn) => {
@@ -37,7 +41,8 @@ const buildConfig = (envKey) => {
     dialectOptions: {
       ssl: {
         require: true,
-        rejectUnauthorized: cfg.NODE_TLS_REJECT_UNAUTHORIZED !== '0'
+        ca: rdsCa,
+        rejectUnauthorized: true
       }
     }
   }

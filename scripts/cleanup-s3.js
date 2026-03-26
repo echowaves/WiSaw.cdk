@@ -18,11 +18,6 @@ const ENV_CONFIG_LOADERS = {
 const loadConfigModule = ENV_CONFIG_LOADERS[env] || ENV_CONFIG_LOADERS.dev
 const config = loadConfigModule().config()
 
-// Set NODE_TLS_REJECT_UNAUTHORIZED if specified in config
-if (config.NODE_TLS_REJECT_UNAUTHORIZED) {
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = config.NODE_TLS_REJECT_UNAUTHORIZED
-}
-
 const BUCKET_NAME = config.S3_BUCKET || `wisaw-img-${env}`
 const DRY_RUN = process.argv.includes('--dry-run')
 
@@ -35,7 +30,7 @@ async function getPhotoIds () {
     delayMs: 3000,
     maxConnections: 80,
     maxRetries: 3,
-    ssl: true,
+    ssl: { rejectUnauthorized: false },
     connectionTimeoutMillis: 10000, // 10 second timeout
     idleTimeoutMillis: 10000
   })

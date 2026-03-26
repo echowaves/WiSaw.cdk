@@ -1,6 +1,7 @@
 import type { QueryResult, QueryResultRow } from 'pg'
 import ServerlessClient from 'serverless-postgres'
 import { traceLog } from './utilities/trace'
+import rdsCa from './certs/global-bundle.pem'
 const { env } = process
 
 type ServerlessConfig = Record<string, unknown>
@@ -336,7 +337,7 @@ const psql = new ManagedServerlessClient({
   user: env.username, // pg expects 'user', not Sequelize's 'username'
   delayMs: 3000,
   maxRetries: 3,
-  ssl: true,
+  ssl: { ca: rdsCa, rejectUnauthorized: true },
   processCountCacheEnabled: true,
   debug: env.PG_CLIENT_DEBUG === 'true'
 })

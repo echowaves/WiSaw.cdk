@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Utility scripts map username to user for pg compatibility
 All utility scripts in `scripts/` that create `ServerlessClient` instances SHALL explicitly set `user: config.username` in the constructor options. Scripts SHALL use `ssl: { rejectUnauthorized: false }` for database connections and SHALL NOT manipulate the `NODE_TLS_REJECT_UNAUTHORIZED` environment variable.

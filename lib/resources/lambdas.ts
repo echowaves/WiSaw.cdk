@@ -39,7 +39,8 @@ export function createLambdas (scope: Construct, config: any): any {
         target: 'es2020',
         sourceMap: true,
         sourceMapMode: SourceMapMode.INLINE,
-        sourcesContent: false
+        sourcesContent: false,
+        loader: { '.pem': 'text' }
         // externalModules: ["sharp"],
       },
       // layers: [
@@ -86,7 +87,8 @@ export function createLambdas (scope: Construct, config: any): any {
         sourceMap: true,
         sourceMapMode: SourceMapMode.INLINE,
         sourcesContent: false,
-        externalModules: ['sharp']
+        externalModules: ['sharp'],
+        loader: { '.pem': 'text' }
       },
       layers: [
         lambda.LayerVersion.fromLayerVersionArn(
@@ -125,7 +127,8 @@ export function createLambdas (scope: Construct, config: any): any {
         sourceMap: true,
         sourceMapMode: SourceMapMode.INLINE,
         sourcesContent: false,
-        externalModules: ['sharp']
+        externalModules: ['sharp'],
+        loader: { '.pem': 'text' }
       },
       layers: [
         lambda.LayerVersion.fromLayerVersionArn(
@@ -164,7 +167,8 @@ export function createLambdas (scope: Construct, config: any): any {
         target: 'es2020',
         sourceMap: true,
         sourceMapMode: SourceMapMode.INLINE,
-        sourcesContent: false
+        sourcesContent: false,
+        loader: { '.pem': 'text' }
         // externalModules: ["sharp"],
       },
       // layers: [
@@ -204,7 +208,8 @@ export function createLambdas (scope: Construct, config: any): any {
         target: 'es2020',
         sourceMap: true,
         sourceMapMode: SourceMapMode.INLINE,
-        sourcesContent: false
+        sourcesContent: false,
+        loader: { '.pem': 'text' }
         // externalModules: ["sharp"],
       },
       // layers: [
@@ -244,7 +249,8 @@ export function createLambdas (scope: Construct, config: any): any {
         target: 'es2020',
         sourceMap: true,
         sourceMapMode: SourceMapMode.INLINE,
-        sourcesContent: false
+        sourcesContent: false,
+        loader: { '.pem': 'text' }
         // externalModules: ["sharp"],
       },
       // layers: [
@@ -301,7 +307,8 @@ export function createLambdas (scope: Construct, config: any): any {
           target: 'es2020',
           sourceMap: true,
           sourceMapMode: SourceMapMode.INLINE,
-          sourcesContent: false
+          sourcesContent: false,
+          loader: { '.pem': 'text' }
         },
         insightsVersion,
         logGroup: generateSiteMapLambdaFunctionLogGroup,

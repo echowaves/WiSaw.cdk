@@ -36,11 +36,6 @@ const config = typeof configModule.config === 'function'
   ? configModule.config()
   : configModule
 
-// Set NODE_TLS_REJECT_UNAUTHORIZED if specified in config
-if (config.NODE_TLS_REJECT_UNAUTHORIZED) {
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = config.NODE_TLS_REJECT_UNAUTHORIZED
-}
-
 const BUCKET_NAME = config.S3_BUCKET || `wisaw-img-${env}`
 const DRY_RUN = process.argv.includes('--dry-run')
 const BATCH_SIZE = parseInt(process.argv.find(arg => arg.startsWith('--batch-size='))?.split('=')[1]) || 10
@@ -59,7 +54,7 @@ const getDbConnection = () => {
       delayMs: 1000,
       maxConnections: 20,
       maxRetries: 2,
-      ssl: true,
+      ssl: { rejectUnauthorized: false },
       connectionTimeoutMillis: 5000,
       idleTimeoutMillis: 30000
     })

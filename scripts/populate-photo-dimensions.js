@@ -20,10 +20,6 @@ if (env === 'prod' || env === 'production') {
   configModule = require('../.env.dev')
 }
 const config = configModule.config()
-// Set NODE_TLS_REJECT_UNAUTHORIZED if specified in config
-if (config.NODE_TLS_REJECT_UNAUTHORIZED) {
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = config.NODE_TLS_REJECT_UNAUTHORIZED
-}
 
 const BUCKET_NAME = config.S3_BUCKET || `wisaw-img-${env}`
 const DRY_RUN = process.argv.includes('--dry-run')
@@ -42,7 +38,7 @@ const getDbConnection = () => {
       delayMs: 1000, // Reduced delay for better performance
       maxConnections: 20, // Reduced max connections
       maxRetries: 2, // Reduced retries for faster failure
-      ssl: true,
+      ssl: { rejectUnauthorized: false },
       connectionTimeoutMillis: 5000, // Reduced timeout
       idleTimeoutMillis: 30000 // Keep connections alive longer
     })
