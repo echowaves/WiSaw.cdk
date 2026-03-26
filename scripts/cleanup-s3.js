@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 /* eslint-env node */
 
+const fs = require('fs')
+const path = require('path')
 const { S3Client, ListObjectsV2Command, DeleteObjectCommand } = require('@aws-sdk/client-s3')
 const ServerlessClient = require('serverless-postgres')
+
+const rdsCa = fs.readFileSync(path.join(__dirname, '../lambda-fns/certs/global-bundle.pem'), 'utf8')
 
 // Parse command line arguments
 const args = process.argv.slice(2)
@@ -30,7 +34,7 @@ async function getPhotoIds () {
     delayMs: 3000,
     maxConnections: 80,
     maxRetries: 3,
-    ssl: { rejectUnauthorized: false },
+    ssl: { ca: rdsCa, rejectUnauthorized: true },
     connectionTimeoutMillis: 10000, // 10 second timeout
     idleTimeoutMillis: 10000
   })

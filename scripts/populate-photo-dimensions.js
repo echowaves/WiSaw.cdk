@@ -1,9 +1,13 @@
 #!/usr/bin/env node
 /* eslint-env node */
 
+const fs = require('fs')
+const path = require('path')
 const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3')
 const ServerlessClient = require('serverless-postgres')
 const sharp = require('sharp')
+
+const rdsCa = fs.readFileSync(path.join(__dirname, '../lambda-fns/certs/global-bundle.pem'), 'utf8')
 
 // Parse command line arguments
 const args = process.argv.slice(2)
@@ -38,7 +42,7 @@ const getDbConnection = () => {
       delayMs: 1000, // Reduced delay for better performance
       maxConnections: 20, // Reduced max connections
       maxRetries: 2, // Reduced retries for faster failure
-      ssl: { rejectUnauthorized: false },
+      ssl: { ca: rdsCa, rejectUnauthorized: true },
       connectionTimeoutMillis: 5000, // Reduced timeout
       idleTimeoutMillis: 30000 // Keep connections alive longer
     })

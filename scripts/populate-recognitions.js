@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 /* eslint-env node */
 
+const fs = require('fs')
+const path = require('path')
 const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3')
 const { RekognitionClient, DetectLabelsCommand, DetectModerationLabelsCommand, DetectTextCommand } = require('@aws-sdk/client-rekognition')
 const ServerlessClient = require('serverless-postgres')
 const sharp = require('sharp')
 const moment = require('moment')
+
+const rdsCa = fs.readFileSync(path.join(__dirname, '../lambda-fns/certs/global-bundle.pem'), 'utf8')
 
 // Parse command line arguments
 const args = process.argv.slice(2)
@@ -54,7 +58,7 @@ const getDbConnection = () => {
       delayMs: 1000,
       maxConnections: 20,
       maxRetries: 2,
-      ssl: { rejectUnauthorized: false },
+      ssl: { ca: rdsCa, rejectUnauthorized: true },
       connectionTimeoutMillis: 5000,
       idleTimeoutMillis: 30000
     })
