@@ -14,4 +14,4 @@
 
 ## 4. Verification
 
-- [ ] 4.1 Deploy and verify `listWaves` returns Photo objects with `imgUrl`, `thumbUrl`, `videoUrl`, `width`, `height`, `video` fields
+- [x] 4.1 Deploy and verify `listWaves` returns Photo objects with `imgUrl`, `thumbUrl`, `videoUrl`, `width`, `height`, `video` fields
