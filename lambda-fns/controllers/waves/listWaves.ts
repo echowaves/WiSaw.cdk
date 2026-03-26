@@ -1,5 +1,6 @@
 import psql from '../../psql'
 import { Wave } from '../../models/wave'
+import Photo from '../../models/photo'
 import { plainToClass } from 'class-transformer'
 import { validate as uuidValidate } from 'uuid'
 
@@ -65,13 +66,13 @@ export default async function main (
 
   const waveUuids = results.map((row: any) => row.waveUuid)
 
-  let photosByWave: Record<string, string[]> = {}
+  let photosByWave: Record<string, any[]> = {}
   if (waveUuids.length > 0) {
     const photosQuery = `
-      SELECT "waveUuid", "id"
+      SELECT "waveUuid", ranked.*
       FROM (
         SELECT "WavePhotos"."waveUuid",
-               "Photos"."id",
+               "Photos".*,
                ROW_NUMBER() OVER (PARTITION BY "WavePhotos"."waveUuid" ORDER BY "Photos"."createdAt" DESC) AS row_num
         FROM "WavePhotos"
         JOIN "Photos" ON "Photos"."id" = "WavePhotos"."photoId"
@@ -81,13 +82,12 @@ export default async function main (
       WHERE row_num <= 5
     `
     const photosResults = (await psql.query(photosQuery, [waveUuids])).rows
-    for (const photo of photosResults) {
-      if (!photosByWave[photo.waveUuid]) {
-        photosByWave[photo.waveUuid] = []
+    for (const row of photosResults) {
+      if (!photosByWave[row.waveUuid]) {
+        photosByWave[row.waveUuid] = []
       }
-      photosByWave[photo.waveUuid].push(
-        `https://${process.env.S3_IMAGES}/${photo.id}-thumb.webp`
-      )
+      const photo = plainToClass(Photo, { ...row, row_number: row.row_num })
+      photosByWave[row.waveUuid].push(photo.toJSON())
     }
   }
 
