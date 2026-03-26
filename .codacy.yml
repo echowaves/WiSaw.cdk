@@ -7,5 +7,7 @@ exclude_paths:
   - "openspec/**"
   - "scripts/**"
   - "migrations/**"
-exclude_patterns:
   - "package-lock.json"
+exclude_patterns:
+  
+
