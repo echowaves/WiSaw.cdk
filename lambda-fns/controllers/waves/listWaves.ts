@@ -73,7 +73,7 @@ export default async function main (
       FROM (
         SELECT "WavePhotos"."waveUuid",
                "Photos".*,
-               ROW_NUMBER() OVER (PARTITION BY "WavePhotos"."waveUuid" ORDER BY "Photos"."createdAt" DESC) AS row_num
+               ROW_NUMBER() OVER (PARTITION BY "WavePhotos"."waveUuid" ORDER BY "Photos"."updatedAt" DESC) AS row_num
         FROM "WavePhotos"
         JOIN "Photos" ON "Photos"."id" = "WavePhotos"."photoId"
         WHERE "WavePhotos"."waveUuid" = ANY($1)

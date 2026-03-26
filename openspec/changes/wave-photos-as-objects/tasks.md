@@ -12,6 +12,10 @@
 - [x] 3.2 Replace the URL string builder with `plainToClass(Photo, row).toJSON()` transformation
 - [x] 3.3 Import the `Photo` model in `listWaves.ts`
 
-## 4. Verification
+## 4. Ordering fix
 
-- [x] 4.1 Deploy and verify `listWaves` returns Photo objects with `imgUrl`, `thumbUrl`, `videoUrl`, `width`, `height`, `video` fields
+- [x] 4.1 Change photo subquery ORDER BY from `createdAt DESC` to `updatedAt DESC` to match `feedForWave` ordering
+
+## 5. Verification
+
+- [x] 5.1 Deploy and verify `listWaves` returns Photo objects with `imgUrl`, `thumbUrl`, `videoUrl`, `width`, `height`, `video` fields

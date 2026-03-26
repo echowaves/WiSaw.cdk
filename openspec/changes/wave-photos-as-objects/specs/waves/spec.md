@@ -5,7 +5,7 @@ The system SHALL return a paginated list of Waves that a given UUID is a member 
 
 #### Scenario: Waves listed with Photo objects limited to 5
 - **WHEN** `listWaves(pageNumber, batch, uuid)` is called
-- **THEN** each Wave in the response SHALL include a `photos` field containing at most 5 `Photo` objects for the most recent active photos, ordered by `createdAt` descending. Each Photo SHALL include `id`, `uuid`, `location`, `commentsCount`, `watchersCount`, `createdAt`, `updatedAt`, `active`, `video`, `width`, `height`, `lastComment`, `imgUrl`, `thumbUrl`, `videoUrl`, and `row_number`.
+- **THEN** each Wave in the response SHALL include a `photos` field containing at most 5 `Photo` objects for the most recent active photos, ordered by `updatedAt` descending (matching `feedForWave` ordering). Each Photo SHALL include `id`, `uuid`, `location`, `commentsCount`, `watchersCount`, `createdAt`, `updatedAt`, `active`, `video`, `width`, `height`, `lastComment`, `imgUrl`, `thumbUrl`, `videoUrl`, and `row_number`.
 
 #### Scenario: Photo objects include computed URL fields
 - **WHEN** Photo objects are returned in the `photos` array
