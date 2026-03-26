@@ -31,6 +31,7 @@ const s3 = new S3Client({ region: 'us-east-1' })
 async function getPhotoIds () {
   const db = new ServerlessClient({
     ...config, // Use the config object from the env file
+    user: config.username, // pg.Client expects 'user', not 'username'
     delayMs: 3000,
     maxConnections: 80,
     maxRetries: 3,

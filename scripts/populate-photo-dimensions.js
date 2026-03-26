@@ -38,6 +38,7 @@ const getDbConnection = () => {
   if (!dbPool) {
     dbPool = new ServerlessClient({
       ...config,
+      user: config.username, // pg.Client expects 'user', not 'username'
       delayMs: 1000, // Reduced delay for better performance
       maxConnections: 20, // Reduced max connections
       maxRetries: 2, // Reduced retries for faster failure
