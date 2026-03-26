@@ -52,7 +52,7 @@ export default async function main (
   }
 
   const query = `
-    SELECT DISTINCT "Waves".* FROM "Waves"
+    SELECT "Waves".* FROM "Waves"
     JOIN "WaveUsers" ON "Waves"."waveUuid" = "WaveUsers"."waveUuid"
     WHERE "WaveUsers"."uuid" = $1
     ${searchClause}
