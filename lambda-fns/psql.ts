@@ -75,6 +75,7 @@ class ManagedServerlessClient {
   private pendingHealthCheck: Promise<void> | null = null
   private connecting: Promise<void> | null = null
   private connectionCreatedAt = 0
+  private operationChain: Promise<unknown> = Promise.resolve()
 
   constructor (config: ServerlessConfig) {
     this.baseConfig = { ...config }
@@ -102,7 +103,7 @@ class ManagedServerlessClient {
     const start = Date.now()
     traceLog('psql.connect:START')
     await this.ensureConnected()
-    await this.runHealthCheck(true)
+    await this.serialized(async () => { await this.runHealthCheck(true) })
     traceLog('psql.connect:END', { duration: `${Date.now() - start}ms` })
   }
 
@@ -113,22 +114,24 @@ class ManagedServerlessClient {
     const start = Date.now()
     traceLog('psql.query:START', { query: queryText.substring(0, 200).replace(/\n/g, ' ') })
     await this.ensureConnected()
-    try {
-      const result = await this.client.query(queryText, values)
-      traceLog('psql.query:END', { duration: `${Date.now() - start}ms`, rows: result.rowCount ?? 0 })
-      return result as QueryResult<T>
-    } catch (error) {
-      if (this.isConnectionError(error)) {
-        await this.handleConnectionFailure(error as Error)
-        await this.ensureConnected()
-        await this.runHealthCheck(true)
-        const retryResult = await this.client.query(queryText, values)
-        traceLog('psql.query:END', { duration: `${Date.now() - start}ms`, rows: retryResult.rowCount ?? 0, retried: true })
-        return retryResult as QueryResult<T>
+    return await this.serialized(async () => {
+      try {
+        const result = await this.client.query(queryText, values)
+        traceLog('psql.query:END', { duration: `${Date.now() - start}ms`, rows: result.rowCount ?? 0 })
+        return result as QueryResult<T>
+      } catch (error) {
+        if (this.isConnectionError(error)) {
+          await this.handleConnectionFailure(error as Error)
+          await this.ensureConnected()
+          await this.runHealthCheck(true)
+          const retryResult = await this.client.query(queryText, values)
+          traceLog('psql.query:END', { duration: `${Date.now() - start}ms`, rows: retryResult.rowCount ?? 0, retried: true })
+          return retryResult as QueryResult<T>
+        }
+        traceLog('psql.query:ERROR', { duration: `${Date.now() - start}ms`, error: String(error) })
+        throw error
       }
-      traceLog('psql.query:ERROR', { duration: `${Date.now() - start}ms`, error: String(error) })
-      throw error
-    }
+    })
   }
 
   async clean (): Promise<void> {
@@ -137,16 +140,18 @@ class ManagedServerlessClient {
     }
     const start = Date.now()
     traceLog('psql.clean:START')
-    try {
-      await this.client.clean()
-      traceLog('psql.clean:END', { duration: `${Date.now() - start}ms` })
-    } catch (error) {
-      if (this.isConnectionError(error)) {
-        await this.handleConnectionFailure(error as Error)
-      } else {
-        throw error
+    await this.serialized(async () => {
+      try {
+        await this.client.clean()
+        traceLog('psql.clean:END', { duration: `${Date.now() - start}ms` })
+      } catch (error) {
+        if (this.isConnectionError(error)) {
+          await this.handleConnectionFailure(error as Error)
+        } else {
+          throw error
+        }
       }
-    }
+    })
   }
 
   async end (): Promise<void> {
@@ -261,6 +266,7 @@ class ManagedServerlessClient {
     this.healthStatus = 'unknown'
     this.lastHealthCheckAt = 0
     this.connectionCreatedAt = 0
+    this.operationChain = Promise.resolve()
   }
 
   private async safeEnd (): Promise<void> {
@@ -273,6 +279,12 @@ class ManagedServerlessClient {
     } catch (error) {
       this.logWarn('Error closing PostgreSQL client', error)
     }
+  }
+
+  private async serialized<T> (fn: () => Promise<T>): Promise<T> {
+    const result = this.operationChain.then(fn, fn)
+    this.operationChain = result.catch(() => {})
+    return await result
   }
 
   private async withTimeout<T> (

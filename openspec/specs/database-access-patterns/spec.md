@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Database connections use ManagedServerlessClient wrapper
-The system SHALL use a `ManagedServerlessClient` class (in `lambda-fns/psql.ts`) that wraps `serverless-postgres` to provide managed connection lifecycle, health checking, and automatic reconnection for Lambda-based database access. The singleton config SHALL explicitly map `user` from the `username` environment variable, because `pg.Client` expects `user` (not `username`).
+The system SHALL use a `ManagedServerlessClient` class (in `lambda-fns/psql.ts`) that wraps `serverless-postgres` to provide managed connection lifecycle, health checking, automatic reconnection, and operation serialization for Lambda-based database access. The singleton config SHALL explicitly map `user` from the `username` environment variable, because `pg.Client` expects `user` (not `username`). The client SHALL serialize all operations that touch `pg.Client`'s query protocol so that only one operation executes at a time, making the singleton safe for concurrent callers and pg@9-compatible.
 
 #### Scenario: Module exports a singleton client
 - **WHEN** any controller imports `psql` from `../../psql`
@@ -10,6 +10,18 @@ The system SHALL use a `ManagedServerlessClient` class (in `lambda-fns/psql.ts`)
 #### Scenario: Singleton maps username to user for pg compatibility
 - **WHEN** the psql singleton is created
 - **THEN** the config SHALL include `user: env.username` so that `pg.Client` receives the database user from the `username` environment variable
+
+#### Scenario: Concurrent queries are serialized
+- **WHEN** multiple callers invoke `query()`, `connect()`, or `clean()` concurrently on the singleton
+- **THEN** the client SHALL serialize these operations so that only one touches `pg.Client` at a time, preventing the pg@8 `DeprecationWarning` and ensuring pg@9 compatibility
+
+#### Scenario: Error-retry stays serialized
+- **WHEN** a query fails with a connection error and the client performs reconnection and retry
+- **THEN** the entire retry sequence (reconnect, health check, retry query) SHALL execute within the same serialized slot, preventing other operations from hitting a dead connection
+
+#### Scenario: Client restart resets the operation queue
+- **WHEN** `restartClient()` creates a new `ServerlessClient` instance
+- **THEN** the operation chain SHALL be reset so subsequent operations run against the new client
 
 ### Requirement: Connection concurrency guard is configurable
 The `ManagedServerlessClient` SHALL read the maximum connection count from the `PG_MAX_CONNECTIONS` environment variable. If not set, it SHALL default to `80`. This value is passed to `serverless-postgres` as `maxConnections`, which controls when `clean()` starts killing idle connections (threshold = `maxConnections × connUtilization`).
