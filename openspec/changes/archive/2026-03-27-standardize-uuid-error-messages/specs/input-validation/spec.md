@@ -15,6 +15,8 @@ The system SHALL provide an `assertValidUuid(value, fieldName)` function in `lam
 - **WHEN** `assertValidUuid("", "uuid")` is called
 - **THEN** the function throws `Error` with message `Wrong UUID format for uuid: ""`
 
+## MODIFIED Requirements
+
 ### Requirement: Device uuid validation
 Every controller that accepts a device `uuid` argument SHALL validate the value using `assertValidUuid(uuid, 'uuid')` before any database access. If the value does not match UUID format, the error message SHALL include both the field name and the rejected value.
 
@@ -44,9 +46,8 @@ Every controller that accepts a `waveUuid` argument SHALL validate the value usi
 - **WHEN** a controller receives a `waveUuid` that is not valid UUID format
 - **THEN** the controller SHALL throw an error with message `Wrong UUID format for waveUuid: "<value>"` before executing any SQL query
 
-### Requirement: Numeric argument validation
-Controllers that accept numeric arguments (`lat`, `lon`, `daysAgo`, `pageNumber`) SHALL verify the values are finite numbers before use.
+## REMOVED Requirements
 
-#### Scenario: Non-finite numeric value rejected
-- **WHEN** a controller receives `NaN`, `Infinity`, or a non-numeric value for a numeric argument
-- **THEN** the controller SHALL throw an error before executing any SQL query
+### Requirement: isValidDeviceUuid utility
+**Reason**: Replaced by `assertValidUuid` shared helper which validates and throws in a single call with standardized error messages.
+**Migration**: Replace `import { isValidDeviceUuid }` with `import { assertValidUuid }` from `../../utilities/assertValidUuid`. Replace `if (!isValidDeviceUuid(uuid)) { throw ... }` with `assertValidUuid(uuid, 'uuid')`.

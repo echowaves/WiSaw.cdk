@@ -1,5 +1,5 @@
 import psql from '../../psql'
-import { validate as uuidValidate } from 'uuid'
+import { assertValidUuid } from '../../utilities/assertValidUuid'
 
 interface PhotoLocation {
   lat: number
@@ -13,9 +13,7 @@ export default async function main (
   uuid: string,
   radius: number = 50
 ): Promise<PhotoLocation[]> {
-  if (!uuidValidate(uuid)) {
-    throw new Error('Wrong UUID format for uuid')
-  }
+  assertValidUuid(uuid, 'uuid')
 
   // Ensure radius is a positive number
   const clusterRadius = Math.max(1, Number.isNaN(radius) || radius === 0 ? 50 : radius)

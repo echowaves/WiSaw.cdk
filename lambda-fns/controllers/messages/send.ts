@@ -1,12 +1,11 @@
 import moment from "moment"
 
-import { validate as uuidValidate } from "uuid"
-
 import { plainToClass } from "class-transformer"
 
 import psql from "../../psql"
 
 import Message from "../../models/message"
+import { assertValidUuid } from '../../utilities/assertValidUuid'
 
 export default async function main(
   chatUuidArg: string,
@@ -20,15 +19,9 @@ export default async function main(
   // 2. otherwise update the existing ,message
 
   // here validate values before inserting into DB
-  if (uuidValidate(chatUuidArg) === false) {
-    throw new Error(`Wrong UUID format1`)
-  }
-  if (uuidValidate(uuidArg) === false) {
-    throw new Error(`Wrong UUID format2`)
-  }
-  if (uuidValidate(messageUuidArg) === false) {
-    throw new Error(`Wrong UUID format3`)
-  }
+  assertValidUuid(chatUuidArg, 'chatUuid')
+  assertValidUuid(uuidArg, 'uuid')
+  assertValidUuid(messageUuidArg, 'messageUuid')
 
   if (pendingArg !== true && pendingArg !== false) {
     throw new Error(`Pending value should be passed in`)

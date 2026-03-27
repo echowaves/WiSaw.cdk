@@ -1,7 +1,5 @@
-import { validate as uuidValidate } from 'uuid'
-
 import psql from '../../psql'
-import { isValidPhotoId } from '../../utilities/isValidPhotoId'
+import { assertValidUuid } from '../../utilities/assertValidUuid'
 
 import { _updatePhotosCount } from './_updatePhotosCount'
 
@@ -9,12 +7,8 @@ export default async function main (
   waveUuid: string,
   photoId: string
 ): Promise<boolean> {
-  if (!uuidValidate(waveUuid)) {
-    throw new Error('Wrong UUID format for waveUuid')
-  }
-  if (!isValidPhotoId(photoId)) {
-    throw new Error('Wrong UUID format for photoId')
-  }
+  assertValidUuid(waveUuid, 'waveUuid')
+  assertValidUuid(photoId, 'photoId')
 
   await psql.connect()
 

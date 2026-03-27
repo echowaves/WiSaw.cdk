@@ -1,16 +1,12 @@
-import { validate as uuidValidate } from 'uuid'
 import psql from '../../psql'
+import { assertValidUuid } from '../../utilities/assertValidUuid'
 
 export default async function main (
   waveUuid: string,
   uuid: string
 ): Promise<boolean> {
-  if (!uuidValidate(waveUuid)) {
-    throw new Error('Wrong UUID format for waveUuid')
-  }
-  if (!uuidValidate(uuid)) {
-    throw new Error('Wrong UUID format for uuid')
-  }
+  assertValidUuid(waveUuid, 'waveUuid')
+  assertValidUuid(uuid, 'uuid')
 
   await psql.connect()
 

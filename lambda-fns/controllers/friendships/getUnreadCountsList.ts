@@ -1,6 +1,6 @@
 import psql from '../../psql'
 
-import {validate as uuidValidate,} from 'uuid'
+import { assertValidUuid } from '../../utilities/assertValidUuid'
 
 // import {plainToClass,} from 'class-transformer'
 // import Friendship from '../../models/friendship'
@@ -9,9 +9,7 @@ import {validate as uuidValidate,} from 'uuid'
 export default async function main(
   uuid: string
 ) {
-  if(uuidValidate(uuid) === false) {
-    throw new Error(`Wrong UUID format`)
-  }
+  assertValidUuid(uuid, 'uuid')
 
   await psql.connect()
 

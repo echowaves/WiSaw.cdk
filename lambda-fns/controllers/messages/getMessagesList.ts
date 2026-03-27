@@ -1,16 +1,13 @@
 import psql from "../../psql"
 
-import { validate as uuidValidate } from "uuid"
-
 import { plainToClass } from "class-transformer"
 import Message from "../../models/message"
+import { assertValidUuid } from '../../utilities/assertValidUuid'
 
 export default async function main(chatUuid: string, lastLoaded: string) {
   const limit = 20
 
-  if (uuidValidate(chatUuid) === false) {
-    throw new Error(`Wrong UUID format`)
-  }
+  assertValidUuid(chatUuid, 'chatUuid')
 
   await psql.connect()
 

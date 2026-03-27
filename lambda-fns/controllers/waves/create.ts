@@ -1,8 +1,9 @@
-import { v4 as uuidv4, validate as uuidValidate } from 'uuid'
+import { v4 as uuidv4 } from 'uuid'
 import moment from 'moment'
 import psql from '../../psql'
 import { Wave } from '../../models/wave'
 import { plainToClass } from 'class-transformer'
+import { assertValidUuid } from '../../utilities/assertValidUuid'
 
 export default async function main (
   name: string,
@@ -12,9 +13,7 @@ export default async function main (
   lon?: number,
   radius?: number
 ): Promise<Wave> {
-  if (!uuidValidate(uuid)) {
-    throw new Error('Wrong UUID format for uuid')
-  }
+  assertValidUuid(uuid, 'uuid')
   if (name.trim().length === 0) {
     throw new Error('Unable to save empty wave name.')
   }

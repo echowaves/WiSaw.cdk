@@ -1,9 +1,9 @@
-import { validate as uuidValidate } from 'uuid'
 import moment from 'moment'
 import psql from '../../psql'
 import { Wave } from '../../models/wave'
 import { plainToClass } from 'class-transformer'
 import { _updatePhotosCount } from './_updatePhotosCount'
+import { assertValidUuid } from '../../utilities/assertValidUuid'
 
 export default async function main (
   targetWaveUuid: string,
@@ -12,15 +12,9 @@ export default async function main (
   name?: string,
   description?: string
 ): Promise<Wave> {
-  if (!uuidValidate(targetWaveUuid)) {
-    throw new Error('Wrong UUID format for targetWaveUuid')
-  }
-  if (!uuidValidate(sourceWaveUuid)) {
-    throw new Error('Wrong UUID format for sourceWaveUuid')
-  }
-  if (!uuidValidate(uuid)) {
-    throw new Error('Wrong UUID format for uuid')
-  }
+  assertValidUuid(targetWaveUuid, 'targetWaveUuid')
+  assertValidUuid(sourceWaveUuid, 'sourceWaveUuid')
+  assertValidUuid(uuid, 'uuid')
   if (targetWaveUuid === sourceWaveUuid) {
     throw new Error('Cannot merge a wave into itself')
   }

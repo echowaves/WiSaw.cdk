@@ -1,13 +1,11 @@
 import psql from '../../psql'
 
-import { validate as uuidValidate, } from 'uuid'
+import { assertValidUuid } from '../../utilities/assertValidUuid'
 
 export default async function main( friendshipUuid: string) {
   // console.log({friendshipUuid,})
   // here validate values before inserting into DB
-  if(uuidValidate(friendshipUuid) === false) {
-    throw new Error(`Wrong UUID format`)
-  }
+  assertValidUuid(friendshipUuid, 'friendshipUuid')
 
   await psql.connect()
 

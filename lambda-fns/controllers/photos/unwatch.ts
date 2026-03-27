@@ -1,13 +1,11 @@
 import psql from '../../psql'
-import { isValidPhotoId } from '../../utilities/isValidPhotoId'
+import { assertValidUuid } from '../../utilities/assertValidUuid'
 
 
 import { _updateWatchers, } from './_updateWatchers'
 
 export default async function main(photoId: string, uuid: string) {
-  if (!isValidPhotoId(photoId)) {
-    throw new Error('Wrong UUID format for photoId')
-  }
+  assertValidUuid(photoId, 'photoId')
 
   await psql.connect()
 

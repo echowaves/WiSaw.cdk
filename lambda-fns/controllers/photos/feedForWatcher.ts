@@ -1,7 +1,7 @@
 import psql from '../../psql'
 import { plainToClass } from 'class-transformer'
 import Photo from '../../models/photo'
-import { isValidDeviceUuid } from '../../utilities/isValidDeviceUuid'
+import { assertValidUuid } from '../../utilities/assertValidUuid'
 
 // import AbuseReport from '../../models/abuseReport'
 
@@ -14,9 +14,7 @@ export default async function main (
     batch: string
     noMoreData: boolean
   }> {
-  if (!isValidDeviceUuid(uuid)) {
-    throw new Error('Wrong UUID format for uuid')
-  }
+  assertValidUuid(uuid, 'uuid')
 
   const limit = 100
   const offset = pageNumber * limit

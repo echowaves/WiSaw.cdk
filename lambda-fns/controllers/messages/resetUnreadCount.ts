@@ -1,21 +1,18 @@
 import moment from "moment"
 
-import { validate as uuidValidate } from "uuid"
+import psql from "../../psql"
+import { assertValidUuid } from '../../utilities/assertValidUuid'
 
 // import {plainToClass,} from 'class-transformer'
 
-import psql from "../../psql"
+
 
 // import Message from '../../models/message'
 
 export default async function main(chatUuid: string, uuid: string) {
   // here validate values before inserting into DB
-  if (uuidValidate(chatUuid) === false) {
-    throw new Error(`Wrong UUID format1`)
-  }
-  if (uuidValidate(uuid) === false) {
-    throw new Error(`Wrong UUID format2`)
-  }
+  assertValidUuid(chatUuid, 'chatUuid')
+  assertValidUuid(uuid, 'uuid')
 
   const lastReadAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
 

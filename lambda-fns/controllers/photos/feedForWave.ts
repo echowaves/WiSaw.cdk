@@ -1,7 +1,7 @@
-import { validate as uuidValidate } from 'uuid'
 import psql from '../../psql'
 import { plainToClass } from 'class-transformer'
 import Photo from '../../models/photo'
+import { assertValidUuid } from '../../utilities/assertValidUuid'
 
 export default async function main (
   waveUuid: string,
@@ -12,9 +12,7 @@ export default async function main (
     batch: string
     noMoreData: boolean
   }> {
-  if (!uuidValidate(waveUuid)) {
-    throw new Error('Wrong UUID format for waveUuid')
-  }
+  assertValidUuid(waveUuid, 'waveUuid')
 
   const limit = 100
   const offset = pageNumber * limit

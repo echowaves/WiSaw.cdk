@@ -1,8 +1,9 @@
 import { GeoPlacesClient, ReverseGeocodeCommand } from '@aws-sdk/client-geo-places'
-import { v4 as uuidv4, validate as uuidValidate } from 'uuid'
+import { v4 as uuidv4 } from 'uuid'
 import moment from 'moment'
 import psql from '../../psql'
 import { _updatePhotosCount } from './_updatePhotosCount'
+import { assertValidUuid } from '../../utilities/assertValidUuid'
 
 interface AutoGroupResult {
   waveUuid: string | null
@@ -135,9 +136,7 @@ async function createWaveAndAssign (
 }
 
 export default async function main (uuid: string): Promise<AutoGroupResult> {
-  if (!uuidValidate(uuid)) {
-    throw new Error('Wrong UUID format for uuid')
-  }
+  assertValidUuid(uuid, 'uuid')
 
   await psql.connect()
 

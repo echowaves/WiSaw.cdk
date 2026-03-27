@@ -1,6 +1,6 @@
 import moment from "moment"
 
-import { validate as uuidValidate, v4 as uuidv4 } from "uuid"
+import { v4 as uuidv4 } from "uuid"
 
 import { plainToClass } from "class-transformer"
 
@@ -9,12 +9,11 @@ import psql from "../../psql"
 import Friendship from "../../models/friendship"
 import Chat from "../../models/chat"
 import ChatUser from "../../models/chatUser"
+import { assertValidUuid } from '../../utilities/assertValidUuid'
 
 export default async function main(uuid: string) {
   // here validate values before inserting into DB
-  if (uuidValidate(uuid) === false) {
-    throw new Error(`Wrong UUID format`)
-  }
+  assertValidUuid(uuid, 'uuid')
 
   const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
 
