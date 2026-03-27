@@ -19,8 +19,8 @@ export default async function main(
     await psql.query(`
   SELECT * FROM "ChatPhotos"
     WHERE
-      "chatPhotoHash" = '${photoHash}'
-    `)
+      "chatPhotoHash" = $1
+    `, [photoHash])
   ).rows
   await psql.clean()
 

@@ -18,7 +18,7 @@ export default async function main (
   try {
     const query = `
           SELECT
-            row_number() OVER (ORDER BY id desc) + ${offset} as row_number,
+            row_number() OVER (ORDER BY id desc) + $2 as row_number,
             p.*
           FROM "Photos" p
           WHERE active = true
@@ -27,20 +27,20 @@ export default async function main (
                 SELECT "photoId"
                 FROM "Recognitions"
                 WHERE
-                to_tsvector('English', "metaData"::text) @@ plainto_tsquery('English', '${searchTerm}')
+                to_tsvector('English', "metaData"::text) @@ plainto_tsquery('English', $1)
               UNION
                 SELECT "photoId"
                 FROM "Comments"
                 WHERE
-                  active = true AND to_tsvector('English', "comment"::text) @@ plainto_tsquery('English', '${searchTerm}')
+                  active = true AND to_tsvector('English', "comment"::text) @@ plainto_tsquery('English', $1)
               )
           ORDER BY id desc
-          LIMIT ${limit}
-          OFFSET ${offset}
+          LIMIT $3
+          OFFSET $2
     `
 
     const results =
-      (await psql.query(query)
+      (await psql.query(query, [searchTerm, offset, limit])
       ).rows
     await psql.clean()
 

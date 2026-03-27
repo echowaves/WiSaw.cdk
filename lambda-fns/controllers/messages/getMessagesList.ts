@@ -19,12 +19,12 @@ export default async function main(chatUuid: string, lastLoaded: string) {
   SELECT *
       FROM "Messages"
       WHERE 
-        "chatUuid" = '${chatUuid}'
+        "chatUuid" = $1
       AND
-        "createdAt" < '${lastLoaded}'
+        "createdAt" < $2
       ORDER BY "createdAt" DESC
-      LIMIT ${limit}
-      `)
+      LIMIT $3
+      `, [chatUuid, lastLoaded, limit])
   ).rows
 
   await psql.clean()

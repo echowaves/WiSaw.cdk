@@ -24,13 +24,13 @@ export default async function main(chatUuid: string, uuid: string) {
   // const chatUsers =
   await psql.query(`
                       UPDATE "ChatUsers"
-                      SET "lastReadAt" = '${lastReadAt}'       
+                      SET "lastReadAt" = $1       
                       WHERE 
-                        "chatUuid" = '${chatUuid}'
+                        "chatUuid" = $2
                       AND
-                        "uuid" = '${uuid}' 
+                        "uuid" = $3 
                       returning *
-                      `)
+                      `, [lastReadAt, chatUuid, uuid])
   // ).rows[0]
   await psql.clean()
 

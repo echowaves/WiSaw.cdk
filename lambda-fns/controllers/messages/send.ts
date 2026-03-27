@@ -49,8 +49,8 @@ export default async function main(
     await psql.query(`
   SELECT *
     FROM "Messages"
-    WHERE "messageUuid" = '${messageUuidArg}'
-  `)
+    WHERE "messageUuid" = $1
+  `, [messageUuidArg])
   ).rows
 
   if (existingMessages.length > 1) {
@@ -74,15 +74,15 @@ export default async function main(
                    "pending", 
                    "chatPhotoHash"
                ) values (
-                 '${chatUuidArg}',
-                 '${uuidArg}',
-                 '${messageUuidArg}',
-                 '${textArg}',
-                 ${pendingArg}, 
-                 '${chatPhotoHashArg}'
+                 $1,
+                 $2,
+                 $3,
+                 $4,
+                 $5, 
+                 $6
                )
                returning *
-               `)
+               `, [chatUuidArg, uuidArg, messageUuidArg, textArg, pendingArg, chatPhotoHashArg])
     ).rows[0]
   } else {
     // this is not a new message --> update
@@ -91,21 +91,21 @@ export default async function main(
       await psql.query(`
                UPDATE "Messages"
                SET
-                   "text" = '${textArg}', 
-                   "pending" = ${pendingArg},
-                   "chatPhotoHash" = '${chatPhotoHashArg}'
+                   "text" = $1, 
+                   "pending" = $2,
+                   "chatPhotoHash" = $3
                WHERE
-                    "messageUuid" = '${messageUuidArg}'
+                    "messageUuid" = $4
                returning *
-               `)
+               `, [textArg, pendingArg, chatPhotoHashArg, messageUuidArg])
     ).rows[0]
   }
 
   await psql.query(`
     UPDATE "ChatUsers"
-            SET "updatedAt" = '${updatedAt}'
-            WHERE "chatUuid" = '${chatUuidArg}'
-            returning *`)
+            SET "updatedAt" = $1
+            WHERE "chatUuid" = $2
+            returning *`, [updatedAt, chatUuidArg])
   // console.log({message,})
   await psql.clean()
 

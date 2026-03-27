@@ -1,6 +1,7 @@
 import psql from '../../psql'
 import { plainToClass } from 'class-transformer'
 import Photo from '../../models/photo'
+import { isValidDeviceUuid } from '../../utilities/isValidDeviceUuid'
 
 // import AbuseReport from '../../models/abuseReport'
 
@@ -13,6 +14,10 @@ export default async function main (
     batch: string
     noMoreData: boolean
   }> {
+  if (!isValidDeviceUuid(uuid)) {
+    throw new Error('Wrong UUID format for uuid')
+  }
+
   const limit = 100
   const offset = pageNumber * limit
   // console.log({uuid})
@@ -20,21 +25,21 @@ export default async function main (
 
   const query = `
     SELECT
-      row_number() OVER (ORDER BY p."updatedAt" DESC) + ${offset} as row_number,
+      row_number() OVER (ORDER BY p."updatedAt" DESC) + $3 as row_number,
       p.*
     FROM "Photos" p
     INNER JOIN "Watchers" w
       ON p.id = w."photoId"
     WHERE
-      w.uuid = '${uuid}'
+      w.uuid = $1
     AND p.active = true
     ORDER BY p."updatedAt" DESC
-    LIMIT ${limit}
-    OFFSET ${offset}
+    LIMIT $2
+    OFFSET $3
   `
 
   const results =
-  (await psql.query(query)
+  (await psql.query(query, [uuid, limit, offset])
   ).rows
   await psql.clean()
 

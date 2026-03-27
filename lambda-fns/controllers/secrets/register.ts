@@ -36,8 +36,8 @@ export default async function main(
     await psql.query(
       `SELECT *
               FROM "Secrets"
-              WHERE "nickName" = '${nickName}'
-  `,
+              WHERE "nickName" = $1
+  `, [nickName.toLowerCase()]
     )
   ).rows
 
@@ -72,14 +72,14 @@ export default async function main(
                         "createdAt",
                         "updatedAt"
                     ) values (
-                      '${uuid}',
-                      '${nickName.toLowerCase()}',   
-                      '${_hash(secret)}',
-                      '${createdAt}',
-                      '${updatedAt}'
+                      $1,
+                      $2,   
+                      $3,
+                      $4,
+                      $4
                     )
                     returning *
-                    `)
+                    `, [uuid, nickName.toLowerCase(), _hash(secret), createdAt])
     ).rows
     await psql.clean()
 

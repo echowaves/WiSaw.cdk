@@ -20,9 +20,9 @@ export default async function main(
   
   SELECT *
       FROM "Friendships"
-      WHERE "uuid1" = '${uuid}'
-      OR "uuid2" = '${uuid}'
-    `)
+      WHERE "uuid1" = $1
+      OR "uuid2" = $1
+    `, [uuid])
   ).rows
   await psql.clean()
 

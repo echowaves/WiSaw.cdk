@@ -24,12 +24,12 @@ export default async function main (
     WHERE
       active = true
     ORDER BY "Photos"."updatedAt" DESC
-    LIMIT ${limit}
-    OFFSET ${offset}
+    LIMIT $1
+    OFFSET $2
   `
 
   const results =
-  (await psql.query(query)
+  (await psql.query(query, [limit, offset])
   ).rows
   await psql.clean()
 

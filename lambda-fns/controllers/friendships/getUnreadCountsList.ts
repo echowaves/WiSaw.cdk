@@ -23,9 +23,9 @@ export default async function main(
             COUNT(CASE WHEN m."createdAt" > cu."lastReadAt" THEN 1 END) AS unread
           FROM "ChatUsers" cu 
             INNER JOIN "Messages" m ON cu."chatUuid" = m."chatUuid"
-          WHERE cu."uuid" =  '${uuid}'
+          WHERE cu."uuid" =  $1
           GROUP BY cu."chatUuid", cu."updatedAt"
-      `)).rows
+      `, [uuid])).rows
 
   await psql.clean()
 

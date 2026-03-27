@@ -38,16 +38,16 @@ export default async function main(
     await psql.query(`
     UPDATE "Secrets"
                   SET
-                    "secret" = '${_hash(newSecret)}',
-                    "updatedAt" =  '${updatedAt}'                
+                    "secret" = $1,
+                    "updatedAt" =  $2                
                   WHERE
-                    "uuid" = '${uuid}'
+                    "uuid" = $3
                     AND
-                    "nickName" = '${nickName.toLowerCase()}'
+                    "nickName" = $4
                     AND
-                    "secret" = '${_hash(secret)}'
+                    "secret" = $5
                   returning *
-                  `)
+                  `, [_hash(newSecret), updatedAt, uuid, nickName.toLowerCase(), _hash(secret)])
   ).rows
   if (updatedSecret.length !== 1) {
     throw new Error(`Failed to update secret`)

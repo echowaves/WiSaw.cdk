@@ -14,8 +14,8 @@ export default async function main( friendshipUuid: string) {
   const chatUuid =
         (await psql.query(`      
       SELECT * from "Friendships"
-      WHERE "friendshipUuid" = '${friendshipUuid}'
-  `)).rows[0].chatUuid
+      WHERE "friendshipUuid" = $1
+  `, [friendshipUuid])).rows[0].chatUuid
 
   // console.log({chatUuid,})
 
@@ -24,23 +24,23 @@ export default async function main( friendshipUuid: string) {
 
     await psql.query(`      
       DELETE from "Friendships"
-        WHERE "friendshipUuid" = '${friendshipUuid}'
-    `)
+        WHERE "friendshipUuid" = $1
+    `, [friendshipUuid])
 
     await psql.query(`      
       DELETE from "Chats"
-        WHERE "chatUuid" = '${chatUuid}'
-    `)
+        WHERE "chatUuid" = $1
+    `, [chatUuid])
 
     await psql.query(`      
       DELETE from "ChatUsers"
-        WHERE "chatUuid" = '${chatUuid}'
-    `)
+        WHERE "chatUuid" = $1
+    `, [chatUuid])
 
     await psql.query(`      
       DELETE from "Messages"
-        WHERE "chatUuid" = '${chatUuid}'
-    `)
+        WHERE "chatUuid" = $1
+    `, [chatUuid])
     // console.log("OK")
     await psql.query('COMMIT')
 

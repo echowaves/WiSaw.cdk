@@ -35,13 +35,13 @@ export default async function main(uuid: string) {
                         "chatUuid",
                         "createdAt"
                       ) values (
-                      '${friendshipUuid}',
-                      '${uuid}',
-                      '${chatUuid}',
-                      '${createdAt}'
+                      $1,
+                      $2,
+                      $3,
+                      $4
                       ) 
                       returning *
-                      `)
+                      `, [friendshipUuid, uuid, chatUuid, createdAt])
     ).rows[0]
 
     const chat = (
@@ -51,11 +51,11 @@ export default async function main(uuid: string) {
                           "chatUuid",
                           "createdAt"
                       ) values (
-                        '${chatUuid}',
-                        '${createdAt}'
+                        $1,
+                        $2
                       )
                       returning *
-                      `)
+                      `, [chatUuid, createdAt])
     ).rows[0]
 
     const chatUser = (
@@ -68,14 +68,14 @@ export default async function main(uuid: string) {
                           "createdAt",
                           "lastReadAt"
                       ) values (
-                        '${chatUuid}',
-                        '${uuid}',
-                        '${uuid}',
-                        '${createdAt}',
-                        '${createdAt}'
+                        $1,
+                        $2,
+                        $2,
+                        $3,
+                        $3
                       )
                       returning *
-                      `)
+                      `, [chatUuid, uuid, createdAt])
     ).rows[0]
 
     await psql.query("COMMIT")

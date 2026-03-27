@@ -5,26 +5,30 @@ import { plainToClass } from 'class-transformer'
 import Photo from '../../models/photo'
 
 async function _retrievePhotos (currentDate: moment.Moment, daysAgo: number, lat: number, lon: number): Promise<Photo[]> {
+  const dateFrom = currentDate
+    .clone()
+    .subtract(daysAgo, 'days')
+    .format('YYYY-MM-DD HH:mm:ss.SSS')
+  const dateTo = currentDate
+    .clone()
+    .add(1, 'days')
+    .subtract(daysAgo, 'days')
+    .format('YYYY-MM-DD HH:mm:ss.SSS')
+  const rowNumberOffset = 100 * daysAgo
+
   const query = `
     SELECT
     "Photos".*
     , ST_Distance(
         "location",
-        ST_MakePoint(${lon}, ${lat})
+        ST_MakePoint($1, $2)
       ) as distance
-    , row_number()  OVER (ORDER BY "Photos"."createdAt" DESC) + (100*${daysAgo}) as row_number
+    , row_number()  OVER (ORDER BY "Photos"."createdAt" DESC) + $3 as row_number
   
     FROM "Photos"
     WHERE
-        "Photos"."createdAt" >= '${currentDate
-          .clone()
-          .subtract(daysAgo, 'days')
-          .format('YYYY-MM-DD HH:mm:ss.SSS')}'
-    AND "Photos"."createdAt" <= '${currentDate
-      .clone()
-      .add(1, 'days')
-      .subtract(daysAgo, 'days')
-      .format('YYYY-MM-DD HH:mm:ss.SSS')}'
+        "Photos"."createdAt" >= $4
+    AND "Photos"."createdAt" <= $5
     AND active = true
   
     ORDER BY "Photos"."createdAt" DESC
@@ -33,7 +37,7 @@ async function _retrievePhotos (currentDate: moment.Moment, daysAgo: number, lat
   `
 
   const results = (
-    await psql.query(query)
+    await psql.query(query, [lon, lat, rowNumberOffset, dateFrom, dateTo])
   ).rows
   // console.log({results})
   const photos = results.map((photo: any) => plainToClass(Photo, photo))

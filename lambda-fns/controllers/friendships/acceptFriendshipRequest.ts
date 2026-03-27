@@ -30,8 +30,8 @@ export default async function main(friendshipUuid: string, uuid: string) {
         await psql.query(`
           SELECT *
           FROM "Friendships"
-          WHERE "friendshipUuid" = '${friendshipUuid}'
-        `)
+          WHERE "friendshipUuid" = $1
+        `, [friendshipUuid])
       ).rows
 
       // console.log({friendship1,})
@@ -49,10 +49,10 @@ export default async function main(friendshipUuid: string, uuid: string) {
       const friendship = (
         await psql.query(`
                             UPDATE "Friendships"
-                            SET "uuid2" = '${uuid}'
-                            WHERE "friendshipUuid" = '${friendshipUuid}'
+                            SET "uuid2" = $1
+                            WHERE "friendshipUuid" = $2
                             returning *
-                            `)
+                            `, [uuid, friendshipUuid])
       ).rows[0]
 
       // console.log({ friendship })
@@ -67,14 +67,14 @@ export default async function main(friendshipUuid: string, uuid: string) {
                                 "createdAt",
                                 "lastReadAt"
                             ) values (    
-                              '${friendship.chatUuid}',
-                              '${uuid}',
-                              '${friendship.uuid1}',
-                              '${createdAt}',
-                              '${createdAt}'
+                              $1,
+                              $2,
+                              $3,
+                              $4,
+                              $4
                             )
                             returning *
-                            `)
+                            `, [friendship.chatUuid, uuid, friendship.uuid1, createdAt])
       ).rows[0]
 
       // console.log({ chatUser })
@@ -83,8 +83,8 @@ export default async function main(friendshipUuid: string, uuid: string) {
         await psql.query(`
                       SELECT * FROM "Chats"
                       WHERE                   
-                          "chatUuid" = '${friendship.chatUuid}'
-                      `)
+                          "chatUuid" = $1
+                      `, [friendship.chatUuid])
       ).rows[0]
 
       // console.log({ chat })
