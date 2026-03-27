@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Create a Wave
-The system SHALL allow a device UUID to create a named content channel (Wave) with an optional description, geo-location, and radius.
+The system SHALL allow a device (identified by its `uuid`) to create a named content channel (Wave) with an optional description, geo-location, and radius.
 
 #### Scenario: Wave created without location
 - **WHEN** `createWave(name, description, uuid)` is called without `lat`, `lon`, or `radius`

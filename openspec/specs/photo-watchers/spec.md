@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Watch a photo
-The system SHALL allow a device UUID to subscribe to a photo as a watcher, updating the photo's watcher count.
+The system SHALL allow a device (identified by its `uuid`) to subscribe to a photo as a watcher, updating the photo's watcher count.
 
 #### Scenario: User watches a photo
 - **WHEN** `watchPhoto(photoId, uuid)` is called
@@ -14,7 +14,7 @@ The system SHALL allow a device UUID to subscribe to a photo as a watcher, updat
 ---
 
 ### Requirement: Unwatch a photo
-The system SHALL allow a device UUID to remove themselves as a watcher from a photo.
+The system SHALL allow a device (identified by its `uuid`) to remove itself as a watcher from a photo.
 
 #### Scenario: User unwatches a photo
 - **WHEN** `unwatchPhoto(photoId, uuid)` is called
@@ -23,11 +23,11 @@ The system SHALL allow a device UUID to remove themselves as a watcher from a ph
 ---
 
 ### Requirement: Check if photo is watched
-The system SHALL report whether a given UUID is currently watching a photo.
+The system SHALL report whether a given device (by its `uuid`) is currently watching a photo.
 
 #### Scenario: Photo details include watch status
 - **WHEN** `getPhotoDetails(photoId, uuid)` is called
-- **THEN** `isPhotoWatched` in the `PhotoDetails` response is `true` if a Watcher record exists for that photo and UUID, and `false` otherwise
+- **THEN** `isPhotoWatched` in the `PhotoDetails` response is `true` if a Watcher record exists for that photo and device `uuid`, and `false` otherwise
 
 ---
 
@@ -36,4 +36,4 @@ The system SHALL notify all current watchers of a photo whenever a new comment i
 
 #### Scenario: Watchers receive notification on comment
 - **WHEN** a new comment is created on a photo
-- **THEN** the system SHALL send a notification to every UUID that has a Watcher record for that photo (excluding the commenter themselves)
+- **THEN** the system SHALL send a notification to every device `uuid` that has a Watcher record for that photo (excluding the commenter's `uuid`)

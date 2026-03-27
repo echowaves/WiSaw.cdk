@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Register a new identity
-The system SHALL allow a device to register a persistent anonymous identity using a globally unique nickName and a secret passphrase, tied to a client-generated UUID.
+The system SHALL allow a device to register a persistent anonymous identity using a globally unique nickName and a secret passphrase, tied to the device's `uuid` (a client-generated device/user identifier).
 
 #### Scenario: New identity registered
 - **WHEN** `registerSecret(uuid, nickName, secret)` is called and no record with that nickName exists

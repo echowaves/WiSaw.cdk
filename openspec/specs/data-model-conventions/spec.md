@@ -5,7 +5,7 @@ Data models SHALL be defined as plain TypeScript classes with typed properties m
 
 #### Scenario: Photo model definition
 - **WHEN** the Photo model class is defined
-- **THEN** it SHALL have typed properties (`id: string`, `uuid: string`, `location: object`, `commentsCount: bigint`, etc.) with no decorators or ORM metadata
+- **THEN** it SHALL have typed properties (`id: string` for the photo's primary key, `uuid: string` for the device/user identity that uploaded the photo, `location: object`, `commentsCount: bigint`, etc.) with no decorators or ORM metadata
 
 #### Scenario: Wave model definition
 - **WHEN** the Wave model class is defined
@@ -28,6 +28,17 @@ Models that need derived properties (e.g., URLs constructed from environment var
 #### Scenario: Model without derived properties
 - **WHEN** a model has no computed properties (e.g., Wave, Message)
 - **THEN** it SHALL NOT implement `toJSON()` and rely on default serialization
+
+### Requirement: The `uuid` field is the device/user identifier, not a data type
+Across all tables and function signatures, the field named `uuid` represents the **device/user identifier** — the anonymous identity of the client that created or owns the record. It is a field name, not a data type label. The Photo's own identifier is `id` (which is stored in UUID format after the July 2025 migration). When passed as a function argument, the photo's ID is called `photoId` and the device identity is called `uuid`.
+
+#### Scenario: Distinguishing uuid from id
+- **WHEN** a model has both `id` and `uuid` fields (e.g., Photo)
+- **THEN** `id` is the record's primary key (in UUID format) and `uuid` is the device/user identity that created or owns the record
+
+#### Scenario: Function argument naming
+- **WHEN** a controller or resolver accepts an identifier for the calling device
+- **THEN** the parameter SHALL be named `uuid` (the device identity), not to be confused with `photoId` (the photo's primary key) or `waveUuid` (the wave's primary key)
 
 ### Requirement: Models support UUID and integer ID duality
 Models that originated before the UUID migration SHALL have both an `id` field (UUID string, current primary key) and may reference legacy integer IDs in relationships. New models SHALL use UUID as the primary identifier.
