@@ -1,11 +1,11 @@
 ## ADDED Requirements
 
 ### Requirement: Send a message to a chat
-The system SHALL allow a ChatUser to send a message into a Chat using an upsert pattern that supports optimistic UI.
+The system SHALL allow a ChatUser to send a message into a Chat using an upsert pattern that supports optimistic UI. All SQL queries SHALL use parameterized SQL.
 
 #### Scenario: New message inserted
 - **WHEN** `sendMessage(chatUuid, uuid, messageUuid, text, pending, chatPhotoHash)` is called and no message with that `messageUuid` exists
-- **THEN** a new Message record is inserted and the saved Message is returned
+- **THEN** a new Message record is inserted using parameterized SQL and the saved Message is returned
 
 #### Scenario: Pending message confirmed (upsert)
 - **WHEN** `sendMessage` is called with a `messageUuid` that already exists (from a prior optimistic insert)
@@ -31,16 +31,16 @@ The system SHALL deliver new messages to all subscribers of a chat in real time 
 ---
 
 ### Requirement: List messages for a chat
-The system SHALL return all messages for a given chat created after a specified timestamp.
+The system SHALL return all messages for a given chat created after a specified timestamp. All SQL queries SHALL use parameterized SQL.
 
 #### Scenario: Message history retrieved
 - **WHEN** `getMessagesList(chatUuid, lastLoaded)` is called
-- **THEN** all Message records for that `chatUuid` with `createdAt > lastLoaded` are returned in ascending creation order
+- **THEN** all Message records for that `chatUuid` with `createdAt > lastLoaded` are returned in ascending creation order using parameterized SQL
 
 ---
 
 ### Requirement: Track unread message counts per chat
-The system SHALL maintain an unread count per chat per user, incremented on send and query-able at any time.
+The system SHALL maintain an unread count per chat per user, incremented on send and query-able at any time. All SQL queries SHALL use parameterized SQL.
 
 #### Scenario: Unread counts retrieved
 - **WHEN** `getUnreadCountsList(uuid)` is called
@@ -49,7 +49,7 @@ The system SHALL maintain an unread count per chat per user, incremented on send
 ---
 
 ### Requirement: Reset unread count for a chat
-The system SHALL allow a user to mark all messages in a chat as read by resetting their unread count.
+The system SHALL allow a user to mark all messages in a chat as read by resetting their unread count. All SQL queries SHALL use parameterized SQL.
 
 #### Scenario: Unread count reset
 - **WHEN** `resetUnreadCount(chatUuid, uuid)` is called
@@ -58,7 +58,7 @@ The system SHALL allow a user to mark all messages in a chat as read by resettin
 ---
 
 ### Requirement: Generate presigned upload URL for message image
-The system SHALL generate a presigned S3 URL for uploading an image attachment to a message.
+The system SHALL generate a presigned S3 URL for uploading an image attachment to a message. The controller SHALL validate inputs using parameterized SQL for all database queries.
 
 #### Scenario: Upload URL generated for new asset
 - **WHEN** `generateUploadUrlForMessage(uuid, photoHash, contentType)` is called and no asset with that hash exists

@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Initiate a friendship request
-The system SHALL allow a device UUID to initiate a friendship by creating a pending Friendship record along with a dedicated Chat and ChatUser entry.
+The system SHALL allow a device (identified by its `uuid`) to initiate a friendship by creating a pending Friendship record along with a dedicated Chat and ChatUser entry. All SQL queries SHALL use parameterized SQL.
 
 #### Scenario: Friendship request created
 - **WHEN** `createFriendship(uuid)` is called with a valid UUID
@@ -14,7 +14,7 @@ The system SHALL allow a device UUID to initiate a friendship by creating a pend
 ---
 
 ### Requirement: Accept a friendship request
-The system SHALL allow the recipient of a pending friendship to accept it, setting `uuid2` and adding them as a ChatUser.
+The system SHALL allow the recipient of a pending friendship to accept it, setting `uuid2` and adding them as a ChatUser. All SQL queries SHALL use parameterized SQL.
 
 #### Scenario: Friendship accepted
 - **WHEN** `acceptFriendshipRequest(friendshipUuid, uuid)` is called with the UUID of the accepting party
@@ -23,7 +23,7 @@ The system SHALL allow the recipient of a pending friendship to accept it, setti
 ---
 
 ### Requirement: Delete a friendship
-The system SHALL allow either party to delete a friendship record.
+The system SHALL allow either party to delete a friendship record. All SQL queries SHALL use parameterized SQL.
 
 #### Scenario: Friendship deleted
 - **WHEN** `deleteFriendship(friendshipUuid)` is called
@@ -32,8 +32,12 @@ The system SHALL allow either party to delete a friendship record.
 ---
 
 ### Requirement: List friendships for a user
-The system SHALL return all friendships (pending and confirmed) where a given UUID is either `uuid1` or `uuid2`.
+The system SHALL return all friendships (pending and confirmed) where a given device `uuid` is either `uuid1` or `uuid2`. All SQL queries SHALL use parameterized SQL. The controller SHALL validate the device `uuid` format.
 
 #### Scenario: Friendships list returned
-- **WHEN** `getFriendshipsList(uuid)` is called
+- **WHEN** `getFriendshipsList(uuid)` is called with a valid device `uuid`
 - **THEN** all Friendship records where the UUID appears as `uuid1` or `uuid2` are returned; records where `uuid2` is null represent unaccepted outgoing requests
+
+#### Scenario: Invalid uuid rejected
+- **WHEN** `getFriendshipsList` is called with an invalid `uuid` format
+- **THEN** the system throws a validation error before executing any SQL query
