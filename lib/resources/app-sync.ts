@@ -24,5 +24,11 @@ export function createAppSyncApi (scope: Construct): appsync.GraphqlApi {
       xrayEnabled: true
     }
   )
+
+  const apiKey = api.node.tryFindChild('DefaultApiKey') as cdk.CfnResource | undefined
+  if (apiKey) {
+    apiKey.overrideLogicalId('WiSawApiKey')
+  }
+
   return api
 }
