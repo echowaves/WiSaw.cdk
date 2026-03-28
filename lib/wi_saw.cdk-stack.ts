@@ -8,6 +8,7 @@ import { createLambdas } from './resources/lambdas'
 import { createBuckets } from './resources/buckets'
 import { createCloudFront } from './resources/cloud-front'
 import { createResolvers } from './resources/resolvers'
+import { createWaf } from './resources/waf'
 
 export { deployEnv }
 
@@ -43,6 +44,9 @@ export class WiSawCdkStack extends cdk.Stack {
 
     // Map the resolvers to the Lambda function
     createResolvers(this, api, lambdaDs)
+
+    // Add WAF rate limiting to the AppSync API
+    createWaf(this, api.arn)
 
     // CFN Outputs
     // eslint-disable-next-line no-new
