@@ -6,6 +6,7 @@ import { assertValidUuid } from '../../utilities/assertValidUuid'
 export default async function main (photoId: string, uuid: string): Promise<string> {
   // const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
   assertValidUuid(photoId, 'photoId')
+  assertValidUuid(uuid, 'uuid')
 
   await psql.connect()
 

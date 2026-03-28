@@ -7,6 +7,7 @@ import { _updateWatchers } from "./_updateWatchers"
 
 export default async function main(photoId: string, uuid: string) {
   assertValidUuid(photoId, 'photoId')
+  assertValidUuid(uuid, 'uuid')
 
   const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
 

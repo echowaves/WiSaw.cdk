@@ -3,6 +3,7 @@ import moment from "moment"
 import { plainToClass } from "class-transformer"
 
 import psql from "../../psql"
+import { assertValidUuid } from '../../utilities/assertValidUuid'
 
 import Secret from "../../models/secret"
 
@@ -26,6 +27,8 @@ export default async function main(
   secret: string,
   newSecret: string,
 ) {
+  assertValidUuid(uuid, 'uuid')
+
   const updatedAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
   const secretValid = newSecret.length >= 5 && newSecret.length <= 512
 

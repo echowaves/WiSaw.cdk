@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from "uuid"
 import { plainToClass } from "class-transformer"
 
 import psql from "../../psql"
+import { assertValidUuid } from '../../utilities/assertValidUuid'
 
 import Photo from "../../models/photo"
 import watch from "./watch"
@@ -14,6 +15,8 @@ export default async function main(
   lon: number,
   video: boolean,
 ) {
+  assertValidUuid(uuid, 'uuid')
+
   await psql.connect()
   // first count how many times photos from this device were reported
   const abuseCount = (

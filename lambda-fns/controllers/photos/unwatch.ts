@@ -6,6 +6,7 @@ import { _updateWatchers, } from './_updateWatchers'
 
 export default async function main(photoId: string, uuid: string) {
   assertValidUuid(photoId, 'photoId')
+  assertValidUuid(uuid, 'uuid')
 
   await psql.connect()
 

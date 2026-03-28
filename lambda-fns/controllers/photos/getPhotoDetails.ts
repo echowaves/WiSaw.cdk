@@ -9,6 +9,7 @@ export default async function main(
   uuid: string,
 ) {
   assertValidUuid(photoId, 'photoId')
+  assertValidUuid(uuid, 'uuid')
 
   const [
     comments,

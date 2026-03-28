@@ -1,4 +1,5 @@
 import psql from "../../psql"
+import { assertValidUuid } from '../../utilities/assertValidUuid'
 
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3"
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
@@ -10,6 +11,8 @@ export default async function main(
   photoHash: string,
   contentType: string,
 ) {
+  assertValidUuid(uuid, 'uuid')
+
   // console.log("generateUploadUrlForMessage:: started")
 
   const assetKey = `${photoHash}.upload`

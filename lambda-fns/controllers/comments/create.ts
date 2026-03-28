@@ -15,6 +15,7 @@ export default async function main(
   description: string,
 ) {
   assertValidUuid(photoId, 'photoId')
+  assertValidUuid(uuid, 'uuid')
 
   const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
 

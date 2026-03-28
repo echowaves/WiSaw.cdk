@@ -1,11 +1,14 @@
 import moment from "moment"
 
 import psql from "../../psql"
+import { assertValidUuid } from '../../utilities/assertValidUuid'
 
 import { _updateCommentsCount } from "./_updateCommentsCount"
 import { _updateLastComment } from "./_updateLastComment"
 
 export default async function main(commentId: bigint, uuid: string) {
+  assertValidUuid(uuid, 'uuid')
+
   const updatedAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
 
   await psql.connect()
