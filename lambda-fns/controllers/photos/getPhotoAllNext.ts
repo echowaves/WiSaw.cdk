@@ -12,7 +12,7 @@ export default async function main(
 
   await psql.connect()
 
-  const result =
+  const nextId =
   (await psql.query(`
                     SELECT "id" FROM "Photos"
                     WHERE
@@ -22,9 +22,13 @@ export default async function main(
                     ORDER BY "updatedAt" ASC
                     LIMIT 1
                     `, [photoId]
-                  )).rows[0]?.id || '0'
+                  )).rows[0]?.id
 
   await psql.clean()
+
+  if (!nextId) {
+    return { photo: null, comments: [], recognitions: [] }
+  }
 
   const [
     photo,
@@ -32,9 +36,9 @@ export default async function main(
     recognitions,
   ] =
     await Promise.all([
-      _getPhoto(result),
-      _getComments(result),
-      _getRecognitions(result),
+      _getPhoto(nextId),
+      _getComments(nextId),
+      _getRecognitions(nextId),
     ])
 
   return {
