@@ -31,6 +31,38 @@ export function createWaf (scope: Construct, apiArn: string): void {
               aggregateKeyType: 'IP'
             }
           }
+        },
+        {
+          name: `${deployEnv()}-aws-ip-reputation-list`,
+          priority: 10,
+          overrideAction: { none: {} },
+          visibilityConfig: {
+            cloudWatchMetricsEnabled: true,
+            metricName: `${deployEnv()}-aws-ip-reputation-list`,
+            sampledRequestsEnabled: true
+          },
+          statement: {
+            managedRuleGroupStatement: {
+              vendorName: 'AWS',
+              name: 'AWSManagedRulesAmazonIpReputationList'
+            }
+          }
+        },
+        {
+          name: `${deployEnv()}-aws-common-rule-set`,
+          priority: 20,
+          overrideAction: { none: {} },
+          visibilityConfig: {
+            cloudWatchMetricsEnabled: true,
+            metricName: `${deployEnv()}-aws-common-rule-set`,
+            sampledRequestsEnabled: true
+          },
+          statement: {
+            managedRuleGroupStatement: {
+              vendorName: 'AWS',
+              name: 'AWSManagedRulesCommonRuleSet'
+            }
+          }
         }
       ]
     }
