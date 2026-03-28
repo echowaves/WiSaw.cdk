@@ -35,6 +35,29 @@ exports.handler = async (event) => {
     }
   }
 
+  // Check if URI has a malformed UUID with insufficiently padded last segment (1-11 digits instead of 12)
+  const malformedUuidMatch = request.uri.match(/^\/(photos|videos)\/00000000-0000-0000-0000-(\d{1,11})$/)
+  if (malformedUuidMatch) {
+    const [, type, shortId] = malformedUuidMatch
+    const uuid = convertIntegerIdToUuid(shortId)
+
+    let redirectUrl = `https://wisaw.com/${type}/${uuid}`
+    if (request.querystring) {
+      redirectUrl += `?${request.querystring}`
+    }
+
+    return {
+      status: '301',
+      statusDescription: 'Moved Permanently',
+      headers: {
+        location: [{
+          key: 'Location',
+          value: redirectUrl
+        }]
+      }
+    }
+  }
+
   if (host === 'www.wisaw.com') {
     // Build the new URL, preserving query string if present
     let redirectUrl = `https://wisaw.com${request.uri}`
