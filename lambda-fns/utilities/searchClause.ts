@@ -11,7 +11,7 @@ export function buildSearchClause (
               SELECT "photoId"
               FROM "Recognitions"
               WHERE
-              to_tsvector('English', "metaData"::text) @@ plainto_tsquery('English', $${paramStartIndex})
+              to_tsvector('English', "searchableText") @@ plainto_tsquery('English', $${paramStartIndex})
             UNION
               SELECT "photoId"
               FROM "Comments"

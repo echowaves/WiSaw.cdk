@@ -260,6 +260,11 @@ const _recognizeImage = async ({
   try {
     const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
 
+    const searchableText = [
+      ...metaData.Labels.map((l: any) => l.Name).filter(Boolean),
+      ...metaData.TextDetections.map((t: any) => t.DetectedText).filter(Boolean)
+    ].join(' ')
+
     // console.log({metaData: JSON.stringify(metaData),})
     await psql.connect()
     // const result =
@@ -270,17 +275,19 @@ const _recognizeImage = async ({
                     (
                         "photoId",
                         "metaData",
+                        "searchableText",
                         "createdAt",
                         "updatedAt"
                     ) values (
                       $1,
                       $2,
                       $3,
-                      $4
+                      $4,
+                      $5
                     )
                     returning *
                     `,
-      [Key.replace(".upload", ""), metaData, createdAt, createdAt],
+      [Key.replace(".upload", ""), metaData, searchableText, createdAt, createdAt],
     )
     // ).rows
     // console.log({result})
