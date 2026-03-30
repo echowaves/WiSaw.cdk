@@ -202,20 +202,24 @@ type Query {
     lon: Float!
     batch: String!
     whenToStop: AWSDateTime!
+    searchTerm: String
     ): PhotoFeed
   feedForWatcher(
     uuid: String!
     pageNumber: Int!
     batch: String!
+    searchTerm: String
     ): PhotoFeed
   feedForWave(
     waveUuid: String!
     pageNumber: Int!
     batch: String!
+    searchTerm: String
     ): PhotoFeed
   feedRecent(    
     pageNumber: Int!
     batch: String!
+    searchTerm: String
     ): PhotoFeed
   feedForTextSearch(
       searchTerm: String!

@@ -3,8 +3,9 @@ import psql from '../../psql'
 
 import { plainToClass } from 'class-transformer'
 import Photo from '../../models/photo'
+import { buildSearchClause } from '../../utilities/searchClause'
 
-async function _retrievePhotos (currentDate: moment.Moment, daysAgo: number, lat: number, lon: number): Promise<Photo[]> {
+async function _retrievePhotos (currentDate: moment.Moment, daysAgo: number, lat: number, lon: number, searchTerm?: string): Promise<Photo[]> {
   const dateFrom = currentDate
     .clone()
     .subtract(daysAgo, 'days')
@@ -15,6 +16,8 @@ async function _retrievePhotos (currentDate: moment.Moment, daysAgo: number, lat
     .subtract(daysAgo, 'days')
     .format('YYYY-MM-DD HH:mm:ss.SSS')
   const rowNumberOffset = 100 * daysAgo
+
+  const { clause: searchClause, params: searchParams } = buildSearchClause(searchTerm, 6)
 
   const query = `
     SELECT
@@ -30,14 +33,14 @@ async function _retrievePhotos (currentDate: moment.Moment, daysAgo: number, lat
         "Photos"."createdAt" >= $4
     AND "Photos"."createdAt" <= $5
     AND active = true
-  
+    ${searchClause}
     ORDER BY "Photos"."createdAt" DESC
     LIMIT 1000
     OFFSET 0
   `
 
   const results = (
-    await psql.query(query, [lon, lat, rowNumberOffset, dateFrom, dateTo])
+    await psql.query(query, [lon, lat, rowNumberOffset, dateFrom, dateTo, ...searchParams])
   ).rows
   // console.log({results})
   const photos = results.map((photo: any) => plainToClass(Photo, photo))
@@ -51,7 +54,8 @@ export default async function main (
   lat: number,
   lon: number,
   batch: string,
-  whenToStop: string
+  whenToStop: string,
+  searchTerm?: string
 ): Promise<{
     photos: Photo[]
     batch: string
@@ -66,7 +70,7 @@ export default async function main (
   // call _retrievePhotos 10 times for 10 conscutive days in parallel
   const photos = (
     await Promise.all(
-      [...Array(arraySize)].map(async (_, i) => await _retrievePhotos(currentDate, daysAgo * arraySize + i, lat, lon))
+      [...Array(arraySize)].map(async (_, i) => await _retrievePhotos(currentDate, daysAgo * arraySize + i, lat, lon, searchTerm))
     )
   ).flat(1)
 

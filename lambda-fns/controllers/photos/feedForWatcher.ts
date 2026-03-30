@@ -2,13 +2,15 @@ import psql from '../../psql'
 import { plainToClass } from 'class-transformer'
 import Photo from '../../models/photo'
 import { assertValidUuid } from '../../utilities/assertValidUuid'
+import { buildSearchClause } from '../../utilities/searchClause'
 
 // import AbuseReport from '../../models/abuseReport'
 
 export default async function main (
   uuid: string,
   pageNumber: number,
-  batch: string
+  batch: string,
+  searchTerm?: string
 ): Promise<{
     photos: Photo[]
     batch: string
@@ -21,6 +23,8 @@ export default async function main (
   // console.log({uuid})
   await psql.connect()
 
+  const { clause: searchClause, params: searchParams } = buildSearchClause(searchTerm, 4)
+
   const query = `
     SELECT
       row_number() OVER (ORDER BY p."updatedAt" DESC) + $3 as row_number,
@@ -31,13 +35,14 @@ export default async function main (
     WHERE
       w.uuid = $1
     AND p.active = true
+    ${searchClause}
     ORDER BY p."updatedAt" DESC
     LIMIT $2
     OFFSET $3
   `
 
   const results =
-  (await psql.query(query, [uuid, limit, offset])
+  (await psql.query(query, [uuid, limit, offset, ...searchParams])
   ).rows
   await psql.clean()
 

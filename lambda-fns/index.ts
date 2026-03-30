@@ -135,19 +135,19 @@ const queryHandlers: Record<string, HandlerDefinition> = {
   },
   feedByDate: {
     resolver: feedByDate,
-    getArgs: (args) => [args.daysAgo, args.lat, args.lon, args.batch, args.whenToStop]
+    getArgs: (args) => [args.daysAgo, args.lat, args.lon, args.batch, args.whenToStop, args.searchTerm]
   },
   feedForWatcher: {
     resolver: feedForWatcher,
-    getArgs: (args) => [args.uuid, args.pageNumber, args.batch]
+    getArgs: (args) => [args.uuid, args.pageNumber, args.batch, args.searchTerm]
   },
   feedForWave: {
     resolver: feedForWave,
-    getArgs: (args) => [args.waveUuid, args.pageNumber, args.batch]
+    getArgs: (args) => [args.waveUuid, args.pageNumber, args.batch, args.searchTerm]
   },
   feedRecent: {
     resolver: feedRecent,
-    getArgs: (args) => [args.pageNumber, args.batch]
+    getArgs: (args) => [args.pageNumber, args.batch, args.searchTerm]
   },
   feedForTextSearch: {
     resolver: feedForTextSearch,

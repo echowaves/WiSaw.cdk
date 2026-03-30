@@ -1,6 +1,7 @@
 import psql from '../../psql'
 import { plainToClass } from 'class-transformer'
 import Photo from '../../models/photo'
+import { buildSearchClause } from '../../utilities/searchClause'
 
 export default async function main (
   searchTerm: string,
@@ -16,31 +17,22 @@ export default async function main (
 
   await psql.connect()
   try {
+    const { clause: searchClause, params: searchParams } = buildSearchClause(searchTerm, 3)
+
     const query = `
           SELECT
-            row_number() OVER (ORDER BY id desc) + $2 as row_number,
+            row_number() OVER (ORDER BY id desc) + $1 as row_number,
             p.*
           FROM "Photos" p
           WHERE active = true
-
-            AND "id" in (
-                SELECT "photoId"
-                FROM "Recognitions"
-                WHERE
-                to_tsvector('English', "metaData"::text) @@ plainto_tsquery('English', $1)
-              UNION
-                SELECT "photoId"
-                FROM "Comments"
-                WHERE
-                  active = true AND to_tsvector('English', "comment"::text) @@ plainto_tsquery('English', $1)
-              )
+            ${searchClause}
           ORDER BY id desc
-          LIMIT $3
-          OFFSET $2
+          LIMIT $2
+          OFFSET $1
     `
 
     const results =
-      (await psql.query(query, [searchTerm, offset, limit])
+      (await psql.query(query, [offset, limit, ...searchParams])
       ).rows
     await psql.clean()
 

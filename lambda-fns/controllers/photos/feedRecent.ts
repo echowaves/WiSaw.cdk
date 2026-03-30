@@ -1,12 +1,14 @@
 import psql from '../../psql'
 import { plainToClass } from 'class-transformer'
 import Photo from '../../models/photo'
+import { buildSearchClause } from '../../utilities/searchClause'
 
 // import AbuseReport from '../../models/abuseReport'
 
 export default async function main (
   pageNumber: number,
-  batch: string
+  batch: string,
+  searchTerm?: string
 ): Promise<{
     photos: Photo[]
     batch: string
@@ -17,19 +19,22 @@ export default async function main (
   // console.log({uuid})
   await psql.connect()
 
+  const { clause: searchClause, params: searchParams } = buildSearchClause(searchTerm, 3)
+
   const query = `
     SELECT
       "Photos".*
     FROM "Photos"
     WHERE
       active = true
+    ${searchClause}
     ORDER BY "Photos"."updatedAt" DESC
     LIMIT $1
     OFFSET $2
   `
 
   const results =
-  (await psql.query(query, [limit, offset])
+  (await psql.query(query, [limit, offset, ...searchParams])
   ).rows
   await psql.clean()
 
