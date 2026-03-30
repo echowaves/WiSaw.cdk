@@ -13,6 +13,7 @@ export default async function main (
     photos: Photo[]
     batch: string
     noMoreData: boolean
+    nextPage: number | null
   }> {
   const limit = 20
   const offset = pageNumber * limit
@@ -51,6 +52,7 @@ export default async function main (
   return {
     photos,
     batch,
-    noMoreData
+    noMoreData,
+    nextPage: noMoreData ? null : pageNumber + 1
   }
 }

@@ -1,5 +1,47 @@
 ## ADDED Requirements
 
+### Requirement: PhotoFeed nextPage field
+The `PhotoFeed` GraphQL type SHALL include a nullable `nextPage: Int` field. When results are returned, `nextPage` SHALL indicate the value the client should pass as the pagination parameter (pageNumber or daysAgo, depending on the feed) for the next request. When `noMoreData` is true, `nextPage` SHALL be null.
+
+#### Scenario: Feed returns results
+- **WHEN** any feed query returns a non-empty photos array
+- **THEN** `nextPage` SHALL be set to the next pagination value the client should use
+
+#### Scenario: Feed has no more data
+- **WHEN** any feed query determines there is no more data
+- **THEN** `noMoreData` SHALL be true and `nextPage` SHALL be null
+
+#### Scenario: Feed returns empty due to iteration cap
+- **WHEN** `feedByDate` with a searchTerm exhausts its scan-ahead iteration cap without finding results and has not reached `whenToStop`
+- **THEN** `noMoreData` SHALL be false and `nextPage` SHALL point to the next unscanned window so the client can resume
+
+---
+
+### Requirement: feedByDate search scan-ahead
+When `feedByDate` is called with a non-null `searchTerm` and the initial 15-day window returns zero results, the server SHALL loop internally — incrementing `daysAgo` and re-querying — until one of three conditions is met: (1) results are found, (2) the date window passes `whenToStop`, or (3) a maximum of 10 iterations is reached. Without a `searchTerm`, no loop SHALL occur.
+
+#### Scenario: Search results found on first iteration
+- **WHEN** `feedByDate` is called with a searchTerm and the first 15-day window contains matching photos
+- **THEN** the server returns those photos with `nextPage` set to `daysAgo + 1`
+
+#### Scenario: Search results found on later iteration
+- **WHEN** `feedByDate` is called with a searchTerm and iterations 0 through N-1 return empty but iteration N finds results
+- **THEN** the server returns iteration N's photos with `nextPage` set to the `daysAgo` value of the next unscanned window
+
+#### Scenario: whenToStop reached during scan-ahead
+- **WHEN** `feedByDate` is scanning ahead with a searchTerm and the date window passes `whenToStop` before finding results
+- **THEN** the server returns empty photos with `noMoreData: true` and `nextPage: null`
+
+#### Scenario: Iteration cap exhausted
+- **WHEN** `feedByDate` reaches 10 iterations without finding results and has not passed `whenToStop`
+- **THEN** the server returns empty photos with `noMoreData: false` and `nextPage` set to the next unscanned `daysAgo` value
+
+#### Scenario: No search term provided
+- **WHEN** `feedByDate` is called without a searchTerm
+- **THEN** no scan-ahead loop occurs, behavior is identical to pre-change except `nextPage` is set to `daysAgo + 1`
+
+## MODIFIED Requirements
+
 ### Requirement: Feed by date and location
 The system SHALL return photos from a sliding date window centered on a location, ordered by creation time descending. The query SHALL use parameterized SQL for all interpolated values including coordinates, date boundaries, and pagination limits. The controller SHALL validate that `lat` and `lon` are finite numbers. The query SHALL accept an optional `searchTerm` parameter (nullable, not required by GraphQL schema or controller signature); when provided, results SHALL be filtered to only photos matching the full-text search and the server SHALL scan ahead through successive date windows until results are found, `whenToStop` is reached, or an iteration cap is hit. When `searchTerm` is omitted or null, behavior SHALL be identical to the pre-change implementation. The response SHALL include `nextPage` indicating the next `daysAgo` value for the client to use.
 
@@ -76,23 +118,6 @@ The system SHALL search photo recognitions and comments for a plain-English quer
 
 ---
 
-### Requirement: Shared search clause utility
-The system SHALL provide a reusable `buildSearchClause(searchTerm, paramStartIndex)` utility that returns a SQL WHERE clause fragment and corresponding parameter array for full-text search filtering on Recognitions metadata and Comments text. The clause SHALL use a table-qualified column reference (`p."id"`) so it works in queries with JOINs.
-
-#### Scenario: Search term provided
-- **WHEN** `buildSearchClause` is called with a non-null search term and a param start index
-- **THEN** it returns a clause `AND p."id" IN (SELECT ... UNION ...)` using the given param index, and a params array containing the search term
-
-#### Scenario: Search term is null
-- **WHEN** `buildSearchClause` is called with null or undefined
-- **THEN** it returns an empty clause string and an empty params array
-
-#### Scenario: Search clause used in JOINed query
-- **WHEN** the returned clause is used in a query that JOINs Photos with another table (e.g., Watchers, WavePhotos)
-- **THEN** the column reference SHALL NOT be ambiguous — it SHALL resolve to the Photos table
-
----
-
 ### Requirement: Wave feed search
 The system SHALL accept an optional `searchTerm` parameter (nullable, not required by GraphQL schema or controller signature) on the `feedForWave` query; when provided, results SHALL be filtered to only photos matching the full-text search. When `searchTerm` is omitted or null, behavior SHALL be identical to the pre-change implementation. The response SHALL include `nextPage` set to `pageNumber + 1` when results exist, or `null` when `noMoreData` is true.
 
@@ -107,85 +132,3 @@ The system SHALL accept an optional `searchTerm` parameter (nullable, not requir
 #### Scenario: No more wave results
 - **WHEN** the returned photos count is less than the page size
 - **THEN** `noMoreData` SHALL be true and `nextPage` SHALL be null
-
----
-
-### Requirement: PhotoFeed nextPage field
-The `PhotoFeed` GraphQL type SHALL include a nullable `nextPage: Int` field. When results are returned, `nextPage` SHALL indicate the value the client should pass as the pagination parameter (pageNumber or daysAgo, depending on the feed) for the next request. When `noMoreData` is true, `nextPage` SHALL be null.
-
-#### Scenario: Feed returns results
-- **WHEN** any feed query returns a non-empty photos array
-- **THEN** `nextPage` SHALL be set to the next pagination value the client should use
-
-#### Scenario: Feed has no more data
-- **WHEN** any feed query determines there is no more data
-- **THEN** `noMoreData` SHALL be true and `nextPage` SHALL be null
-
-#### Scenario: Feed returns empty due to iteration cap
-- **WHEN** `feedByDate` with a searchTerm exhausts its scan-ahead iteration cap without finding results and has not reached `whenToStop`
-- **THEN** `noMoreData` SHALL be false and `nextPage` SHALL point to the next unscanned window so the client can resume
-
----
-
-### Requirement: feedByDate search scan-ahead
-When `feedByDate` is called with a non-null `searchTerm` and the initial 15-day window returns zero results, the server SHALL loop internally — incrementing `daysAgo` and re-querying — until one of three conditions is met: (1) results are found, (2) the date window passes `whenToStop`, or (3) a maximum of 10 iterations is reached. Without a `searchTerm`, no loop SHALL occur.
-
-#### Scenario: Search results found on first iteration
-- **WHEN** `feedByDate` is called with a searchTerm and the first 15-day window contains matching photos
-- **THEN** the server returns those photos with `nextPage` set to `daysAgo + 1`
-
-#### Scenario: Search results found on later iteration
-- **WHEN** `feedByDate` is called with a searchTerm and iterations 0 through N-1 return empty but iteration N finds results
-- **THEN** the server returns iteration N's photos with `nextPage` set to the `daysAgo` value of the next unscanned window
-
-#### Scenario: whenToStop reached during scan-ahead
-- **WHEN** `feedByDate` is scanning ahead with a searchTerm and the date window passes `whenToStop` before finding results
-- **THEN** the server returns empty photos with `noMoreData: true` and `nextPage: null`
-
-#### Scenario: Iteration cap exhausted
-- **WHEN** `feedByDate` reaches 10 iterations without finding results and has not passed `whenToStop`
-- **THEN** the server returns empty photos with `noMoreData: false` and `nextPage` set to the next unscanned `daysAgo` value
-
-#### Scenario: No search term provided
-- **WHEN** `feedByDate` is called without a searchTerm
-- **THEN** no scan-ahead loop occurs, behavior is identical to pre-change except `nextPage` is set to `daysAgo + 1`
-
----
-
-### Requirement: Feed pagination batch token
-The system SHALL accept and echo back an opaque `batch` string that clients use to correlate paginated request sets.
-
-#### Scenario: Batch token is echoed unchanged
-- **WHEN** any feed query is called with an arbitrary `batch` string
-- **THEN** the `PhotoFeed` response contains the same `batch` value passed in
-
----
-
-### Requirement: Photo navigation boundary handling
-When navigating to the next or previous photo and no such photo exists (i.e., the user is at the beginning or end of the feed), the system SHALL return a response with `photo: null`, `comments: []`, and `recognitions: []` without executing any database queries for photo details, comments, or recognitions. The system SHALL NOT pass invalid or placeholder IDs to downstream queries.
-
-#### Scenario: No next photo exists
-- **WHEN** `getPhotoAllNext(photoId)` is called and no active photo has a newer `updatedAt` than the given photo
-- **THEN** the response SHALL be `{ photo: null, comments: [], recognitions: [] }`
-
-#### Scenario: No previous photo exists
-- **WHEN** `getPhotoAllPrev(photoId)` is called and no active photo has an older `updatedAt` than the given photo
-- **THEN** the response SHALL be `{ photo: null, comments: [], recognitions: [] }`
-
-#### Scenario: Next photo exists
-- **WHEN** `getPhotoAllNext(photoId)` is called and a newer active photo exists
-- **THEN** the response SHALL contain the next photo's details, comments, and recognitions
-
-#### Scenario: Previous photo exists
-- **WHEN** `getPhotoAllPrev(photoId)` is called and an older active photo exists
-- **THEN** the response SHALL contain the previous photo's details, comments, and recognitions
-
----
-
-### Requirement: GIN index on Recognitions.metaData
-The database SHALL have a GIN index on `to_tsvector('English', "metaData"::text)` on the `Recognitions` table. This index SHALL be used by the full-text search subquery in `buildSearchClause`.
-
----
-
-### Requirement: GIN index on Comments.comment
-The database SHALL have a GIN index on `to_tsvector('English', "comment"::text)` on the `Comments` table, scoped to active comments. This index SHALL be used by the full-text search subquery in `buildSearchClause`.

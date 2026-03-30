@@ -11,6 +11,7 @@ export default async function main (
     photos: Photo[]
     batch: string
     noMoreData: boolean
+    nextPage: number | null
   }> {
   const limit = 100
   const offset = pageNumber * limit
@@ -43,7 +44,8 @@ export default async function main (
     return {
       photos,
       batch,
-      noMoreData: true // for now limitind to 1 batch
+      noMoreData: true, // for now limitind to 1 batch
+      nextPage: null
     }
   } catch (err) {
     await psql.clean()
@@ -51,6 +53,7 @@ export default async function main (
   return {
     photos: [],
     batch,
-    noMoreData: true
+    noMoreData: true,
+    nextPage: null
   }
 }

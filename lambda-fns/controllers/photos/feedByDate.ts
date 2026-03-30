@@ -60,6 +60,7 @@ export default async function main (
     photos: Photo[]
     batch: string
     noMoreData: boolean
+    nextPage: number | null
   }> {
   const currentDate = moment()
   const whenToStopDate = moment(whenToStop)
@@ -67,24 +68,37 @@ export default async function main (
   await psql.connect()
 
   const arraySize = 15
-  // call _retrievePhotos 10 times for 10 conscutive days in parallel
-  const photos = (
-    await Promise.all(
-      [...Array(arraySize)].map(async (_, i) => await _retrievePhotos(currentDate, daysAgo * arraySize + i, lat, lon, searchTerm))
-    )
-  ).flat(1)
+  const maxIterations = searchTerm ? 10 : 1
 
-  await psql.clean()
-
+  let photos: Photo[] = []
+  let currentDaysAgo = daysAgo
   let noMoreData = false
 
-  if (currentDate.clone().subtract(daysAgo * arraySize, 'days').diff(whenToStopDate) < 0) {
-    noMoreData = true
+  for (let iteration = 0; iteration < maxIterations; iteration++) {
+    photos = (
+      await Promise.all(
+        [...Array(arraySize)].map(async (_, i) => await _retrievePhotos(currentDate, currentDaysAgo * arraySize + i, lat, lon, searchTerm))
+      )
+    ).flat(1)
+
+    if (currentDate.clone().subtract(currentDaysAgo * arraySize, 'days').diff(whenToStopDate) < 0) {
+      noMoreData = true
+      break
+    }
+
+    if (photos.length > 0) {
+      break
+    }
+
+    currentDaysAgo++
   }
+
+  await psql.clean()
 
   return {
     photos,
     batch,
-    noMoreData
+    noMoreData,
+    nextPage: noMoreData ? null : currentDaysAgo + 1
   }
 }

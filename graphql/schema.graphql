@@ -47,6 +47,7 @@ type PhotoFeed {
   photos: [Photo]
   batch: String!
   noMoreData: Boolean!
+  nextPage: Int
 }
 
 type PhotoDetails {

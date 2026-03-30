@@ -15,6 +15,7 @@ export default async function main (
     photos: Photo[]
     batch: string
     noMoreData: boolean
+    nextPage: number | null
   }> {
   assertValidUuid(uuid, 'uuid')
 
@@ -59,6 +60,7 @@ export default async function main (
   return {
     photos,
     batch,
-    noMoreData
+    noMoreData,
+    nextPage: noMoreData ? null : pageNumber + 1
   }
 }
