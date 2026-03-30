@@ -7,7 +7,7 @@ export function buildSearchClause (
   }
 
   const clause = `
-          AND "id" IN (
+          AND p."id" IN (
               SELECT "photoId"
               FROM "Recognitions"
               WHERE

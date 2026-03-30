@@ -23,12 +23,12 @@ export default async function main (
 
   const query = `
     SELECT
-      "Photos".*
-    FROM "Photos"
+      p.*
+    FROM "Photos" p
     WHERE
       active = true
     ${searchClause}
-    ORDER BY "Photos"."updatedAt" DESC
+    ORDER BY p."updatedAt" DESC
     LIMIT $1
     OFFSET $2
   `

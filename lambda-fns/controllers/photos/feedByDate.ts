@@ -21,20 +21,20 @@ async function _retrievePhotos (currentDate: moment.Moment, daysAgo: number, lat
 
   const query = `
     SELECT
-    "Photos".*
+    p.*
     , ST_Distance(
         "location",
         ST_MakePoint($1, $2)
       ) as distance
-    , row_number()  OVER (ORDER BY "Photos"."createdAt" DESC) + $3 as row_number
+    , row_number()  OVER (ORDER BY p."createdAt" DESC) + $3 as row_number
   
-    FROM "Photos"
+    FROM "Photos" p
     WHERE
-        "Photos"."createdAt" >= $4
-    AND "Photos"."createdAt" <= $5
+        p."createdAt" >= $4
+    AND p."createdAt" <= $5
     AND active = true
     ${searchClause}
-    ORDER BY "Photos"."createdAt" DESC
+    ORDER BY p."createdAt" DESC
     LIMIT 1000
     OFFSET 0
   `
