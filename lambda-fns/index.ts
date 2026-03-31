@@ -9,6 +9,7 @@ import zeroMoment from './controllers/photos/zeroMoment'
 import feedByDate from './controllers/photos/feedByDate'
 import feedForTextSearch from './controllers/photos/feedForTextSearch'
 import feedForWatcher from './controllers/photos/feedForWatcher'
+import feedForUngrouped from './controllers/photos/feedForUngrouped'
 import feedForWave from './controllers/photos/feedForWave'
 import feedRecent from './controllers/photos/feedRecent'
 
@@ -139,6 +140,10 @@ const queryHandlers: Record<string, HandlerDefinition> = {
   },
   feedForWatcher: {
     resolver: feedForWatcher,
+    getArgs: (args) => [args.uuid, args.pageNumber, args.batch, args.searchTerm]
+  },
+  feedForUngrouped: {
+    resolver: feedForUngrouped,
     getArgs: (args) => [args.uuid, args.pageNumber, args.batch, args.searchTerm]
   },
   feedForWave: {

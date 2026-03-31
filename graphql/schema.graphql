@@ -272,6 +272,13 @@ getMessagesList(
     radius: Int
   ): [PhotoLocation]!
 
+  feedForUngrouped(
+    uuid: String!
+    pageNumber: Int!
+    batch: String!
+    searchTerm: String
+  ): PhotoFeed
+
   getUngroupedPhotosCount(
     uuid: String!
   ): Int!
