@@ -287,6 +287,10 @@ getMessagesList(
     uuid: String!
   ): Int!
 
+  getWatchedCount(
+    uuid: String!
+  ): Int!
+
 }
 
 # ... ******************************************************
