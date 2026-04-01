@@ -15,7 +15,8 @@ const ALLOWED_DIRECTIONS: Record<string, string> = {
 }
 
 export default async function main (
-  waveUuid: string,
+  uuid: string,
+  friendUuid: string,
   pageNumber: number,
   batch: string,
   searchTerm?: string,
@@ -27,7 +28,8 @@ export default async function main (
     noMoreData: boolean
     nextPage: number | null
   }> {
-  assertValidUuid(waveUuid, 'waveUuid')
+  assertValidUuid(uuid, 'uuid')
+  assertValidUuid(friendUuid, 'friendUuid')
 
   const sortField = ALLOWED_SORT_FIELDS[sortBy ?? 'updatedAt']
   if (sortField == null) {
@@ -38,10 +40,26 @@ export default async function main (
     throw new Error('Invalid sort direction')
   }
 
+  await psql.connect()
+
+  // Validate accepted friendship exists
+  const friendship = (await psql.query(`
+    SELECT 1 FROM "Friendships"
+    WHERE "uuid2" IS NOT NULL
+      AND (
+        ("uuid1" = $1 AND "uuid2" = $2)
+        OR
+        ("uuid1" = $2 AND "uuid2" = $1)
+      )
+    LIMIT 1
+  `, [uuid, friendUuid])).rows
+
+  if (friendship.length === 0) {
+    throw new Error('No accepted friendship exists between these users')
+  }
+
   const limit = 100
   const offset = pageNumber * limit
-
-  await psql.connect()
 
   const { clause: searchClause, params: searchParams } = buildSearchClause(searchTerm, 2)
 
@@ -50,10 +68,8 @@ export default async function main (
       row_number() OVER (ORDER BY p.${sortField} ${direction}) + ${offset} as row_number,
       p.*
     FROM "Photos" p
-    INNER JOIN "WavePhotos" wp
-      ON p.id = wp."photoId"
     WHERE
-      wp."waveUuid" = $1
+      p."uuid" = $1
     AND p.active = true
     ${searchClause}
     ORDER BY p.${sortField} ${direction}
@@ -62,7 +78,7 @@ export default async function main (
   `
 
   const results =
-  (await psql.query(query, [waveUuid, ...searchParams])
+  (await psql.query(query, [friendUuid, ...searchParams])
   ).rows
   await psql.clean()
 

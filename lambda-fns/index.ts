@@ -21,6 +21,7 @@ import getPhotoAllPrev from './controllers/photos/getPhotoAllPrev'
 
 import getFriendshipsList from './controllers/friendships/getFriendshipsList'
 import getUnreadCountsList from './controllers/friendships/getUnreadCountsList'
+import feedForFriend from './controllers/friendships/feedForFriend'
 
 import getMessagesList from './controllers/messages/getMessagesList'
 
@@ -114,6 +115,7 @@ interface AppSyncEvent {
     sourceWaveUuid: string
     sortBy: string
     sortDirection: string
+    friendUuid: string
   }
 }
 
@@ -149,7 +151,7 @@ const queryHandlers: Record<string, HandlerDefinition> = {
   },
   feedForWave: {
     resolver: feedForWave,
-    getArgs: (args) => [args.waveUuid, args.pageNumber, args.batch, args.searchTerm]
+    getArgs: (args) => [args.waveUuid, args.pageNumber, args.batch, args.searchTerm, args.sortBy, args.sortDirection]
   },
   feedRecent: {
     resolver: feedRecent,
@@ -206,6 +208,10 @@ const queryHandlers: Record<string, HandlerDefinition> = {
   getWatchedCount: {
     resolver: getWatchedCount,
     getArgs: (args) => [args.uuid]
+  },
+  feedForFriend: {
+    resolver: feedForFriend,
+    getArgs: (args) => [args.uuid, args.friendUuid, args.pageNumber, args.batch, args.searchTerm, args.sortBy, args.sortDirection]
   }
 }
 

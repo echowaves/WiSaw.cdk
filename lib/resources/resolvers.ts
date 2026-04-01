@@ -25,6 +25,7 @@ export function createResolvers (scope: Construct, api: appsync.GraphqlApi, lamb
     { typeName: 'Query', fieldName: 'getUngroupedPhotosCount' },
     { typeName: 'Query', fieldName: 'getWavesCount' },
     { typeName: 'Query', fieldName: 'getWatchedCount' },
+    { typeName: 'Query', fieldName: 'feedForFriend' },
 
     { typeName: 'Mutation', fieldName: 'createContactForm' },
     { typeName: 'Mutation', fieldName: 'createAbuseReport' },

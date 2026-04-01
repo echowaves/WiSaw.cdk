@@ -1,3 +1,5 @@
+## MODIFIED Requirements
+
 ### Requirement: Wave photo feed
 The system SHALL provide a dedicated paginated feed query `feedForWave` that returns active photos belonging to a specific wave, with configurable sorting order.
 

@@ -139,6 +139,7 @@ type Friendship {
   uuid1: String! 
   uuid2: String # if uuid2 is null == friendship is not confirmed
   chatUuid: String!
+  photos: [Photo]
   createdAt: AWSDateTime!  
 }
 
@@ -216,6 +217,8 @@ type Query {
     pageNumber: Int!
     batch: String!
     searchTerm: String
+    sortBy: String
+    sortDirection: String
     ): PhotoFeed
   feedRecent(    
     pageNumber: Int!
@@ -290,6 +293,16 @@ getMessagesList(
   getWatchedCount(
     uuid: String!
   ): Int!
+
+  feedForFriend(
+    uuid: String!
+    friendUuid: String!
+    pageNumber: Int!
+    batch: String!
+    searchTerm: String
+    sortBy: String
+    sortDirection: String
+  ): PhotoFeed
 
 }
 
