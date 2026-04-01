@@ -1,11 +1,11 @@
 ## ADDED Requirements
 
 ### Requirement: Initiate a friendship request
-The system SHALL allow a device (identified by its `uuid`) to initiate a friendship by creating a pending Friendship record along with a dedicated Chat and ChatUser entry. All SQL queries SHALL use parameterized SQL.
+The system SHALL allow a device (identified by its `uuid`) to initiate a friendship by creating a pending Friendship record. All SQL queries SHALL use parameterized SQL.
 
 #### Scenario: Friendship request created
 - **WHEN** `createFriendship(uuid)` is called with a valid UUID
-- **THEN** a Friendship record is inserted with `uuid1` set to the initiator, `uuid2` as null (pending), and a new Chat + ChatUser row are created in the same transaction; the `CreateFriendshipResult` is returned
+- **THEN** a Friendship record is inserted with `uuid1` set to the initiator, `uuid2` as null (pending); the `Friendship` is returned
 
 #### Scenario: UUID format validated
 - **WHEN** `createFriendship` is called with an invalid UUID
@@ -14,11 +14,11 @@ The system SHALL allow a device (identified by its `uuid`) to initiate a friends
 ---
 
 ### Requirement: Accept a friendship request
-The system SHALL allow the recipient of a pending friendship to accept it, setting `uuid2` and adding them as a ChatUser. All SQL queries SHALL use parameterized SQL.
+The system SHALL allow the recipient of a pending friendship to accept it by setting `uuid2`. All SQL queries SHALL use parameterized SQL.
 
 #### Scenario: Friendship accepted
 - **WHEN** `acceptFriendshipRequest(friendshipUuid, uuid)` is called with the UUID of the accepting party
-- **THEN** the Friendship record is updated with `uuid2` set to the acceptor's UUID and a ChatUser record is added for the acceptor on the shared Chat; the updated `CreateFriendshipResult` is returned
+- **THEN** the Friendship record is updated with `uuid2` set to the acceptor's UUID; the updated `Friendship` is returned
 
 ---
 
