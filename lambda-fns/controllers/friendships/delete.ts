@@ -3,54 +3,17 @@ import psql from '../../psql'
 import { assertValidUuid } from '../../utilities/assertValidUuid'
 
 export default async function main( friendshipUuid: string) {
-  // console.log({friendshipUuid,})
   // here validate values before inserting into DB
   assertValidUuid(friendshipUuid, 'friendshipUuid')
 
   await psql.connect()
 
-  const chatUuid =
-        (await psql.query(`      
-      SELECT * from "Friendships"
+  await psql.query(`      
+    DELETE from "Friendships"
       WHERE "friendshipUuid" = $1
-  `, [friendshipUuid])).rows[0].chatUuid
-
-  // console.log({chatUuid,})
-
-  try {
-    await psql.query('BEGIN')
-
-    await psql.query(`      
-      DELETE from "Friendships"
-        WHERE "friendshipUuid" = $1
-    `, [friendshipUuid])
-
-    await psql.query(`      
-      DELETE from "Chats"
-        WHERE "chatUuid" = $1
-    `, [chatUuid])
-
-    await psql.query(`      
-      DELETE from "ChatUsers"
-        WHERE "chatUuid" = $1
-    `, [chatUuid])
-
-    await psql.query(`      
-      DELETE from "Messages"
-        WHERE "chatUuid" = $1
-    `, [chatUuid])
-    // console.log("OK")
-    await psql.query('COMMIT')
-
-  } catch (e) {
-    console.error(e)
-    await psql.query('ROLLBACK')
-    throw('unable to delete friendship request')
-  }
-
+  `, [friendshipUuid])
 
   await psql.clean()
 
-  // console.log({status,})
   return "OK"
 }

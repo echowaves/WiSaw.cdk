@@ -7,8 +7,6 @@ import { plainToClass } from "class-transformer"
 import psql from "../../psql"
 
 import Friendship from "../../models/friendship"
-import Chat from "../../models/chat"
-import ChatUser from "../../models/chatUser"
 import { assertValidUuid } from '../../utilities/assertValidUuid'
 
 export default async function main(uuid: string) {
@@ -18,77 +16,26 @@ export default async function main(uuid: string) {
   const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
 
   const friendshipUuid = uuidv4()
-  const chatUuid = uuidv4()
 
   await psql.connect()
 
-  try {
-    await psql.query("BEGIN")
+  const friendship = (
+    await psql.query(`      
+                    INSERT INTO "Friendships"
+                    (
+                      "friendshipUuid",
+                      "uuid1",
+                      "createdAt"
+                    ) values (
+                    $1,
+                    $2,
+                    $3
+                    ) 
+                    returning *
+                    `, [friendshipUuid, uuid, createdAt])
+  ).rows[0]
 
-    const friendship = (
-      await psql.query(`      
-                      INSERT INTO "Friendships"
-                      (
-                        "friendshipUuid",
-                        "uuid1",
-                        "chatUuid",
-                        "createdAt"
-                      ) values (
-                      $1,
-                      $2,
-                      $3,
-                      $4
-                      ) 
-                      returning *
-                      `, [friendshipUuid, uuid, chatUuid, createdAt])
-    ).rows[0]
+  await psql.clean()
 
-    const chat = (
-      await psql.query(`      
-                      INSERT INTO "Chats"
-                      (
-                          "chatUuid",
-                          "createdAt"
-                      ) values (
-                        $1,
-                        $2
-                      )
-                      returning *
-                      `, [chatUuid, createdAt])
-    ).rows[0]
-
-    const chatUser = (
-      await psql.query(`      
-                      INSERT INTO "ChatUsers"
-                      (
-                          "chatUuid",
-                          "uuid",
-                          "invitedByUuid",
-                          "createdAt",
-                          "lastReadAt"
-                      ) values (
-                        $1,
-                        $2,
-                        $2,
-                        $3,
-                        $3
-                      )
-                      returning *
-                      `, [chatUuid, uuid, createdAt])
-    ).rows[0]
-
-    await psql.query("COMMIT")
-    await psql.clean()
-    // console.log({friendship, friend, chat, chatUser,})
-    return {
-      friendship: plainToClass(Friendship, friendship),
-      chat: plainToClass(Chat, chat),
-      chatUser: plainToClass(ChatUser, chatUser),
-    }
-  } catch (e) {
-    console.error(e)
-    await psql.query("ROLLBACK")
-    await psql.clean()
-    throw "unable to create friendship"
-  }
+  return plainToClass(Friendship, friendship)
 }

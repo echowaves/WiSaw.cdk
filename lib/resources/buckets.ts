@@ -8,8 +8,6 @@ export function createBuckets (scope: Construct, lambdas: any): any {
     wisawFn,
     processUploadedImageLambdaFunction,
     processDeletedImageLambdaFunction,
-    processUploadedPrivateImageLambdaFunction,
-    processDeletedPrivateImageLambdaFunction,
     generateSiteMapLambdaFunction,
     injectMetaTagsLambdaFunctionPhoto,
     injectMetaTagsLambdaFunctionVideo,
@@ -57,41 +55,6 @@ export function createBuckets (scope: Construct, lambdas: any): any {
     { suffix: '-thumb.webp' }
   )
 
-  // ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // imgPrivateBucket
-  // Grant access to s3 bucket for lambda function
-  const imgPrivateBucket = s3.Bucket.fromBucketName(
-    scope,
-    `wisaw-img-private-${deployEnv()}`,
-    `wisaw-img-private-${deployEnv()}`
-  )
-  imgPrivateBucket.grantPut(wisawFn)
-  imgPrivateBucket.grantPutAcl(wisawFn)
-  imgPrivateBucket.grantReadWrite(processUploadedPrivateImageLambdaFunction)
-  imgPrivateBucket.grantPut(processUploadedPrivateImageLambdaFunction)
-  imgPrivateBucket.grantPutAcl(processUploadedPrivateImageLambdaFunction)
-  imgPrivateBucket.grantDelete(processUploadedPrivateImageLambdaFunction)
-
-  imgPrivateBucket.grantDelete(processDeletedPrivateImageLambdaFunction)
-
-  // invoke lambda every time an object is created in the bucket
-  imgPrivateBucket.addEventNotification(
-    s3.EventType.OBJECT_CREATED,
-    new s3n.LambdaDestination(processUploadedPrivateImageLambdaFunction),
-    // only invoke lambda if object matches the filter
-    // {prefix: 'test/', suffix: '.yaml'},
-    { suffix: '.upload' }
-  )
-
-  // invoke lambda every time an object is deleted in the bucket
-  imgPrivateBucket.addEventNotification(
-    s3.EventType.OBJECT_REMOVED,
-    new s3n.LambdaDestination(processDeletedPrivateImageLambdaFunction),
-    // only invoke lambda if object matches the filter
-    // {prefix: 'test/', suffix: '.yaml'},
-    { suffix: '-thumb' }
-  )
-
   let webAppBucket: s3.IBucket | undefined
 
   if (deployEnv() === 'prod') {
@@ -123,7 +86,6 @@ export function createBuckets (scope: Construct, lambdas: any): any {
 
   return {
     imgBucket,
-    imgPrivateBucket,
     webAppBucket
   }
 }

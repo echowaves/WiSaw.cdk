@@ -2,7 +2,6 @@
 //                       queries
 // ******************************************************
 import { traceWrap } from './utilities/trace'
-import generateUploadUrlForMessage from './controllers/messages/generateUploadUrlForMessage'
 import generateUploadUrl from './controllers/photos/generateUploadUrl'
 import zeroMoment from './controllers/photos/zeroMoment'
 
@@ -20,10 +19,7 @@ import getPhotoAllNext from './controllers/photos/getPhotoAllNext'
 import getPhotoAllPrev from './controllers/photos/getPhotoAllPrev'
 
 import getFriendshipsList from './controllers/friendships/getFriendshipsList'
-import getUnreadCountsList from './controllers/friendships/getUnreadCountsList'
 import feedForFriend from './controllers/friendships/feedForFriend'
-
-import getMessagesList from './controllers/messages/getMessagesList'
 
 import createWave from './controllers/waves/create'
 import updateWave from './controllers/waves/update'
@@ -60,10 +56,6 @@ import deleteFriendship from './controllers/friendships/delete'
 
 import updateSecret from './controllers/secrets/update'
 
-import sendMessage from './controllers/messages/send'
-
-import resetUnreadCount from './controllers/messages/resetUnreadCount'
-
 // import AbuseReport from './models/abuseReport'
 // import Photo from './models/photo'
 // import Message from './models/message'
@@ -96,18 +88,6 @@ interface AppSyncEvent {
     newSecret: string
     friendshipUuid: string
     invitedByUuid: string
-    chatUuid: string
-    messageUuid: string
-    text: string
-    lastLoaded: string
-
-    chatUuidArg: string
-    uuidArg: string
-    messageUuidArg: string
-    textArg: string
-    photoHash: string
-    pendingArg: boolean
-    chatPhotoHashArg: string
     waveUuid: string
     name: string
     radius: number
@@ -128,10 +108,6 @@ const queryHandlers: Record<string, HandlerDefinition> = {
   generateUploadUrl: {
     resolver: generateUploadUrl,
     getArgs: (args) => [args.assetKey, args.contentType]
-  },
-  generateUploadUrlForMessage: {
-    resolver: generateUploadUrlForMessage,
-    getArgs: (args) => [args.uuid, args.photoHash, args.contentType]
   },
   zeroMoment: {
     resolver: zeroMoment,
@@ -180,14 +156,6 @@ const queryHandlers: Record<string, HandlerDefinition> = {
   getFriendshipsList: {
     resolver: getFriendshipsList,
     getArgs: (args) => [args.uuid]
-  },
-  getUnreadCountsList: {
-    resolver: getUnreadCountsList,
-    getArgs: (args) => [args.uuid]
-  },
-  getMessagesList: {
-    resolver: getMessagesList,
-    getArgs: (args) => [args.chatUuid, args.lastLoaded]
   },
   listWaves: {
     resolver: listWaves,
@@ -267,21 +235,6 @@ const mutationHandlers: Record<string, HandlerDefinition> = {
   deleteFriendship: {
     resolver: deleteFriendship,
     getArgs: (args) => [args.friendshipUuid]
-  },
-  sendMessage: {
-    resolver: sendMessage,
-    getArgs: (args) => [
-      args.chatUuidArg,
-      args.uuidArg,
-      args.messageUuidArg,
-      args.textArg,
-      args.pendingArg,
-      args.chatPhotoHashArg
-    ]
-  },
-  resetUnreadCount: {
-    resolver: resetUnreadCount,
-    getArgs: (args) => [args.chatUuid, args.uuid]
   },
   createWave: {
     resolver: createWave,

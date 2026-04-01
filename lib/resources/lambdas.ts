@@ -108,46 +108,6 @@ export function createLambdas (scope: Construct, config: any): any {
     }
   )
 
-  const processUploadedPrivateImageLambdaFunctionLogGroup = new logs.LogGroup(scope, `${deployEnv()}_processUploadedPrivateImage-LogGroup`, {
-    logGroupName: `/aws/lambda/${deployEnv()}-cdk-wisaw-fn-processUploadedPrivateImage`,
-    retention: logs.RetentionDays.ONE_DAY,
-    removalPolicy: cdk.RemovalPolicy.DESTROY
-  })
-
-  const processUploadedPrivateImageLambdaFunction = new NodejsFunction(
-    scope,
-    `${deployEnv()}_processUploadedPrivateImage`,
-    {
-      runtime: lambda.Runtime.NODEJS_22_X,
-      entry: path.join(__dirname, '../../lambda-fns/lambdas/processUploadedPrivateImage/index.ts'),
-      handler: 'main',
-      bundling: {
-        minify: true,
-        target: 'es2020',
-        sourceMap: true,
-        sourceMapMode: SourceMapMode.INLINE,
-        sourcesContent: false,
-        externalModules: ['sharp'],
-        loader: { '.pem': 'text' }
-      },
-      layers: [
-        lambda.LayerVersion.fromLayerVersionArn(
-          scope,
-          `${deployEnv()}-processUploadedPrivateImage`,
-          sharpLayerArn
-        )
-      ],
-      insightsVersion,
-      logGroup: processUploadedPrivateImageLambdaFunctionLogGroup,
-      memorySize: 10240,
-      // memorySize: 3008,
-      timeout: cdk.Duration.seconds(30),
-      environment: {
-        ...config
-      }
-    }
-  )
-
   const processDeletedImageLambdaFunctionLogGroup = new logs.LogGroup(scope, `${deployEnv()}_processDeletedImage-LogGroup`, {
     logGroupName: `/aws/lambda/${deployEnv()}-cdk-wisaw-fn-processDeletedImage`,
     retention: logs.RetentionDays.ONE_DAY,
@@ -180,47 +140,6 @@ export function createLambdas (scope: Construct, config: any): any {
       // ],
       insightsVersion,
       logGroup: processDeletedImageLambdaFunctionLogGroup,
-      // memorySize: 10240,
-      memorySize: 1024,
-      timeout: cdk.Duration.seconds(30),
-      environment: {
-        ...config
-      }
-    }
-  )
-
-  const processDeletedPrivateImageLambdaFunctionLogGroup = new logs.LogGroup(scope, `${deployEnv()}_processDeletedPrivateImage-LogGroup`, {
-    logGroupName: `/aws/lambda/${deployEnv()}-cdk-wisaw-fn-processDeletedPrivateImage`,
-    retention: logs.RetentionDays.ONE_DAY,
-    removalPolicy: cdk.RemovalPolicy.DESTROY
-  })
-
-  const processDeletedPrivateImageLambdaFunction = new NodejsFunction(
-    scope,
-    `${deployEnv()}_processDeletedPrivateImage`,
-    {
-      runtime: lambda.Runtime.NODEJS_22_X,
-      // handler: "index.handler",
-      entry: path.join(__dirname, '../../lambda-fns/lambdas/processDeletedPrivateImage/index.ts'),
-      handler: 'main',
-      bundling: {
-        minify: true,
-        target: 'es2020',
-        sourceMap: true,
-        sourceMapMode: SourceMapMode.INLINE,
-        sourcesContent: false,
-        loader: { '.pem': 'text' }
-        // externalModules: ["sharp"],
-      },
-      // layers: [
-      //   lambda.LayerVersion.fromLayerVersionArn(
-      //     scope,
-      //     `${deployEnv()}-_processDeletedPrivateImage`,
-      //     sharpLayerArn,
-      //   ),
-      // ],
-      insightsVersion,
-      logGroup: processDeletedPrivateImageLambdaFunctionLogGroup,
       // memorySize: 10240,
       memorySize: 1024,
       timeout: cdk.Duration.seconds(30),
@@ -467,9 +386,7 @@ export function createLambdas (scope: Construct, config: any): any {
   return {
     wisawFn,
     processUploadedImageLambdaFunction,
-    processUploadedPrivateImageLambdaFunction,
     processDeletedImageLambdaFunction,
-    processDeletedPrivateImageLambdaFunction,
     cleanupAbuseReportsLambdaFunction,
     generateSiteMapLambdaFunction,
     injectMetaTagsLambdaFunctionPhoto,

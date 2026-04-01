@@ -4,7 +4,6 @@ import { Construct } from 'constructs'
 export function createResolvers (scope: Construct, api: appsync.GraphqlApi, lambdaDs: appsync.BaseDataSource): void {
   const fields = [
     { typeName: 'Query', fieldName: 'generateUploadUrl' },
-    { typeName: 'Query', fieldName: 'generateUploadUrlForMessage' },
     { typeName: 'Query', fieldName: 'zeroMoment' },
     { typeName: 'Query', fieldName: 'feedByDate' },
     { typeName: 'Query', fieldName: 'feedForWatcher' },
@@ -16,8 +15,6 @@ export function createResolvers (scope: Construct, api: appsync.GraphqlApi, lamb
     { typeName: 'Query', fieldName: 'getPhotoAllNext' },
     { typeName: 'Query', fieldName: 'getPhotoAllPrev' },
     { typeName: 'Query', fieldName: 'getFriendshipsList' },
-    { typeName: 'Query', fieldName: 'getUnreadCountsList' },
-    { typeName: 'Query', fieldName: 'getMessagesList' },
     { typeName: 'Query', fieldName: 'listWaves' },
     { typeName: 'Query', fieldName: 'listWavePhotos' },
     { typeName: 'Query', fieldName: 'listPhotoLocations' },
@@ -40,8 +37,6 @@ export function createResolvers (scope: Construct, api: appsync.GraphqlApi, lamb
     { typeName: 'Mutation', fieldName: 'createFriendship' },
     { typeName: 'Mutation', fieldName: 'acceptFriendshipRequest' },
     { typeName: 'Mutation', fieldName: 'deleteFriendship' },
-    { typeName: 'Mutation', fieldName: 'sendMessage' },
-    { typeName: 'Mutation', fieldName: 'resetUnreadCount' },
     { typeName: 'Mutation', fieldName: 'createWave' },
     { typeName: 'Mutation', fieldName: 'updateWave' },
     { typeName: 'Mutation', fieldName: 'deleteWave' },

@@ -138,48 +138,8 @@ type Friendship {
   friendshipUuid: String!
   uuid1: String! 
   uuid2: String # if uuid2 is null == friendship is not confirmed
-  chatUuid: String!
   photos: [Photo]
   createdAt: AWSDateTime!  
-}
-
-type Chat {  
-  chatUuid: String!
-  createdAt: AWSDateTime!  
-}
-type ChatUser {  
-  uuid: String!
-  chatUuid: String!
-  invitedByUuid: String! 
-  createdAt: AWSDateTime!  
-  lastReadAt: AWSDateTime!  
-}
-
-type UnreadCount {  
-  chatUuid: String!
-  unread: Int!  
-  updatedAt: AWSDateTime!
-}
-
-type CreateFriendshipResult {
-  friendship: Friendship!
-  chat: Chat!
-  chatUser: ChatUser!
-}
-
-type Message{  
-  chatUuid: String!
-  uuid: String!
-  messageUuid: String!
-  text: String! 
-  pending: Boolean!  
-  chatPhotoHash: String!
-  createdAt: AWSDateTime!  
-  updatedAt: AWSDateTime!  
-}
-type UploadUrlForMessage{
-  newAsset: Boolean!
-  uploadUrl: String
 }
 
 # ... ******************************************************
@@ -190,11 +150,6 @@ type Query {
     assetKey: String!
     contentType: String!
     ): String!
-  generateUploadUrlForMessage(
-    uuid: String!
-    photoHash: String!
-    contentType: String!
-    ): UploadUrlForMessage!
 
   zeroMoment: AWSDateTime!
     
@@ -249,17 +204,6 @@ type Query {
   getFriendshipsList(
       uuid: String! # self  
   ): [Friendship]! #list of all friends by UUID, if uuid2 of a friend is null, the friendship is not confirmed
-
-  getUnreadCountsList(
-      uuid: String! # self  
-  ): [UnreadCount]! #list of all underads counts for given uuid
-
-
-
-getMessagesList(
-     chatUuid: String!
-     lastLoaded: AWSDateTime!
-  ): [Message]!
 
   listWaves(
     pageNumber: Int!
@@ -366,29 +310,14 @@ type Mutation {
 # freindship management 
   createFriendship(
       uuid: String!
-  ): CreateFriendshipResult!
+  ): Friendship!
   acceptFriendshipRequest(
     friendshipUuid: String!
     uuid: String! # self
-  ): CreateFriendshipResult! # returns the ChatUser from the other side of the friendship
+  ): Friendship!
   deleteFriendship(
     friendshipUuid: String!
   ): String! # returns "OK"
-  
-  # messages
-  sendMessage(
-    chatUuidArg: String!
-    uuidArg: String!
-    messageUuidArg: String!
-    textArg: String! 
-    pendingArg: Boolean! 
-    chatPhotoHashArg: String!
-  ): Message!
-  
-  resetUnreadCount(
-    chatUuid: String!
-    uuid: String!
-  ): String! #returns current date time
 
   createWave(
     name: String!
@@ -449,11 +378,6 @@ type Mutation {
 
 # only works with nullable return types, the return type must match corresponding mutation
 type Subscription {
-  onSendMessage(
-    chatUuid: String
-  ): Message
-    @aws_subscribe(mutations: ["sendMessage"])
-
   # onHelloWorld(helloMessage: String): String
   #   @aws_subscribe(mutations: ["helloWorld"])
 }
