@@ -38,11 +38,27 @@ The system SHALL only process active photos that are NOT already associated with
 - **THEN** no new waves SHALL be created and the result SHALL indicate zero photos grouped
 
 ### Requirement: Auto-group creates a wave for each cluster
-The system SHALL create **at most one** Wave record per invocation of `autoGroupPhotosIntoWaves(uuid)`. It SHALL run the full clustering pipeline (spatial DBSCAN + temporal gap splitting), sort the resulting temporal clusters by `earliestDate` ascending, and create a Wave for only the **first** (oldest) cluster. The Wave SHALL be owned by the requesting user (`createdBy = uuid`), SHALL have its location set to the centroid of the cluster's photos, and SHALL have the user auto-added to `WaveUsers`. The mutation result SHALL include the created wave's `waveUuid` and `name`. When no ungrouped photos exist, `waveUuid` and `name` SHALL be null. After creating the wave, the system SHALL count remaining ungrouped photos and return `hasMore` and `photosRemaining` so the client can call again.
+The system SHALL create **at most one** Wave record per invocation of `autoGroupPhotosIntoWaves(uuid)`. The user MUST have a registered secret (a record in the `Secrets` table). The created wave SHALL have `frozen = true` and `open = false`. It SHALL run the full clustering pipeline (spatial DBSCAN + temporal gap splitting), sort the resulting temporal clusters by `earliestDate` ascending, and create a Wave for only the **first** (oldest) cluster. The Wave SHALL be owned by the requesting user (`createdBy = uuid`), SHALL have its location set to the centroid of the cluster's photos, and SHALL have the user auto-added to `WaveUsers` with `role = 'owner'`. The mutation result SHALL include the created wave's `waveUuid` and `name`. When no ungrouped photos exist, `waveUuid` and `name` SHALL be null. After creating the wave, the system SHALL count remaining ungrouped photos and return `hasMore` and `photosRemaining` so the client can call again.
 
 #### Scenario: One wave created per invocation
-- **WHEN** `autoGroupPhotosIntoWaves(uuid)` is invoked and clustering produces 5 temporal clusters
-- **THEN** exactly one Wave SHALL be created for the cluster with the oldest `earliestDate`
+- **WHEN** `autoGroupPhotosIntoWaves(uuid)` is invoked by a user with a registered secret and clustering produces 5 temporal clusters
+- **THEN** exactly one Wave SHALL be created for the cluster with the oldest `earliestDate`, with `frozen = true` and `open = false`
+
+#### Scenario: User without secret cannot auto-group
+- **WHEN** `autoGroupPhotosIntoWaves(uuid)` is called by a user with no record in the `Secrets` table
+- **THEN** the system SHALL throw an error indicating the user must register an identity first
+
+#### Scenario: Auto-created wave is frozen
+- **WHEN** a wave is created by `autoGroupPhotosIntoWaves`
+- **THEN** the wave's `frozen` field SHALL be `true`
+
+#### Scenario: Auto-created wave is invite-only
+- **WHEN** a wave is created by `autoGroupPhotosIntoWaves`
+- **THEN** the wave's `open` field SHALL be `false`
+
+#### Scenario: Creator added as owner
+- **WHEN** a wave is created by `autoGroupPhotosIntoWaves`
+- **THEN** the creator's `WaveUsers` record SHALL have `role = 'owner'`
 
 #### Scenario: Wave created for oldest cluster
 - **WHEN** clusters exist from 2023, 2024, and 2025
@@ -71,10 +87,6 @@ The system SHALL create **at most one** Wave record per invocation of `autoGroup
 #### Scenario: No ungrouped photos exist
 - **WHEN** `autoGroupPhotosIntoWaves(uuid)` is invoked and no ungrouped photos exist
 - **THEN** the result SHALL have `photosGrouped: 0`, `hasMore: false`, and `photosRemaining: 0`
-
-#### Scenario: Idempotent re-invocation
-- **WHEN** `autoGroupPhotosIntoWaves(uuid)` is invoked a second time after all photos have been grouped with no new photos
-- **THEN** no new waves SHALL be created and the result SHALL indicate zero photos grouped with `hasMore: false`
 
 ### Requirement: Auto-group names waves using reverse geocoding and date range
 The system SHALL name each auto-created wave using the pattern `"<Location>, <DateRange>"` where Location is the city or area name from reverse geocoding the cluster centroid, and DateRange reflects the timespan of photos in the cluster.
