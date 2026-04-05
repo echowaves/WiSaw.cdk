@@ -33,6 +33,20 @@ import addPhotoToWave from './controllers/waves/addPhoto'
 import removePhotoFromWave from './controllers/waves/removePhoto'
 import autoGroupPhotosIntoWaves from './controllers/waves/autoGroupPhotosIntoWaves'
 import mergeWaves from './controllers/waves/mergeWaves'
+import createWaveInvite from './controllers/waves/createWaveInvite'
+import revokeWaveInvite from './controllers/waves/revokeWaveInvite'
+import joinWaveByInvite from './controllers/waves/joinWaveByInvite'
+import joinOpenWave from './controllers/waves/joinOpenWave'
+import assignFacilitator from './controllers/waves/assignFacilitator'
+import removeFacilitator from './controllers/waves/removeFacilitator'
+import removeUserFromWave from './controllers/waves/removeUserFromWave'
+import reportWavePhoto from './controllers/waves/reportWavePhoto'
+import dismissWaveReport from './controllers/waves/dismissWaveReport'
+import banUserFromWave from './controllers/waves/banUserFromWave'
+import listWaveMembers from './controllers/waves/listWaveMembers'
+import listWaveInvites from './controllers/waves/listWaveInvites'
+import listWaveAbuseReports from './controllers/waves/listWaveAbuseReports'
+import listWaveBans from './controllers/waves/listWaveBans'
 
 // ******************************************************
 //                       mutations
@@ -96,6 +110,16 @@ interface AppSyncEvent {
     sortBy: string
     sortDirection: string
     friendUuid: string
+    inviteToken: string
+    targetUuid: string
+    reportId: string
+    reason: string
+    open: boolean
+    frozen: boolean
+    startDate: string
+    endDate: string
+    expiresAt: string
+    maxUses: number
   }
 }
 
@@ -180,6 +204,22 @@ const queryHandlers: Record<string, HandlerDefinition> = {
   feedForFriend: {
     resolver: feedForFriend,
     getArgs: (args) => [args.uuid, args.friendUuid, args.pageNumber, args.batch, args.searchTerm, args.sortBy, args.sortDirection]
+  },
+  listWaveMembers: {
+    resolver: listWaveMembers,
+    getArgs: (args) => [args.waveUuid, args.uuid]
+  },
+  listWaveInvites: {
+    resolver: listWaveInvites,
+    getArgs: (args) => [args.waveUuid, args.uuid]
+  },
+  listWaveAbuseReports: {
+    resolver: listWaveAbuseReports,
+    getArgs: (args) => [args.waveUuid, args.uuid]
+  },
+  listWaveBans: {
+    resolver: listWaveBans,
+    getArgs: (args) => [args.waveUuid, args.uuid]
   }
 }
 
@@ -242,7 +282,7 @@ const mutationHandlers: Record<string, HandlerDefinition> = {
   },
   updateWave: {
     resolver: updateWave,
-    getArgs: (args) => [args.waveUuid, args.uuid, args.name, args.description, args.lat, args.lon, args.radius]
+    getArgs: (args) => [args.waveUuid, args.uuid, args.name, args.description, args.lat, args.lon, args.radius, args.open, args.frozen, args.startDate, args.endDate]
   },
   deleteWave: {
     resolver: deleteWave,
@@ -254,7 +294,7 @@ const mutationHandlers: Record<string, HandlerDefinition> = {
   },
   removePhotoFromWave: {
     resolver: removePhotoFromWave,
-    getArgs: (args) => [args.waveUuid, args.photoId]
+    getArgs: (args) => [args.waveUuid, args.photoId, args.uuid]
   },
   autoGroupPhotosIntoWaves: {
     resolver: autoGroupPhotosIntoWaves,
@@ -263,6 +303,46 @@ const mutationHandlers: Record<string, HandlerDefinition> = {
   mergeWaves: {
     resolver: mergeWaves,
     getArgs: (args) => [args.targetWaveUuid, args.sourceWaveUuid, args.uuid, args.name, args.description]
+  },
+  createWaveInvite: {
+    resolver: createWaveInvite,
+    getArgs: (args) => [args.waveUuid, args.uuid, args.expiresAt, args.maxUses]
+  },
+  revokeWaveInvite: {
+    resolver: revokeWaveInvite,
+    getArgs: (args) => [args.inviteToken, args.uuid]
+  },
+  joinWaveByInvite: {
+    resolver: joinWaveByInvite,
+    getArgs: (args) => [args.inviteToken, args.uuid]
+  },
+  joinOpenWave: {
+    resolver: joinOpenWave,
+    getArgs: (args) => [args.waveUuid, args.uuid]
+  },
+  assignFacilitator: {
+    resolver: assignFacilitator,
+    getArgs: (args) => [args.waveUuid, args.targetUuid, args.uuid]
+  },
+  removeFacilitator: {
+    resolver: removeFacilitator,
+    getArgs: (args) => [args.waveUuid, args.targetUuid, args.uuid]
+  },
+  removeUserFromWave: {
+    resolver: removeUserFromWave,
+    getArgs: (args) => [args.waveUuid, args.targetUuid, args.uuid]
+  },
+  reportWavePhoto: {
+    resolver: reportWavePhoto,
+    getArgs: (args) => [args.waveUuid, args.photoId, args.uuid]
+  },
+  dismissWaveReport: {
+    resolver: dismissWaveReport,
+    getArgs: (args) => [args.reportId, args.uuid]
+  },
+  banUserFromWave: {
+    resolver: banUserFromWave,
+    getArgs: (args) => [args.waveUuid, args.targetUuid, args.uuid, args.reason]
   }
 }
 

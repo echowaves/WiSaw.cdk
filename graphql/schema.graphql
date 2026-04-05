@@ -108,8 +108,41 @@ type Wave {
   radius: Int
   photos: [Photo]
   photosCount: Int
+  open: Boolean!
+  frozen: Boolean!
+  startDate: AWSDateTime
+  endDate: AWSDateTime
+  isFrozen: Boolean!
+  isActive: Boolean!
+  myRole: String
+  joinUrl: String
   createdAt: AWSDateTime!
   updatedAt: AWSDateTime!
+}
+
+type WaveInvite {
+  inviteToken: String!
+  waveUuid: String!
+  deepLink: String!
+  expiresAt: AWSDateTime
+  maxUses: Int
+  useCount: Int!
+  active: Boolean!
+  createdAt: AWSDateTime!
+}
+
+type WaveMember {
+  uuid: String!
+  nickName: String
+  role: String!
+  createdAt: AWSDateTime!
+}
+
+type WaveBan {
+  uuid: String!
+  bannedBy: String!
+  reason: String
+  createdAt: AWSDateTime!
 }
 
 type WaveFeed {
@@ -238,6 +271,23 @@ type Query {
     uuid: String!
   ): Int!
 
+  listWaveMembers(
+    waveUuid: String!
+    uuid: String!
+  ): [WaveMember]!
+  listWaveInvites(
+    waveUuid: String!
+    uuid: String!
+  ): [WaveInvite]!
+  listWaveAbuseReports(
+    waveUuid: String!
+    uuid: String!
+  ): [AbuseReport]!
+  listWaveBans(
+    waveUuid: String!
+    uuid: String!
+  ): [WaveBan]!
+
   feedForFriend(
     uuid: String!
     friendUuid: String!
@@ -336,11 +386,15 @@ type Mutation {
   updateWave(
     waveUuid: String!
     uuid: String!
-    name: String!
+    name: String
     description: String
     lat: Float
     lon: Float
     radius: Int
+    open: Boolean
+    frozen: Boolean
+    startDate: AWSDateTime
+    endDate: AWSDateTime
   ): Wave!
 
   addPhotoToWave(
@@ -352,6 +406,7 @@ type Mutation {
   removePhotoFromWave(
     waveUuid: String!
     photoId: String!
+    uuid: String!
   ): Boolean!
 
   autoGroupPhotosIntoWaves(
@@ -365,6 +420,55 @@ type Mutation {
     name: String
     description: String
   ): Wave!
+
+  createWaveInvite(
+    waveUuid: String!
+    uuid: String!
+    expiresAt: AWSDateTime
+    maxUses: Int
+  ): WaveInvite!
+  revokeWaveInvite(
+    inviteToken: String!
+    uuid: String!
+  ): Boolean!
+  joinWaveByInvite(
+    inviteToken: String!
+    uuid: String!
+  ): Wave!
+  joinOpenWave(
+    waveUuid: String!
+    uuid: String!
+  ): Wave!
+  assignFacilitator(
+    waveUuid: String!
+    targetUuid: String!
+    uuid: String!
+  ): Boolean!
+  removeFacilitator(
+    waveUuid: String!
+    targetUuid: String!
+    uuid: String!
+  ): Boolean!
+  removeUserFromWave(
+    waveUuid: String!
+    targetUuid: String!
+    uuid: String!
+  ): Boolean!
+  reportWavePhoto(
+    waveUuid: String!
+    photoId: String!
+    uuid: String!
+  ): AbuseReport!
+  dismissWaveReport(
+    reportId: ID!
+    uuid: String!
+  ): Boolean!
+  banUserFromWave(
+    waveUuid: String!
+    targetUuid: String!
+    uuid: String!
+    reason: String
+  ): Boolean!
 }
 
   # helloWorld(helloMessage: String!): String!

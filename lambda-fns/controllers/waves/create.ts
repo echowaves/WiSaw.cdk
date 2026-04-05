@@ -4,6 +4,7 @@ import psql from '../../psql'
 import { Wave } from '../../models/wave'
 import { plainToClass } from 'class-transformer'
 import { assertValidUuid } from '../../utilities/assertValidUuid'
+import { _assertHasSecret } from './_assertHasSecret'
 
 export default async function main (
   name: string,
@@ -23,6 +24,7 @@ export default async function main (
   const updatedAt = createdAt
 
   await psql.connect()
+  await _assertHasSecret(uuid)
 
   // Build query based on whether location is provided
   const hasLocation = lat !== undefined && lon !== undefined
@@ -50,11 +52,11 @@ export default async function main (
 
   await psql.query(`
     INSERT INTO "WaveUsers" (
-      "waveUuid", "uuid", "createdAt", "updatedAt"
+      "waveUuid", "uuid", "role", "createdAt", "updatedAt"
     ) VALUES (
-      $1, $2, $3, $4
+      $1, $2, $3, $4, $5
     )
-  `, [waveUuid, uuid, createdAt, updatedAt])
+  `, [waveUuid, uuid, 'owner', createdAt, updatedAt])
 
   await psql.clean()
 

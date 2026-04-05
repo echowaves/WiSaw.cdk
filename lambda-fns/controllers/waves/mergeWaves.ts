@@ -4,6 +4,8 @@ import { Wave } from '../../models/wave'
 import { plainToClass } from 'class-transformer'
 import { _updatePhotosCount } from './_updatePhotosCount'
 import { assertValidUuid } from '../../utilities/assertValidUuid'
+import { _assertWaveRole } from './_assertWaveRole'
+import { _assertNotFrozen } from './_assertNotFrozen'
 
 export default async function main (
   targetWaveUuid: string,
@@ -21,16 +23,20 @@ export default async function main (
 
   await psql.connect()
 
-  // Verify user owns both waves
-  const ownershipResult = await psql.query(`
-    SELECT "waveUuid" FROM "Waves"
-    WHERE "waveUuid" IN ($1, $2) AND "createdBy" = $3
-  `, [targetWaveUuid, sourceWaveUuid, uuid])
+  // Verify user is owner of both waves
+  await _assertWaveRole(targetWaveUuid, uuid, 'owner')
+  await _assertWaveRole(sourceWaveUuid, uuid, 'owner')
 
-  if (ownershipResult.rows.length < 2) {
-    await psql.clean()
-    throw new Error('Wave not found or you do not have permission to merge')
-  }
+  // Both waves must not be frozen
+  const targetWaveResult = await psql.query(`
+    SELECT "frozen", "endDate" FROM "Waves" WHERE "waveUuid" = $1
+  `, [targetWaveUuid])
+  _assertNotFrozen(targetWaveResult.rows[0])
+
+  const sourceWaveResult = await psql.query(`
+    SELECT "frozen", "endDate" FROM "Waves" WHERE "waveUuid" = $1
+  `, [sourceWaveUuid])
+  _assertNotFrozen(sourceWaveResult.rows[0])
 
   // Move all photos from source to target (preserves original createdBy)
   await psql.query(`
@@ -42,8 +48,8 @@ export default async function main (
   // Merge WaveUsers from source into target (skip duplicates)
   const now = moment().format('YYYY-MM-DD HH:mm:ss.SSS')
   await psql.query(`
-    INSERT INTO "WaveUsers" ("waveUuid", "uuid", "createdAt", "updatedAt")
-    SELECT $1, "uuid", $3, $4
+    INSERT INTO "WaveUsers" ("waveUuid", "uuid", "role", "createdAt", "updatedAt")
+    SELECT $1, "uuid", "role", $3, $4
     FROM "WaveUsers"
     WHERE "waveUuid" = $2
     ON CONFLICT ("waveUuid", "uuid") DO NOTHING

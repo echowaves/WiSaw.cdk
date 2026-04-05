@@ -8,6 +8,7 @@ import { _updateLastComment } from "./_updateLastComment"
 
 import { _notifyAllWatchers } from "../photos/_notifyAllWatchers"
 import watch from "../photos/watch"
+import { _isPhotoInFrozenWave } from "../waves/_isPhotoInFrozenWave"
 
 export default async function main(
   photoId: string,
@@ -23,6 +24,12 @@ export default async function main(
     throw "Unable to save empty comment."
   }
   await psql.connect()
+
+  if (await _isPhotoInFrozenWave(photoId)) {
+    await psql.clean()
+    throw new Error('Cannot comment on a photo that is in a frozen wave')
+  }
+
   const comment = (
     await psql.query(`
     INSERT INTO "Comments"

@@ -4,6 +4,7 @@ import moment from 'moment'
 import psql from '../../psql'
 import { _updatePhotosCount } from './_updatePhotosCount'
 import { assertValidUuid } from '../../utilities/assertValidUuid'
+import { _assertHasSecret } from './_assertHasSecret'
 
 interface AutoGroupResult {
   waveUuid: string | null
@@ -97,29 +98,29 @@ async function createWaveAndAssign (
     await psql.query(`
       INSERT INTO "Waves" (
         "waveUuid", "name", "description", "createdBy",
-        "location", "radius", "createdAt", "updatedAt"
+        "location", "radius", "open", "frozen", "createdAt", "updatedAt"
       ) VALUES (
         $1, $2, $3, $4,
-        ST_MakePoint($5, $6), $7, $8, $9
+        ST_MakePoint($5, $6), $7, $8, $9, $10, $11
       )
-    `, [waveUuid, waveName, '', uuid, lon, lat, 100, now, now])
+    `, [waveUuid, waveName, '', uuid, lon, lat, 100, false, true, now, now])
   } else {
     await psql.query(`
       INSERT INTO "Waves" (
         "waveUuid", "name", "description", "createdBy",
-        "location", "radius", "createdAt", "updatedAt"
+        "location", "radius", "open", "frozen", "createdAt", "updatedAt"
       ) VALUES (
         $1, $2, $3, $4,
-        NULL, $5, $6, $7
+        NULL, $5, $6, $7, $8, $9
       )
-    `, [waveUuid, waveName, '', uuid, 100, now, now])
+    `, [waveUuid, waveName, '', uuid, 100, false, true, now, now])
   }
 
   await psql.query(`
     INSERT INTO "WaveUsers" (
-      "waveUuid", "uuid", "createdAt", "updatedAt"
-    ) VALUES ($1, $2, $3, $4)
-  `, [waveUuid, uuid, now, now])
+      "waveUuid", "uuid", "role", "createdAt", "updatedAt"
+    ) VALUES ($1, $2, $3, $4, $5)
+  `, [waveUuid, uuid, 'owner', now, now])
 
   for (const photoId of photoIds) {
     await psql.query(`
@@ -139,6 +140,7 @@ export default async function main (uuid: string): Promise<AutoGroupResult> {
   assertValidUuid(uuid, 'uuid')
 
   await psql.connect()
+  await _assertHasSecret(uuid)
 
   // Query up to 1000 oldest ungrouped photos (with and without location)
   const photosResult = await psql.query(`

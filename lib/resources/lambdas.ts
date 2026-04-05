@@ -56,7 +56,8 @@ export function createLambdas (scope: Construct, config: any): any {
       // memorySize: 3008,
       timeout: cdk.Duration.seconds(30),
       environment: {
-        ...config
+        ...config,
+        DEEP_LINK_BASE_URL: process.env.DEEP_LINK_BASE_URL ?? ''
       }
     }
   )
