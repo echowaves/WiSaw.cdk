@@ -1,6 +1,5 @@
 import psql from '../../psql'
 import { assertValidUuid } from '../../utilities/assertValidUuid'
-import { _isPhotoInFrozenWave } from '../waves/_isPhotoInFrozenWave'
 import { _updatePhotosCount } from '../waves/_updatePhotosCount'
 
 // import Photo from '../../models/photo'
@@ -12,7 +11,17 @@ export default async function main (photoId: string, uuid: string): Promise<stri
 
   await psql.connect()
 
-  if (await _isPhotoInFrozenWave(photoId)) {
+  // Check if photo is in a frozen wave, with role awareness for owner override
+  const frozenCheck = await psql.query(`
+    SELECT w."waveUuid", wu."role"
+    FROM "WavePhotos" wp
+    JOIN "Waves" w ON w."waveUuid" = wp."waveUuid"
+    LEFT JOIN "WaveUsers" wu ON wu."waveUuid" = w."waveUuid" AND wu."uuid" = $2
+    WHERE wp."photoId" = $1
+      AND (w."frozen" = true OR (w."endDate" IS NOT NULL AND NOW() > w."endDate"))
+  `, [photoId, uuid])
+
+  if (frozenCheck.rows.length > 0 && frozenCheck.rows[0].role !== 'owner') {
     await psql.clean()
     throw new Error('Cannot delete a photo that is in a frozen wave')
   }
