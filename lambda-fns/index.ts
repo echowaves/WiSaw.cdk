@@ -24,6 +24,7 @@ import feedForFriend from './controllers/friendships/feedForFriend'
 import createWave from './controllers/waves/create'
 import updateWave from './controllers/waves/update'
 import deleteWave from './controllers/waves/delete'
+import getWave from './controllers/waves/getWave'
 import listWaves from './controllers/waves/listWaves'
 import listPhotoLocations from './controllers/waves/listPhotoLocations'
 import getUngroupedPhotosCount from './controllers/waves/getUngroupedPhotosCount'
@@ -180,6 +181,10 @@ const queryHandlers: Record<string, HandlerDefinition> = {
   getFriendshipsList: {
     resolver: getFriendshipsList,
     getArgs: (args) => [args.uuid]
+  },
+  getWave: {
+    resolver: getWave,
+    getArgs: (args) => [args.waveUuid, args.uuid]
   },
   listWaves: {
     resolver: listWaves,

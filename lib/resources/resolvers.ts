@@ -16,6 +16,7 @@ export function createResolvers (scope: Construct, api: appsync.GraphqlApi, lamb
     { typeName: 'Query', fieldName: 'getPhotoAllPrev' },
     { typeName: 'Query', fieldName: 'getFriendshipsList' },
     { typeName: 'Query', fieldName: 'listWaves' },
+    { typeName: 'Query', fieldName: 'getWave' },
     { typeName: 'Query', fieldName: 'listWavePhotos' },
     { typeName: 'Query', fieldName: 'listPhotoLocations' },
     { typeName: 'Query', fieldName: 'feedForUngrouped' },
