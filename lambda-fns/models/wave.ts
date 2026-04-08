@@ -8,11 +8,9 @@ export class Wave {
   photos: any[]
   photosCount: number
   open: boolean
-  frozen: boolean
-  startDate: string
-  endDate: string
+  splashDate: string
+  freezeDate: string
   isFrozen: boolean
-  isActive: boolean
   myRole: string
   joinUrl: string | null
   createdAt: string

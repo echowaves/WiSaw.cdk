@@ -12,7 +12,9 @@ export default async function main (
   uuid: string,
   lat?: number,
   lon?: number,
-  radius?: number
+  radius?: number,
+  splashDate?: string,
+  freezeDate?: string
 ): Promise<Wave> {
   assertValidUuid(uuid, 'uuid')
   if (name.trim().length === 0) {
@@ -23,6 +25,13 @@ export default async function main (
   const createdAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS')
   const updatedAt = createdAt
 
+  const effectiveSplashDate = splashDate ?? createdAt
+  const effectiveFreezeDate = freezeDate ?? moment().add(30, 'days').format('YYYY-MM-DD HH:mm:ss.SSS')
+
+  if (new Date(effectiveFreezeDate) <= new Date(effectiveSplashDate)) {
+    throw new Error('freezeDate must be after splashDate')
+  }
+
   await psql.connect()
   await _assertHasSecret(uuid)
 
@@ -31,22 +40,22 @@ export default async function main (
   const query = hasLocation
     ? `
       INSERT INTO "Waves" (
-        "waveUuid", "name", "description", "createdBy", "location", "radius", "createdAt", "updatedAt"
+        "waveUuid", "name", "description", "createdBy", "location", "radius", "splashDate", "freezeDate", "createdAt", "updatedAt"
       ) VALUES (
-        $1, $2, $3, $4, ST_MakePoint($5, $6), $7, $8, $9
+        $1, $2, $3, $4, ST_MakePoint($5, $6), $7, $8, $9, $10, $11
       ) RETURNING *
     `
     : `
       INSERT INTO "Waves" (
-        "waveUuid", "name", "description", "createdBy", "createdAt", "updatedAt"
+        "waveUuid", "name", "description", "createdBy", "splashDate", "freezeDate", "createdAt", "updatedAt"
       ) VALUES (
-        $1, $2, $3, $4, $5, $6
+        $1, $2, $3, $4, $5, $6, $7, $8
       ) RETURNING *
     `
 
   const params = hasLocation
-    ? [waveUuid, name, description, uuid, lon, lat, radius ?? 50, createdAt, updatedAt]
-    : [waveUuid, name, description, uuid, createdAt, updatedAt]
+    ? [waveUuid, name, description, uuid, lon, lat, radius ?? 50, effectiveSplashDate, effectiveFreezeDate, createdAt, updatedAt]
+    : [waveUuid, name, description, uuid, effectiveSplashDate, effectiveFreezeDate, createdAt, updatedAt]
 
   const result = await psql.query(query, params)
 

@@ -4,7 +4,6 @@ import Photo from '../../models/photo'
 import { plainToClass } from 'class-transformer'
 import { assertValidUuid } from '../../utilities/assertValidUuid'
 import { _isWaveFrozen } from './_isWaveFrozen'
-import { _isWaveActive } from './_isWaveActive'
 
 const DEEP_LINK_BASE_URL = process.env.DEEP_LINK_BASE_URL ?? ''
 
@@ -100,7 +99,6 @@ export default async function main (
     wave.photos = photosByWave[wave.waveUuid] || []
     wave.myRole = row.myRole
     wave.isFrozen = _isWaveFrozen(row)
-    wave.isActive = _isWaveActive(row)
     wave.joinUrl = row.open === true ? `${DEEP_LINK_BASE_URL}/wave/join/${wave.waveUuid}` : null
     return wave
   })

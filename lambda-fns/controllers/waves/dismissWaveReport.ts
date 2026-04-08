@@ -37,7 +37,7 @@ export default async function main (
 
   // Wave must not be frozen
   const waveResult = await psql.query(`
-    SELECT "frozen", "endDate" FROM "Waves" WHERE "waveUuid" = $1
+    SELECT "splashDate", "freezeDate" FROM "Waves" WHERE "waveUuid" = $1
   `, [waveUuid])
   _assertNotFrozen(waveResult.rows[0])
 

@@ -6,7 +6,6 @@ import { _updatePhotosCount } from './_updatePhotosCount'
 import { _assertNotBanned } from './_assertNotBanned'
 import { _getWaveRole } from './_getWaveRole'
 import { _assertNotFrozen } from './_assertNotFrozen'
-import { _isWaveActive } from './_isWaveActive'
 import { _assertGeoBounds } from './_assertGeoBounds'
 import { _isWaveFrozen } from './_isWaveFrozen'
 
@@ -29,18 +28,13 @@ export default async function main (
     throw new Error('You are not a member of this wave')
   }
 
-  // Fetch wave for freeze/active/geo checks
+  // Fetch wave for freeze/geo checks
   const waveResult = await psql.query(`
-    SELECT "frozen", "endDate", "startDate", "location", "radius" FROM "Waves" WHERE "waveUuid" = $1
+    SELECT "splashDate", "freezeDate", "location", "radius" FROM "Waves" WHERE "waveUuid" = $1
   `, [waveUuid])
   const wave = waveResult.rows[0]
 
   _assertNotFrozen(wave)
-
-  if (!_isWaveActive(wave)) {
-    await psql.clean()
-    throw new Error('This wave is not yet accepting contributions')
-  }
 
   await _assertGeoBounds(waveUuid, photoId)
 
@@ -52,7 +46,7 @@ export default async function main (
   if (existing != null && existing.waveUuid !== waveUuid) {
     // Check if source wave is frozen — block move unless owner of source wave
     const sourceWaveResult = await psql.query(`
-      SELECT "frozen", "endDate" FROM "Waves" WHERE "waveUuid" = $1
+      SELECT "splashDate", "freezeDate" FROM "Waves" WHERE "waveUuid" = $1
     `, [existing.waveUuid])
     const sourceWave = sourceWaveResult.rows[0]
 

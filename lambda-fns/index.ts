@@ -278,11 +278,11 @@ const mutationHandlers: Record<string, HandlerDefinition> = {
   },
   createWave: {
     resolver: createWave,
-    getArgs: (args) => [args.name, args.description, args.uuid, args.lat, args.lon, args.radius]
+    getArgs: (args) => [args.name, args.description, args.uuid, args.lat, args.lon, args.radius, args.splashDate, args.freezeDate]
   },
   updateWave: {
     resolver: updateWave,
-    getArgs: (args) => [args.waveUuid, args.uuid, args.name, args.description, args.lat, args.lon, args.radius, args.open, args.frozen, args.startDate, args.endDate]
+    getArgs: (args) => [args.waveUuid, args.uuid, args.name, args.description, args.lat, args.lon, args.radius, args.open, args.splashDate, args.freezeDate]
   },
   deleteWave: {
     resolver: deleteWave,

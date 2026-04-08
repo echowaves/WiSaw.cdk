@@ -89,7 +89,8 @@ function haversineDistance (lat1: number, lon1: number, lat2: number, lon2: numb
 
 async function createWaveAndAssign (
   waveName: string, uuid: string, photoIds: string[],
-  lon: number | null, lat: number | null
+  lon: number | null, lat: number | null,
+  splashDate: string, freezeDate: string
 ): Promise<string> {
   const waveUuid = uuidv4()
   const now = moment().format('YYYY-MM-DD HH:mm:ss.SSS')
@@ -98,22 +99,22 @@ async function createWaveAndAssign (
     await psql.query(`
       INSERT INTO "Waves" (
         "waveUuid", "name", "description", "createdBy",
-        "location", "radius", "open", "frozen", "createdAt", "updatedAt"
+        "location", "radius", "open", "splashDate", "freezeDate", "createdAt", "updatedAt"
       ) VALUES (
         $1, $2, $3, $4,
-        ST_MakePoint($5, $6), $7, $8, $9, $10, $11
+        ST_MakePoint($5, $6), $7, $8, $9, $10, $11, $12
       )
-    `, [waveUuid, waveName, '', uuid, lon, lat, 100, false, true, now, now])
+    `, [waveUuid, waveName, '', uuid, lon, lat, 100, false, splashDate, freezeDate, now, now])
   } else {
     await psql.query(`
       INSERT INTO "Waves" (
         "waveUuid", "name", "description", "createdBy",
-        "location", "radius", "open", "frozen", "createdAt", "updatedAt"
+        "location", "radius", "open", "splashDate", "freezeDate", "createdAt", "updatedAt"
       ) VALUES (
         $1, $2, $3, $4,
-        NULL, $5, $6, $7, $8, $9
+        NULL, $5, $6, $7, $8, $9, $10
       )
-    `, [waveUuid, waveName, '', uuid, 100, false, true, now, now])
+    `, [waveUuid, waveName, '', uuid, 100, false, splashDate, freezeDate, now, now])
   }
 
   await psql.query(`
@@ -182,7 +183,8 @@ export default async function main (uuid: string): Promise<AutoGroupResult> {
     const dateRange = formatDateRange(earliest, latest)
     const waveName = dateRange
 
-    const waveUuid = await createWaveAndAssign(waveName, uuid, photoIds, null, null)
+    const waveUuid = await createWaveAndAssign(waveName, uuid, photoIds, null, null,
+      earliest.format('YYYY-MM-DD HH:mm:ss.SSS'), latest.format('YYYY-MM-DD HH:mm:ss.SSS'))
 
     const remainResult = await psql.query(`
       SELECT COUNT(*)::int AS count
@@ -235,7 +237,8 @@ export default async function main (uuid: string): Promise<AutoGroupResult> {
   const photoIds = collected.map(p => p.id)
   const waveUuid = await createWaveAndAssign(
     waveName, uuid, photoIds,
-    anchorLon, anchorLat
+    anchorLon, anchorLat,
+    earliest.format('YYYY-MM-DD HH:mm:ss.SSS'), latest.format('YYYY-MM-DD HH:mm:ss.SSS')
   )
 
   const remainResult = await psql.query(`

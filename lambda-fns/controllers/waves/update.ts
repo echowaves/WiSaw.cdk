@@ -15,9 +15,8 @@ export default async function main (
   lon?: number,
   radius?: number,
   open?: boolean,
-  frozen?: boolean,
-  startDate?: string,
-  endDate?: string
+  splashDate?: string,
+  freezeDate?: string
 ): Promise<Wave> {
   assertValidUuid(waveUuid, 'waveUuid')
   assertValidUuid(uuid, 'uuid')
@@ -30,7 +29,7 @@ export default async function main (
 
   // Fetch current wave state for freeze check
   const waveResult = await psql.query(`
-    SELECT "frozen", "endDate" FROM "Waves" WHERE "waveUuid" = $1
+    SELECT "splashDate", "freezeDate" FROM "Waves" WHERE "waveUuid" = $1
   `, [waveUuid])
 
   if (waveResult.rows.length === 0) {
@@ -41,14 +40,14 @@ export default async function main (
   const currentWave = waveResult.rows[0]
   const isFrozen = _isWaveFrozen(currentWave)
 
-  // When frozen, only allow frozen and endDate changes
+  // When frozen, only allow freezeDate changes
   if (isFrozen) {
     const hasNonFreezeChanges = name !== undefined || description !== undefined ||
       lat !== undefined || lon !== undefined || radius !== undefined ||
-      open !== undefined || startDate !== undefined
+      open !== undefined || splashDate !== undefined
     if (hasNonFreezeChanges) {
       await psql.clean()
-      throw new Error('This wave is frozen. Only freeze status and end date can be changed.')
+      throw new Error('This wave is frozen. Only freeze date can be changed.')
     }
   }
 
@@ -76,17 +75,13 @@ export default async function main (
     setClauses.push(`"open" = $${paramIndex++}`)
     params.push(open)
   }
-  if (frozen !== undefined) {
-    setClauses.push(`"frozen" = $${paramIndex++}`)
-    params.push(frozen)
+  if (splashDate !== undefined) {
+    setClauses.push(`"splashDate" = $${paramIndex++}`)
+    params.push(splashDate)
   }
-  if (startDate !== undefined) {
-    setClauses.push(`"startDate" = $${paramIndex++}`)
-    params.push(startDate)
-  }
-  if (endDate !== undefined) {
-    setClauses.push(`"endDate" = $${paramIndex++}`)
-    params.push(endDate)
+  if (freezeDate !== undefined) {
+    setClauses.push(`"freezeDate" = $${paramIndex++}`)
+    params.push(freezeDate)
   }
 
   const updatedAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS')

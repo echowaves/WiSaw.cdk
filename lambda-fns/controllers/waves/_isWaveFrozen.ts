@@ -1,9 +1,11 @@
-export const _isWaveFrozen = (wave: { frozen: boolean, endDate: string | null }): boolean => {
-  if (wave.frozen) {
+export const _isWaveFrozen = (wave: { splashDate: string, freezeDate: string }): boolean => {
+  const now = new Date()
+
+  if (new Date(wave.splashDate) > now) {
     return true
   }
 
-  if (wave.endDate !== null && new Date(wave.endDate) < new Date()) {
+  if (new Date(wave.freezeDate) < now) {
     return true
   }
 
