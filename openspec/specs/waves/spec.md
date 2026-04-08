@@ -48,6 +48,8 @@ The resolver SHALL treat both `null` and `undefined` values as "field not provid
 
 For the `description` field specifically: an empty string (`""`) SHALL clear the description by writing `NULL` to the database. Any other non-null string SHALL update the description to that value.
 
+The returned Wave object SHALL include computed fields: `isFrozen` (derived from the updated `splashDate`/`freezeDate`), `myRole` (always `'owner'` since only owners can update), and `joinUrl` (the deep link URL if the wave is open, otherwise `null`).
+
 #### Scenario: Wave updated by owner
 - **WHEN** `updateWave(waveUuid, uuid, name, description, lat, lon, radius)` is called by the owner on an unfrozen wave
 - **THEN** the Wave record is updated with the new values and the updated Wave is returned
@@ -91,6 +93,22 @@ For the `description` field specifically: an empty string (`""`) SHALL clear the
 #### Scenario: Description null means no change
 - **WHEN** `updateWave(waveUuid, uuid, description: null)` is called by the owner
 - **THEN** `Waves.description` SHALL NOT be changed
+
+#### Scenario: Returned wave includes isFrozen
+- **WHEN** `updateWave` completes successfully
+- **THEN** the returned Wave object SHALL have `isFrozen` computed from the updated `splashDate` and `freezeDate` values
+
+#### Scenario: Returned wave includes myRole as owner
+- **WHEN** `updateWave` completes successfully
+- **THEN** the returned Wave object SHALL have `myRole` set to `'owner'`
+
+#### Scenario: Returned wave includes joinUrl when open
+- **WHEN** `updateWave` completes successfully and the wave's `open` field is `true`
+- **THEN** the returned Wave object SHALL have `joinUrl` set to the deep link URL for the wave
+
+#### Scenario: Returned wave has null joinUrl when not open
+- **WHEN** `updateWave` completes successfully and the wave's `open` field is `false`
+- **THEN** the returned Wave object SHALL have `joinUrl` set to `null`
 
 ---
 
