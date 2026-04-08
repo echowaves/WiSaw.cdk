@@ -6,6 +6,8 @@ import { assertValidUuid } from '../../utilities/assertValidUuid'
 import { _assertWaveRole } from './_assertWaveRole'
 import { _isWaveFrozen } from './_isWaveFrozen'
 
+const DEEP_LINK_BASE_URL = process.env.DEEP_LINK_BASE_URL ?? ''
+
 export default async function main (
   waveUuid: string,
   uuid: string,
@@ -103,5 +105,10 @@ export default async function main (
     throw new Error('Wave not found')
   }
 
-  return plainToClass(Wave, result.rows[0])
+  const row = result.rows[0]
+  const wave = plainToClass(Wave, row)
+  wave.isFrozen = _isWaveFrozen(row)
+  wave.myRole = 'owner'
+  wave.joinUrl = row.open === true ? `${DEEP_LINK_BASE_URL}/wave/join/${wave.waveUuid}` : null
+  return wave
 }
