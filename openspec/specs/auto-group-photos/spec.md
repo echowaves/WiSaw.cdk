@@ -38,19 +38,19 @@ The system SHALL only process active photos that are NOT already associated with
 - **THEN** no new waves SHALL be created and the result SHALL indicate zero photos grouped
 
 ### Requirement: Auto-group creates a wave for each cluster
-The system SHALL create **at most one** Wave record per invocation of `autoGroupPhotosIntoWaves(uuid)`. The user MUST have a registered secret (a record in the `Secrets` table). The created wave SHALL have `frozen = true` and `open = false`. It SHALL run the full clustering pipeline (spatial DBSCAN + temporal gap splitting), sort the resulting temporal clusters by `earliestDate` ascending, and create a Wave for only the **first** (oldest) cluster. The Wave SHALL be owned by the requesting user (`createdBy = uuid`), SHALL have its location set to the centroid of the cluster's photos, and SHALL have the user auto-added to `WaveUsers` with `role = 'owner'`. The mutation result SHALL include the created wave's `waveUuid` and `name`. When no ungrouped photos exist, `waveUuid` and `name` SHALL be null. After creating the wave, the system SHALL count remaining ungrouped photos and return `hasMore` and `photosRemaining` so the client can call again.
+The system SHALL create **at most one** Wave record per invocation of `autoGroupPhotosIntoWaves(uuid)`. The user MUST have a registered secret (a record in the `Secrets` table). The created wave SHALL have `open = false`, `splashDate` set to the oldest photo's `createdAt` in the cluster, and `freezeDate` set to the newest photo's `createdAt` in the cluster (ensuring the wave is frozen since `freezeDate` is in the past). It SHALL run the full clustering pipeline (spatial DBSCAN + temporal gap splitting), sort the resulting temporal clusters by `earliestDate` ascending, and create a Wave for only the **first** (oldest) cluster. The Wave SHALL be owned by the requesting user (`createdBy = uuid`), SHALL have its location set to the centroid of the cluster's photos, and SHALL have the user auto-added to `WaveUsers` with `role = 'owner'`. The mutation result SHALL include the created wave's `waveUuid` and `name`. When no ungrouped photos exist, `waveUuid` and `name` SHALL be null. After creating the wave, the system SHALL count remaining ungrouped photos and return `hasMore` and `photosRemaining` so the client can call again.
 
 #### Scenario: One wave created per invocation
 - **WHEN** `autoGroupPhotosIntoWaves(uuid)` is invoked by a user with a registered secret and clustering produces 5 temporal clusters
-- **THEN** exactly one Wave SHALL be created for the cluster with the oldest `earliestDate`, with `frozen = true` and `open = false`
+- **THEN** exactly one Wave SHALL be created for the cluster with the oldest `earliestDate`, with `open = false`, `splashDate` = oldest photo date, `freezeDate` = newest photo date
 
 #### Scenario: User without secret cannot auto-group
 - **WHEN** `autoGroupPhotosIntoWaves(uuid)` is called by a user with no record in the `Secrets` table
 - **THEN** the system SHALL throw an error indicating the user must register an identity first
 
-#### Scenario: Auto-created wave is frozen
+#### Scenario: Auto-created wave is frozen via dates
 - **WHEN** a wave is created by `autoGroupPhotosIntoWaves`
-- **THEN** the wave's `frozen` field SHALL be `true`
+- **THEN** the wave's `splashDate` SHALL be the earliest photo `createdAt` in the cluster and `freezeDate` SHALL be the latest photo `createdAt` in the cluster, making the wave frozen since both dates are in the past
 
 #### Scenario: Auto-created wave is invite-only
 - **WHEN** a wave is created by `autoGroupPhotosIntoWaves`
