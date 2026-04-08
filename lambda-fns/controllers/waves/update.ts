@@ -20,7 +20,7 @@ export default async function main (
 ): Promise<Wave> {
   assertValidUuid(waveUuid, 'waveUuid')
   assertValidUuid(uuid, 'uuid')
-  if (name !== undefined && name !== null && name.trim().length === 0) {
+  if (name != null && name.trim().length === 0) {
     throw new Error('Unable to save empty wave name.')
   }
 
@@ -42,9 +42,9 @@ export default async function main (
 
   // When frozen, only allow freezeDate changes
   if (isFrozen) {
-    const hasNonFreezeChanges = name !== undefined || description !== undefined ||
-      lat !== undefined || lon !== undefined || radius !== undefined ||
-      open !== undefined || splashDate !== undefined
+    const hasNonFreezeChanges = name != null || (description != null && description !== '') ||
+      lat != null || lon != null || radius != null ||
+      open != null || splashDate != null
     if (hasNonFreezeChanges) {
       await psql.clean()
       throw new Error('This wave is frozen. Only freeze date can be changed.')
@@ -56,30 +56,30 @@ export default async function main (
   const params: any[] = []
   let paramIndex = 1
 
-  if (name !== undefined && name !== null) {
+  if (name != null) {
     setClauses.push(`"name" = $${paramIndex++}`)
     params.push(name)
   }
-  if (description !== undefined) {
+  if (description != null) {
     setClauses.push(`"description" = $${paramIndex++}`)
-    params.push(description)
+    params.push(description === '' ? null : description)
   }
-  if (lat !== undefined && lon !== undefined) {
+  if (lat != null && lon != null) {
     setClauses.push(`"location" = ST_MakePoint($${paramIndex}, $${paramIndex + 1})`)
     params.push(lon, lat)
     paramIndex += 2
     setClauses.push(`"radius" = $${paramIndex++}`)
     params.push(radius ?? 50)
   }
-  if (open !== undefined) {
+  if (open != null) {
     setClauses.push(`"open" = $${paramIndex++}`)
     params.push(open)
   }
-  if (splashDate !== undefined) {
+  if (splashDate != null) {
     setClauses.push(`"splashDate" = $${paramIndex++}`)
     params.push(splashDate)
   }
-  if (freezeDate !== undefined) {
+  if (freezeDate != null) {
     setClauses.push(`"freezeDate" = $${paramIndex++}`)
     params.push(freezeDate)
   }
