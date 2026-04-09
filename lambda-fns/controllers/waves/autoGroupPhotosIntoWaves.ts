@@ -87,9 +87,20 @@ function haversineDistance (lat1: number, lon1: number, lat2: number, lon2: numb
   return R * c
 }
 
+function computeClusterRadius (anchorLat: number, anchorLon: number, photos: Photo[]): number {
+  let maxDist = 0
+  for (const p of photos) {
+    if (p.lat != null && p.lon != null) {
+      const d = haversineDistance(anchorLat, anchorLon, p.lat, p.lon)
+      if (d > maxDist) maxDist = d
+    }
+  }
+  return Math.max(maxDist * 1.2, maxDist + 10, 5)
+}
+
 async function createWaveAndAssign (
   waveName: string, uuid: string, photoIds: string[],
-  lon: number | null, lat: number | null,
+  lon: number | null, lat: number | null, radius: number,
   splashDate: string, freezeDate: string
 ): Promise<string> {
   const waveUuid = uuidv4()
@@ -104,7 +115,7 @@ async function createWaveAndAssign (
         $1, $2, $3, $4,
         ST_MakePoint($5, $6), $7, $8, $9, $10, $11, $12
       )
-    `, [waveUuid, waveName, '', uuid, lon, lat, 100, false, splashDate, freezeDate, now, now])
+    `, [waveUuid, waveName, '', uuid, lon, lat, radius, false, splashDate, freezeDate, now, now])
   } else {
     await psql.query(`
       INSERT INTO "Waves" (
@@ -114,7 +125,7 @@ async function createWaveAndAssign (
         $1, $2, $3, $4,
         NULL, $5, $6, $7, $8, $9, $10
       )
-    `, [waveUuid, waveName, '', uuid, 100, false, splashDate, freezeDate, now, now])
+    `, [waveUuid, waveName, '', uuid, radius, false, splashDate, freezeDate, now, now])
   }
 
   await psql.query(`
@@ -183,7 +194,7 @@ export default async function main (uuid: string): Promise<AutoGroupResult> {
     const dateRange = formatDateRange(earliest, latest)
     const waveName = dateRange
 
-    const waveUuid = await createWaveAndAssign(waveName, uuid, photoIds, null, null,
+    const waveUuid = await createWaveAndAssign(waveName, uuid, photoIds, null, null, 100,
       earliest.format('YYYY-MM-DD HH:mm:ss.SSS'), latest.format('YYYY-MM-DD HH:mm:ss.SSS'))
 
     const remainResult = await psql.query(`
@@ -235,9 +246,10 @@ export default async function main (uuid: string): Promise<AutoGroupResult> {
     : `${formatCoordinates(anchorLat, anchorLon)}, ${dateRange}`
 
   const photoIds = collected.map(p => p.id)
+  const radius = computeClusterRadius(anchorLat, anchorLon, collected)
   const waveUuid = await createWaveAndAssign(
     waveName, uuid, photoIds,
-    anchorLon, anchorLat,
+    anchorLon, anchorLat, radius,
     earliest.format('YYYY-MM-DD HH:mm:ss.SSS'), latest.format('YYYY-MM-DD HH:mm:ss.SSS')
   )
 
