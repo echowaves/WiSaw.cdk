@@ -95,7 +95,7 @@ function computeClusterRadius (anchorLat: number, anchorLon: number, photos: Pho
       if (d > maxDist) maxDist = d
     }
   }
-  return Math.max(maxDist * 1.2, maxDist + 10, 5)
+  return Math.round(Math.max(maxDist * 1.2, maxDist + 10, 5))
 }
 
 async function createWaveAndAssign (
