@@ -3,6 +3,9 @@ import { Wave } from '../../models/wave'
 import Photo from '../../models/photo'
 import { plainToClass } from 'class-transformer'
 import { assertValidUuid } from '../../utilities/assertValidUuid'
+import { _isWaveFrozen } from './_isWaveFrozen'
+
+const DEEP_LINK_BASE_URL = process.env.DEEP_LINK_BASE_URL ?? ''
 
 const ALLOWED_SORT_FIELDS: Record<string, string> = {
   createdAt: '"createdAt"',
@@ -51,7 +54,7 @@ export default async function main (
   }
 
   const query = `
-    SELECT "Waves".* FROM "Waves"
+    SELECT "Waves".*, "WaveUsers"."role" AS "myRole" FROM "Waves"
     JOIN "WaveUsers" ON "Waves"."waveUuid" = "WaveUsers"."waveUuid"
     WHERE "WaveUsers"."uuid" = $1
     ${searchClause}
@@ -94,6 +97,9 @@ export default async function main (
   const waves = results.map((row: any) => {
     const wave = plainToClass(Wave, row)
     wave.photos = photosByWave[wave.waveUuid] || []
+    wave.myRole = row.myRole
+    wave.isFrozen = _isWaveFrozen(row)
+    wave.joinUrl = row.open === true ? `${DEEP_LINK_BASE_URL}/wave/join/${wave.waveUuid}` : null
     return wave
   })
   const noMoreData = waves.length < limit

@@ -1,5 +1,6 @@
 import psql from '../../psql'
 import { assertValidUuid } from '../../utilities/assertValidUuid'
+import { _assertWaveRole } from './_assertWaveRole'
 
 export default async function main (
   waveUuid: string,
@@ -9,17 +10,7 @@ export default async function main (
   assertValidUuid(uuid, 'uuid')
 
   await psql.connect()
-
-  // First verify the wave exists and belongs to the user
-  const waveResult = await psql.query(`
-    SELECT "waveUuid" FROM "Waves"
-    WHERE "waveUuid" = $1 AND "createdBy" = $2
-  `, [waveUuid, uuid])
-
-  if (waveResult.rows.length === 0) {
-    await psql.clean()
-    throw new Error('Wave not found or you do not have permission to delete it')
-  }
+  await _assertWaveRole(waveUuid, uuid, 'owner')
 
   // Delete from WavePhotos (also handled by CASCADE, but explicit for safety)
   await psql.query(`
@@ -36,8 +27,8 @@ export default async function main (
   // Delete the wave itself
   await psql.query(`
     DELETE FROM "Waves"
-    WHERE "waveUuid" = $1 AND "createdBy" = $2
-  `, [waveUuid, uuid])
+    WHERE "waveUuid" = $1
+  `, [waveUuid])
 
   await psql.clean()
 

@@ -16,6 +16,7 @@ export function createResolvers (scope: Construct, api: appsync.GraphqlApi, lamb
     { typeName: 'Query', fieldName: 'getPhotoAllPrev' },
     { typeName: 'Query', fieldName: 'getFriendshipsList' },
     { typeName: 'Query', fieldName: 'listWaves' },
+    { typeName: 'Query', fieldName: 'getWave' },
     { typeName: 'Query', fieldName: 'listWavePhotos' },
     { typeName: 'Query', fieldName: 'listPhotoLocations' },
     { typeName: 'Query', fieldName: 'feedForUngrouped' },
@@ -23,6 +24,10 @@ export function createResolvers (scope: Construct, api: appsync.GraphqlApi, lamb
     { typeName: 'Query', fieldName: 'getWavesCount' },
     { typeName: 'Query', fieldName: 'getWatchedCount' },
     { typeName: 'Query', fieldName: 'feedForFriend' },
+    { typeName: 'Query', fieldName: 'listWaveMembers' },
+    { typeName: 'Query', fieldName: 'listWaveInvites' },
+    { typeName: 'Query', fieldName: 'listWaveAbuseReports' },
+    { typeName: 'Query', fieldName: 'listWaveBans' },
 
     { typeName: 'Mutation', fieldName: 'createContactForm' },
     { typeName: 'Mutation', fieldName: 'createAbuseReport' },
@@ -43,7 +48,17 @@ export function createResolvers (scope: Construct, api: appsync.GraphqlApi, lamb
     { typeName: 'Mutation', fieldName: 'addPhotoToWave' },
     { typeName: 'Mutation', fieldName: 'removePhotoFromWave' },
     { typeName: 'Mutation', fieldName: 'autoGroupPhotosIntoWaves' },
-    { typeName: 'Mutation', fieldName: 'mergeWaves' }
+    { typeName: 'Mutation', fieldName: 'mergeWaves' },
+    { typeName: 'Mutation', fieldName: 'createWaveInvite' },
+    { typeName: 'Mutation', fieldName: 'revokeWaveInvite' },
+    { typeName: 'Mutation', fieldName: 'joinWaveByInvite' },
+    { typeName: 'Mutation', fieldName: 'joinOpenWave' },
+    { typeName: 'Mutation', fieldName: 'assignFacilitator' },
+    { typeName: 'Mutation', fieldName: 'removeFacilitator' },
+    { typeName: 'Mutation', fieldName: 'removeUserFromWave' },
+    { typeName: 'Mutation', fieldName: 'reportWavePhoto' },
+    { typeName: 'Mutation', fieldName: 'dismissWaveReport' },
+    { typeName: 'Mutation', fieldName: 'banUserFromWave' }
   ]
   fields.forEach(({ typeName, fieldName }) =>
     lambdaDs.createResolver(`${typeName}-${fieldName}-Resolver`, {
