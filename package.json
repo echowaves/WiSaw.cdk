@@ -59,7 +59,7 @@
       "@aws-sdk/client-sso-oidc": "3.1018.0",
       "@aws-sdk/client-sts": "3.1018.0",
       "@aws-sdk/s3-request-presigner": "3.1018.0",
-      "aws-cdk-lib": "2.241.0",
+      "aws-cdk-lib": "2.248.0",
       "class-transformer": "0.5.1",
       "constructs": "10.5.1",
       "global": "4.4.0",
