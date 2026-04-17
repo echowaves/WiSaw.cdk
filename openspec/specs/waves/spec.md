@@ -33,7 +33,7 @@
 - **WHEN** user requests waves
 - **THEN** only waves with matching `WaveUsers` membership are returned
 
-#### Scenario: Open wave includes joinUrl
+#### Scenario: Open Wave Includes Join URL
 - **WHEN** returned wave has `open=true`
 - **THEN** response includes non-null join URL
 

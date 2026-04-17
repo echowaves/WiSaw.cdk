@@ -21,7 +21,7 @@ If no handler matches a field name, dispatcher returns `null`.
 ### Requirement: Handlers use resolver plus getArgs shape
 Each entry contains a resolver function and a positional argument extractor.
 
-#### Scenario: New operation registration
+#### Scenario: New Operation Registration
 - **WHEN** adding a new field implementation
 - **THEN** handler entry includes both resolver and getArgs mapping
 

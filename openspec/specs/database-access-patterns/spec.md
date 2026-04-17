@@ -17,18 +17,18 @@ DB client SSL config SHALL use `{ ca: rdsCa, rejectUnauthorized: true }`.
 ### Requirement: Query parameters are parameterized for dynamic/user values
 Dynamic values SHALL be passed via `$n` placeholders. Existing implementation may interpolate fixed numeric pagination constants in selected controllers; user-controlled values are still parameterized.
 
-#### Scenario: User-supplied uuid is parameterized
+#### Scenario: User-Supplied UUID Is Parameterized
 - **WHEN** query filters by uuid/photoId/waveUuid
 - **THEN** SQL uses placeholders with values array
 
-#### Scenario: Fixed numeric pagination constant interpolation
+#### Scenario: Fixed Numeric Pagination Constant Interpolation
 - **WHEN** controller uses fixed/sanitized pagination constant interpolation in current implementation
 - **THEN** behavior remains accepted by this spec while preserving user-input parameterization rule
 
 ### Requirement: Query results are consumed from rows
 Controllers SHALL consume query outputs via `.rows` and `.rows[0]`.
 
-#### Scenario: Single-row fetch
+#### Scenario: Single-Row Fetch
 - **WHEN** query expects one row
 - **THEN** controller reads `.rows[0]`
 

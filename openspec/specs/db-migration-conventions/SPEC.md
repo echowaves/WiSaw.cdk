@@ -39,10 +39,10 @@ Repository includes explicit primary constraints in `*_pkey` style on some table
 ### Requirement: queryInterface is preferred for standard DDL
 Use queryInterface helpers for common DDL. Raw SQL is used when required for PostGIS/index/data transformation operations.
 
-#### Scenario: Standard add/remove column
+#### Scenario: Standard Add/Remove Column
 - **WHEN** operation is basic DDL
 - **THEN** migration uses queryInterface helper
 
-#### Scenario: PostGIS/index-specific SQL
+#### Scenario: PostGIS/Index-Specific SQL
 - **WHEN** operation requires SQL features not fully represented in helper API
 - **THEN** migration uses raw SQL intentionally

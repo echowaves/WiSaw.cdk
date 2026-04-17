@@ -47,6 +47,6 @@ Wave owner can delete a wave even when frozen.
 ### Requirement: Wave API includes computed frozen state
 Wave responses include `isFrozen`. The current API does not include `isActive` and does not persist a separate `frozen` boolean field.
 
-#### Scenario: API shape excludes isActive
+#### Scenario: API Shape Excludes `isActive`
 - **WHEN** wave object is returned through GraphQL
 - **THEN** client gets `isFrozen` but not `isActive`

@@ -3,23 +3,23 @@
 ### Requirement: Register identity by uuid, nickName, and secret
 `registerSecret(uuid, nickName, secret)` SHALL validate inputs, use parameterized SQL, and create or resolve identity by nickName.
 
-#### Scenario: New nickName
+#### Scenario: New Nickname
 - **WHEN** nickName is unused and input is valid
 - **THEN** a new `Secrets` record is created and returned
 
-#### Scenario: Existing nickName with matching secret
+#### Scenario: Existing Nickname With Matching Secret
 - **WHEN** nickName exists and provided secret hash matches stored hash
 - **THEN** existing identity record is returned
 
-#### Scenario: Existing nickName with wrong secret
+#### Scenario: Existing Nickname With Wrong Secret
 - **WHEN** nickName exists and secret does not match
 - **THEN** request fails
 
-#### Scenario: Invalid uuid rejected
+#### Scenario: Invalid UUID Rejected
 - **WHEN** provided `uuid` fails shared UUID validation
 - **THEN** register request fails before insert/update SQL
 
-#### Scenario: Invalid nickName rejected
+#### Scenario: Invalid Nickname Rejected
 - **WHEN** nickName fails controller validation rules
 - **THEN** register request fails
 
