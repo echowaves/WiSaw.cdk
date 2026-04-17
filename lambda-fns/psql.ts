@@ -104,7 +104,6 @@ class ManagedServerlessClient {
     const start = Date.now()
     traceLog('psql.connect:START')
     await this.ensureConnected()
-    await this.serialized(async () => { await this.runHealthCheck(true) })
     traceLog('psql.connect:END', { duration: `${Date.now() - start}ms` })
   }
 
