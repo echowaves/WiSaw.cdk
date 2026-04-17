@@ -15,5 +15,5 @@
 
 ## 4. Rollout and observability
 
-- [ ] 4.1 Deploy and monitor Lambda logs for reduction in connect-time `Connection terminated` failures.
-- [ ] 4.2 Monitor pg warning frequency and confirm no increase in query failure rate post-deploy.
+- [x] 4.1 Deploy and monitor Lambda logs for reduction in connect-time `Connection terminated` failures.
+- [x] 4.2 Monitor pg warning frequency and confirm no increase in query failure rate post-deploy.
