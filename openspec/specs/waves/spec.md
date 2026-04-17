@@ -66,6 +66,6 @@ Owner may always remove. Facilitator and contributor permissions depend on unfro
 ### Requirement: graph operations include auto-group and waves count
 `autoGroupPhotosIntoWaves` and `getWavesCount` are exposed and follow current controller behavior and return shapes.
 
-#### Scenario: getWavesCount validates uuid before SQL
+#### Scenario: GetWavesCount Validates UUID Before SQL
 - **WHEN** uuid is malformed
 - **THEN** request fails before DB query

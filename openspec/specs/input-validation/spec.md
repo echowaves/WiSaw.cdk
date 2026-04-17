@@ -3,11 +3,11 @@
 ### Requirement: UUID fields use assertValidUuid
 Controllers validate `uuid`, `photoId`, and `waveUuid` via `assertValidUuid(value, fieldName)`.
 
-#### Scenario: uuid accepted when structurally valid
+#### Scenario: UUID Accepted When Structurally Valid
 - **WHEN** UUID string passes structural validation
 - **THEN** controller continues to business logic
 
-#### Scenario: uuid rejected when malformed
+#### Scenario: UUID Rejected When Malformed
 - **WHEN** value fails structural validation
 - **THEN** controller throws `Wrong UUID format for <fieldName>: "<value>"`
 
@@ -21,11 +21,11 @@ Controllers validate `uuid`, `photoId`, and `waveUuid` via `assertValidUuid(valu
 ### Requirement: PATCH-style updates are null-safe
 PATCH-like mutations treat both `null` and `undefined` as not provided (`!= null`) and preserve stored values.
 
-#### Scenario: null optional field does not overwrite stored value
+#### Scenario: Null Optional Field Does Not Overwrite Stored Value
 - **WHEN** patch payload includes `null` for optional field
 - **THEN** field is treated as not provided
 
-#### Scenario: undefined optional field does not overwrite stored value
+#### Scenario: Undefined Optional Field Does Not Overwrite Stored Value
 - **WHEN** optional field is omitted/undefined
 - **THEN** field remains unchanged
 
