@@ -18,7 +18,13 @@ export default async function main (photoId: string, uuid: string): Promise<stri
     JOIN "Waves" w ON w."waveUuid" = wp."waveUuid"
     LEFT JOIN "WaveUsers" wu ON wu."waveUuid" = w."waveUuid" AND wu."uuid" = $2
     WHERE wp."photoId" = $1
-      AND (NOW() < w."splashDate" OR NOW() > w."freezeDate")
+      AND (
+        w."freezeMode" = 'FROZEN'
+        OR (
+          w."freezeMode" = 'AUTO'
+          AND (NOW() < w."splashDate" OR NOW() > w."freezeDate")
+        )
+      )
   `, [photoId, uuid])
 
   if (frozenCheck.rows.length > 0 && frozenCheck.rows[0].role !== 'owner') {

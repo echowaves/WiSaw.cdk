@@ -116,9 +116,9 @@ interface AppSyncEvent {
     reportId: string
     reason: string
     open: boolean
-    frozen: boolean
-    startDate: string
-    endDate: string
+    splashDate: string
+    freezeDate: string
+    freezeMode: string
     expiresAt: string
     maxUses: number
   }
@@ -287,7 +287,7 @@ const mutationHandlers: Record<string, HandlerDefinition> = {
   },
   updateWave: {
     resolver: updateWave,
-    getArgs: (args) => [args.waveUuid, args.uuid, args.name, args.description, args.lat, args.lon, args.radius, args.open, args.splashDate, args.freezeDate]
+    getArgs: (args) => [args.waveUuid, args.uuid, args.name, args.description, args.lat, args.lon, args.radius, args.open, args.splashDate, args.freezeDate, args.freezeMode]
   },
   deleteWave: {
     resolver: deleteWave,

@@ -30,7 +30,7 @@ export default async function main (
 
   // Fetch wave for freeze/geo checks
   const waveResult = await psql.query(`
-    SELECT "splashDate", "freezeDate", "location", "radius" FROM "Waves" WHERE "waveUuid" = $1
+    SELECT "splashDate", "freezeDate", "freezeMode", "location", "radius" FROM "Waves" WHERE "waveUuid" = $1
   `, [waveUuid])
   const wave = waveResult.rows[0]
 
@@ -46,11 +46,11 @@ export default async function main (
   if (existing != null && existing.waveUuid !== waveUuid) {
     // Check if source wave is frozen — block move unless owner of source wave
     const sourceWaveResult = await psql.query(`
-      SELECT "splashDate", "freezeDate" FROM "Waves" WHERE "waveUuid" = $1
+      SELECT "splashDate", "freezeDate", "freezeMode" FROM "Waves" WHERE "waveUuid" = $1
     `, [existing.waveUuid])
     const sourceWave = sourceWaveResult.rows[0]
 
-    if (sourceWave && _isWaveFrozen(sourceWave)) {
+    if (sourceWave != null && _isWaveFrozen(sourceWave)) {
       const sourceRole = await _getWaveRole(existing.waveUuid, uuid)
       if (sourceRole !== 'owner') {
         await psql.clean()

@@ -5,7 +5,7 @@ import { plainToClass } from 'class-transformer'
 import { _updatePhotosCount } from './_updatePhotosCount'
 import { assertValidUuid } from '../../utilities/assertValidUuid'
 import { _assertWaveRole } from './_assertWaveRole'
-import { _assertNotFrozen } from './_assertNotFrozen'
+import { _assertNotDateFrozen } from './_assertNotDateFrozen'
 
 export default async function main (
   targetWaveUuid: string,
@@ -31,12 +31,12 @@ export default async function main (
   const targetWaveResult = await psql.query(`
     SELECT "splashDate", "freezeDate" FROM "Waves" WHERE "waveUuid" = $1
   `, [targetWaveUuid])
-  _assertNotFrozen(targetWaveResult.rows[0])
+  _assertNotDateFrozen(targetWaveResult.rows[0])
 
   const sourceWaveResult = await psql.query(`
     SELECT "splashDate", "freezeDate" FROM "Waves" WHERE "waveUuid" = $1
   `, [sourceWaveUuid])
-  _assertNotFrozen(sourceWaveResult.rows[0])
+  _assertNotDateFrozen(sourceWaveResult.rows[0])
 
   // Move all photos from source to target (preserves original createdBy)
   await psql.query(`

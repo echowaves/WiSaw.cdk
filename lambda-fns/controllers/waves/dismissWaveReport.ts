@@ -2,7 +2,7 @@ import moment from 'moment'
 import psql from '../../psql'
 import { assertValidUuid } from '../../utilities/assertValidUuid'
 import { _assertWaveRole } from './_assertWaveRole'
-import { _assertNotFrozen } from './_assertNotFrozen'
+import { _assertNotDateFrozen } from './_assertNotDateFrozen'
 
 export default async function main (
   reportId: string,
@@ -39,7 +39,7 @@ export default async function main (
   const waveResult = await psql.query(`
     SELECT "splashDate", "freezeDate" FROM "Waves" WHERE "waveUuid" = $1
   `, [waveUuid])
-  _assertNotFrozen(waveResult.rows[0])
+  _assertNotDateFrozen(waveResult.rows[0])
 
   const now = moment().format('YYYY-MM-DD HH:mm:ss.SSS')
 

@@ -99,11 +99,18 @@ type Secret {
   updatedAt: AWSDateTime!
 }
 
+enum WaveFreezeMode {
+  AUTO
+  FROZEN
+  UNFROZEN
+}
+
 type Wave {
   waveUuid: String!
   name: String!
   description: String
   createdBy: String!
+  freezeMode: WaveFreezeMode!
   location: AWSJSON
   radius: Int
   photos: [Photo]
@@ -399,6 +406,7 @@ type Mutation {
     open: Boolean
     splashDate: AWSDateTime
     freezeDate: AWSDateTime
+    freezeMode: WaveFreezeMode
   ): Wave!
 
   addPhotoToWave(

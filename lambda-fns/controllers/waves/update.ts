@@ -4,7 +4,8 @@ import { Wave } from '../../models/wave'
 import { plainToClass } from 'class-transformer'
 import { assertValidUuid } from '../../utilities/assertValidUuid'
 import { _assertWaveRole } from './_assertWaveRole'
-import { _isWaveFrozen } from './_isWaveFrozen'
+import { _isWaveDateFrozen } from './_isWaveDateFrozen'
+import { _isWaveFrozen, _normalizeFreezeMode } from './_isWaveFrozen'
 
 const DEEP_LINK_BASE_URL = process.env.DEEP_LINK_BASE_URL ?? ''
 
@@ -18,7 +19,8 @@ export default async function main (
   radius?: number,
   open?: boolean,
   splashDate?: string,
-  freezeDate?: string
+  freezeDate?: string,
+  freezeMode?: string
 ): Promise<Wave> {
   assertValidUuid(waveUuid, 'waveUuid')
   assertValidUuid(uuid, 'uuid')
@@ -40,13 +42,13 @@ export default async function main (
   }
 
   const currentWave = waveResult.rows[0]
-  const isFrozen = _isWaveFrozen(currentWave)
+  const isDateFrozen = _isWaveDateFrozen(currentWave)
 
   // When frozen, only allow freezeDate changes
-  if (isFrozen) {
+  if (isDateFrozen) {
     const hasNonFreezeChanges = name != null || (description != null && description !== '') ||
       lat != null || lon != null || radius != null ||
-      open != null || splashDate != null
+      open != null || splashDate != null || freezeMode != null
     if (hasNonFreezeChanges) {
       await psql.clean()
       throw new Error('This wave is frozen. Only freeze date can be changed.')
@@ -84,6 +86,11 @@ export default async function main (
   if (freezeDate != null) {
     setClauses.push(`"freezeDate" = $${paramIndex++}`)
     params.push(freezeDate)
+  }
+  const normalizedFreezeMode = _normalizeFreezeMode(freezeMode)
+  if (normalizedFreezeMode != null) {
+    setClauses.push(`"freezeMode" = $${paramIndex++}`)
+    params.push(normalizedFreezeMode)
   }
 
   const updatedAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS')

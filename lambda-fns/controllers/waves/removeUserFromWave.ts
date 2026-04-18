@@ -1,7 +1,7 @@
 import psql from '../../psql'
 import { assertValidUuid } from '../../utilities/assertValidUuid'
 import { _assertWaveRole } from './_assertWaveRole'
-import { _assertNotFrozen } from './_assertNotFrozen'
+import { _assertNotDateFrozen } from './_assertNotDateFrozen'
 import { _getWaveRole } from './_getWaveRole'
 import { _updatePhotosCount } from './_updatePhotosCount'
 
@@ -23,7 +23,7 @@ export default async function main (
   const waveResult = await psql.query(`
     SELECT "splashDate", "freezeDate" FROM "Waves" WHERE "waveUuid" = $1
   `, [waveUuid])
-  _assertNotFrozen(waveResult.rows[0])
+  _assertNotDateFrozen(waveResult.rows[0])
 
   // Target must not be the owner
   const targetRole = await _getWaveRole(waveUuid, targetUuid)

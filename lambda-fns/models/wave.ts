@@ -3,6 +3,7 @@ export class Wave {
   name: string
   description: string
   createdBy: string
+  freezeMode: 'AUTO' | 'FROZEN' | 'UNFROZEN'
   location: object
   radius: number
   photos: any[]
