@@ -25,6 +25,13 @@ function sanitizeImageId (uri = '') {
   }
 }
 
+function stripExistingMetaTags (html = '') {
+  return html
+    .replace(/<meta\s[^>]*property=["']og:(image|title|url|type|description)["'][^>]*\/?>\s*/gi, '')
+    .replace(/<meta\s[^>]*name=["']twitter:(card|title|image|description)["'][^>]*\/?>\s*/gi, '')
+    .replace(/<meta\s[^>]*name=["']description["'][^>]*property=["']og:description["'][^>]*\/?>\s*/gi, '')
+}
+
 function injectMetaTags (html = '', options = {}) {
   const {
     description = '',
@@ -47,7 +54,7 @@ function injectMetaTags (html = '', options = {}) {
     ? escapeHtmlAttribute(pageTitle)
     : `wisaw ${safeEntityLabel} ${safeImageIdText}`
 
-  let updatedHtml = html
+  let updatedHtml = stripExistingMetaTags(html)
   updatedHtml = updatedHtml.replace(
     /<title>.*?<\/title>/i,
     '<title>' + safePageTitle + '</title>'
@@ -86,5 +93,6 @@ module.exports = {
   escapeHtmlAttribute,
   normalizeImageId,
   sanitizeImageId,
+  stripExistingMetaTags,
   injectMetaTags
 }
