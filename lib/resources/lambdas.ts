@@ -11,11 +11,6 @@ import * as path from 'path'
 import { deployEnv } from '../utilities/config'
 
 export function createLambdas (scope: Construct, config: any): any {
-  const layerArn =
-    'arn:aws:lambda:us-east-1:580247275435:layer:LambdaInsightsExtension:14'
-  const insightsVersion =
-    lambda.LambdaInsightsVersion.fromInsightVersionArn(layerArn)
-
   const sharpLayerArn =
     'arn:aws:lambda:us-east-1:963958500685:layer:sharp-layer:2'
 
@@ -50,7 +45,6 @@ export function createLambdas (scope: Construct, config: any): any {
       //     sharpLayerArn,
       //   ),
       // ],
-      insightsVersion,
       logGroup: wisawFnLogGroup,
       memorySize: 10240,
       // memorySize: 3008,
@@ -98,7 +92,6 @@ export function createLambdas (scope: Construct, config: any): any {
           sharpLayerArn
         )
       ],
-      insightsVersion,
       logGroup: processUploadedImageLambdaFunctionLogGroup,
       memorySize: 10240,
       // memorySize: 3008,
@@ -139,7 +132,6 @@ export function createLambdas (scope: Construct, config: any): any {
       //     sharpLayerArn,
       //   ),
       // ],
-      insightsVersion,
       logGroup: processDeletedImageLambdaFunctionLogGroup,
       // memorySize: 10240,
       memorySize: 1024,
@@ -180,7 +172,6 @@ export function createLambdas (scope: Construct, config: any): any {
       //     sharpLayerArn,
       //   ),
       // ],
-      insightsVersion,
       logGroup: cleanupAbuseReportsLambdaFunctionLogGroup,
       // memorySize: 10240,
       memorySize: 1024,
@@ -230,7 +221,6 @@ export function createLambdas (scope: Construct, config: any): any {
           sourcesContent: false,
           loader: { '.pem': 'text' }
         },
-        insightsVersion,
         logGroup: generateSiteMapLambdaFunctionLogGroup,
         memorySize: 1024,
         timeout: cdk.Duration.seconds(30),
