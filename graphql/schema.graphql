@@ -423,6 +423,7 @@ type Mutation {
 
   autoGroupPhotosIntoWaves(
     uuid: String!
+    radius: Int
   ): AutoGroupResult!
 
   mergeWaves(

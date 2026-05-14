@@ -20,8 +20,6 @@ interface Photo {
   lon: number | null
   createdAt: string
 }
-
-const DISTANCE_THRESHOLD_KM = 100
 const MAX_PHOTOS_PER_WAVE = 1000
 
 const geoClient = new GeoPlacesClient({})
@@ -148,7 +146,7 @@ async function createWaveAndAssign (
   return waveUuid
 }
 
-export default async function main (uuid: string): Promise<AutoGroupResult> {
+export default async function main (uuid: string, radius?: number): Promise<AutoGroupResult> {
   assertValidUuid(uuid, 'uuid')
 
   await psql.connect()
@@ -220,7 +218,7 @@ export default async function main (uuid: string): Promise<AutoGroupResult> {
   const anchorLat = anchor.lat
   const anchorLon = anchor.lon
 
-  // Walk forward, collecting photos within 100km of anchor or locationless; skip outliers
+  // Walk forward, collecting photos within threshold km of anchor or locationless; skip outliers
   const collected: Photo[] = []
   for (const photo of photos) {
     if (photo.lat == null || photo.lon == null) {
@@ -228,7 +226,7 @@ export default async function main (uuid: string): Promise<AutoGroupResult> {
       collected.push(photo)
     } else {
       const distance = haversineDistance(anchorLat, anchorLon, photo.lat, photo.lon)
-      if (distance <= DISTANCE_THRESHOLD_KM) {
+      if (distance <= (radius ?? 100)) {
         collected.push(photo)
       }
       // Out-of-range photos are skipped, left ungrouped for future processing
@@ -246,10 +244,10 @@ export default async function main (uuid: string): Promise<AutoGroupResult> {
     : `${formatCoordinates(anchorLat, anchorLon)}, ${dateRange}`
 
   const photoIds = collected.map(p => p.id)
-  const radius = computeClusterRadius(anchorLat, anchorLon, collected)
+  const waveRadius = computeClusterRadius(anchorLat, anchorLon, collected)
   const waveUuid = await createWaveAndAssign(
     waveName, uuid, photoIds,
-    anchorLon, anchorLat, radius,
+    anchorLon, anchorLat, waveRadius,
     earliest.format('YYYY-MM-DD HH:mm:ss.SSS'), latest.format('YYYY-MM-DD HH:mm:ss.SSS')
   )
 

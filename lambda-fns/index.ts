@@ -303,7 +303,7 @@ const mutationHandlers: Record<string, HandlerDefinition> = {
   },
   autoGroupPhotosIntoWaves: {
     resolver: autoGroupPhotosIntoWaves,
-    getArgs: (args) => [args.uuid]
+    getArgs: (args) => [args.uuid, args.radius]
   },
   mergeWaves: {
     resolver: mergeWaves,
