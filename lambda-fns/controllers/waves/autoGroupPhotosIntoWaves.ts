@@ -20,33 +20,71 @@ interface Photo {
   lon: number | null
   createdAt: string
 }
+
+interface ReverseGeocodeResult {
+  locality: string | null
+  localityLevel: string | null
+  region: string | null
+  country: string | null
+  countryCode: string | null
+}
+
 const MAX_PHOTOS_PER_WAVE = 1000
 
 const geoClient = new GeoPlacesClient({})
 
-async function reverseGeocode (lat: number, lon: number): Promise<string | null> {
+const GRANULARITY_FALLBACKS: Record<string, number> = {
+  DISTRICT: 10,
+  CITY: 50,
+  REGION: 250,
+  COUNTRY: 1000
+}
+
+const DEFAULT_GRANULARITY = 'CITY'
+
+async function reverseGeocode (lat: number, lon: number): Promise<ReverseGeocodeResult | null> {
   try {
     const command = new ReverseGeocodeCommand({
       QueryPosition: [lon, lat],
       Language: 'en',
       MaxResults: 1
-    })
+     })
     const response = await geoClient.send(command)
     const item = response.ResultItems?.[0]
     if (item?.Address != null) {
       const addr = item.Address
-      const city = addr.Locality ?? addr.District ?? addr.SubRegion?.Name ?? null
-      const isUS = addr.Country?.Code2 === 'US'
-      const qualifier = isUS ? addr.Region?.Name : addr.Country?.Name
-
-      if (city != null && qualifier != null) {
-        return `${city}, ${qualifier}`
-      }
-      return city ?? qualifier ?? addr.Region?.Name ?? addr.Country?.Name ?? null
+      return {
+        locality: addr.Locality ?? addr.District ?? null,
+        localityLevel: (addr.Locality != null) ? 'locality' : ((addr.District != null) ? 'district' : null),
+        region: addr.Region?.Name ?? null,
+        country: addr.Country?.Name ?? null,
+        countryCode: addr.Country?.Code2 ?? null
+       }
+     }
+    return null
+    } catch {
+    return null
     }
-    return null
-  } catch {
-    return null
+  }
+
+function getLocalityKey (granularity: string, geo: ReverseGeocodeResult): string | null {
+  switch (granularity) {
+    case 'DISTRICT': return geo.localityLevel === 'district' ? geo.locality : null
+    case 'CITY': return geo.localityLevel === 'locality' ? geo.locality : geo.localityLevel === 'district' ? geo.locality : null
+    case 'REGION': return geo.region
+    case 'COUNTRY': return geo.country
+    default: return geo.locality
+    }
+  }
+
+function getLocalityName (granularity: string, geo: ReverseGeocodeResult): string | null {
+  const key = getLocalityKey(granularity, geo)
+  if (key != null) return key
+     // fallback: use next lower level
+  switch (granularity) {
+    case 'REGION': return geo.locality ?? geo.country
+    case 'COUNTRY': return geo.locality ?? geo.region
+    default: return key
   }
 }
 
@@ -99,7 +137,7 @@ function computeClusterRadius (anchorLat: number, anchorLon: number, photos: Pho
 async function createWaveAndAssign (
   waveName: string, uuid: string, photoIds: string[],
   lon: number | null, lat: number | null, radius: number,
-  splashDate: string, freezeDate: string
+  splashDate: string, freezeDate: string, granularity: string
 ): Promise<string> {
   const waveUuid = uuidv4()
   const now = moment().format('YYYY-MM-DD HH:mm:ss.SSS')
@@ -108,22 +146,22 @@ async function createWaveAndAssign (
     await psql.query(`
       INSERT INTO "Waves" (
         "waveUuid", "name", "description", "createdBy",
-        "location", "radius", "open", "splashDate", "freezeDate", "createdAt", "updatedAt"
+        "location", "radius", "granularity", "open", "splashDate", "freezeDate", "createdAt", "updatedAt"
       ) VALUES (
         $1, $2, $3, $4,
-        ST_MakePoint($5, $6), $7, $8, $9, $10, $11, $12
+        ST_MakePoint($5, $6), $7, $8, $9, $10, $11, $12, $13
       )
-    `, [waveUuid, waveName, '', uuid, lon, lat, radius, false, splashDate, freezeDate, now, now])
+    `, [waveUuid, waveName, '', uuid, lon, lat, radius, granularity, false, splashDate, freezeDate, now, now])
   } else {
     await psql.query(`
       INSERT INTO "Waves" (
         "waveUuid", "name", "description", "createdBy",
-        "location", "radius", "open", "splashDate", "freezeDate", "createdAt", "updatedAt"
+        "location", "radius", "granularity", "open", "splashDate", "freezeDate", "createdAt", "updatedAt"
       ) VALUES (
         $1, $2, $3, $4,
-        NULL, $5, $6, $7, $8, $9, $10
+        NULL, $5, $6, $7, $8, $9, $10, $11
       )
-    `, [waveUuid, waveName, '', uuid, radius, false, splashDate, freezeDate, now, now])
+    `, [waveUuid, waveName, '', uuid, radius, granularity, false, splashDate, freezeDate, now, now])
   }
 
   await psql.query(`
@@ -146,7 +184,7 @@ async function createWaveAndAssign (
   return waveUuid
 }
 
-export default async function main (uuid: string, radius?: number): Promise<AutoGroupResult> {
+export default async function main (uuid: string, granularity?: string): Promise<AutoGroupResult> {
   assertValidUuid(uuid, 'uuid')
 
   await psql.connect()
@@ -193,7 +231,7 @@ export default async function main (uuid: string, radius?: number): Promise<Auto
     const waveName = dateRange
 
     const waveUuid = await createWaveAndAssign(waveName, uuid, photoIds, null, null, 100,
-      earliest.format('YYYY-MM-DD HH:mm:ss.SSS'), latest.format('YYYY-MM-DD HH:mm:ss.SSS'))
+      earliest.format('YYYY-MM-DD HH:mm:ss.SSS'), latest.format('YYYY-MM-DD HH:mm:ss.SSS'), '')
 
     const remainResult = await psql.query(`
       SELECT COUNT(*)::int AS count
@@ -217,38 +255,50 @@ export default async function main (uuid: string, radius?: number): Promise<Auto
 
   const anchorLat = anchor.lat
   const anchorLon = anchor.lon
-
-  // Walk forward, collecting photos within threshold km of anchor or locationless; skip outliers
+  const gran = granularity ?? DEFAULT_GRANULARITY
+  const threshold = GRANULARITY_FALLBACKS[gran] ?? GRANULARITY_FALLBACKS[DEFAULT_GRANULARITY]
+  // Per-invocation locality cache to avoid redundant geocode calls
+  const localityCache = new Map<string, ReverseGeocodeResult>()
+    // Walk forward, collecting photos within threshold km of anchor or locationless; skip outliers
   const collected: Photo[] = []
   for (const photo of photos) {
     if (photo.lat == null || photo.lon == null) {
-      // Locationless — include
+       // Locationless — include
       collected.push(photo)
-    } else {
+     } else {
       const distance = haversineDistance(anchorLat, anchorLon, photo.lat, photo.lon)
-      if (distance <= (radius ?? 100)) {
+      if (distance <= threshold) {
         collected.push(photo)
-      }
-      // Out-of-range photos are skipped, left ungrouped for future processing
+       }
+       // Out-of-range photos are skipped, left ungrouped for future processing
+     }
+   }
+
+    // Geocode the anchor with cache lookup
+  const cacheKey = `${anchorLat},${anchorLon}`
+  let geo = localityCache.get(cacheKey)
+  if (geo == null) {
+    geo = await reverseGeocode(anchorLat, anchorLon)
+    if (geo != null) {
+      localityCache.set(cacheKey, geo)
     }
   }
-
-  // Geocode the anchor
-  const locationName = await reverseGeocode(anchorLat, anchorLon)
+  const localityName = geo != null ? getLocalityName(gran, geo) : null
 
   const earliest = moment(collected[0].createdAt)
   const latest = moment(collected[collected.length - 1].createdAt)
   const dateRange = formatDateRange(earliest, latest)
-  const waveName = locationName != null
-    ? `${locationName}, ${dateRange}`
-    : `${formatCoordinates(anchorLat, anchorLon)}, ${dateRange}`
+  const waveName = localityName != null
+     ? `${localityName}, ${dateRange}`
+     : `${formatCoordinates(anchorLat, anchorLon)}, ${dateRange}`
 
   const photoIds = collected.map(p => p.id)
   const waveRadius = computeClusterRadius(anchorLat, anchorLon, collected)
   const waveUuid = await createWaveAndAssign(
     waveName, uuid, photoIds,
     anchorLon, anchorLat, waveRadius,
-    earliest.format('YYYY-MM-DD HH:mm:ss.SSS'), latest.format('YYYY-MM-DD HH:mm:ss.SSS')
+    earliest.format('YYYY-MM-DD HH:mm:ss.SSS'), latest.format('YYYY-MM-DD HH:mm:ss.SSS'),
+    gran
   )
 
   const remainResult = await psql.query(`

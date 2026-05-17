@@ -32,6 +32,11 @@ type Photo {
   video: Boolean!
   width: Int
   height: Int
+  locality: String
+  localityLevel: String
+  region: String
+  country: String
+  countryCode: String
 }
 
 type AbuseReport {
@@ -105,6 +110,13 @@ enum WaveFreezeMode {
   UNFROZEN
 }
 
+enum Granularity {
+  DISTRICT
+  CITY
+  REGION
+  COUNTRY
+}
+
 type Wave {
   waveUuid: String!
   name: String!
@@ -113,6 +125,7 @@ type Wave {
   freezeMode: WaveFreezeMode!
   location: AWSJSON
   radius: Int
+  granularity: Granularity
   photos: [Photo]
   photosCount: Int
   open: Boolean!
@@ -377,7 +390,12 @@ type Mutation {
   ): Friendship!
   deleteFriendship(
     friendshipUuid: String!
-  ): String! # returns "OK"
+   ): String! # returns "OK"
+
+  deleteWave(
+    waveUuid: String!
+    uuid: String!
+   ): Boolean!
 
   createWave(
     name: String!
@@ -386,13 +404,7 @@ type Mutation {
     lat: Float
     lon: Float
     radius: Int
-    splashDate: AWSDateTime
-    freezeDate: AWSDateTime
-  ): Wave!
-
-  deleteWave(
-    waveUuid: String!
-    uuid: String!
+    granularity: Granularity
   ): Boolean!
 
   updateWave(
@@ -403,14 +415,7 @@ type Mutation {
     lat: Float
     lon: Float
     radius: Int
-    open: Boolean
-    splashDate: AWSDateTime
-    freezeDate: AWSDateTime
-    freezeMode: WaveFreezeMode
-  ): Wave!
-
-  addPhotoToWave(
-    waveUuid: String!
+    granularity: Granularity
     photoId: String!
     uuid: String!
   ): Boolean!
@@ -423,8 +428,14 @@ type Mutation {
 
   autoGroupPhotosIntoWaves(
     uuid: String!
-    radius: Int
-  ): AutoGroupResult!
+    granularity: Granularity
+   ): AutoGroupResult!
+
+  addPhotoToWave(
+    waveUuid: String!
+    photoId: String!
+    uuid: String!
+   ): Boolean!
 
   mergeWaves(
     targetWaveUuid: String!

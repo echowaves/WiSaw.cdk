@@ -10,7 +10,11 @@ class Photo {
   video: boolean
   width?: number
   height?: number
-
+  locality: string | null
+  localityLevel: string | null
+  region: string | null
+  country: string | null
+  countryCode: string | null
   // add custom derived attributes to the object
   public toJSON() {
     return {

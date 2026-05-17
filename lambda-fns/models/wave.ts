@@ -6,6 +6,7 @@ export class Wave {
   freezeMode: 'AUTO' | 'FROZEN' | 'UNFROZEN'
   location: object
   radius: number
+  granularity: string | null
   photos: any[]
   photosCount: number
   open: boolean
