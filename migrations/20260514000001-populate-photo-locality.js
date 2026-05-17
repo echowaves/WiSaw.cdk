@@ -35,6 +35,10 @@ async function processBatch (sequelize, offset) {
     `SELECT id, ST_Y("location"::geometry) AS lat, ST_X("location"::geometry) AS lon
      FROM "Photos"
      WHERE "locality" IS NULL
+       AND "localityLevel" IS NULL
+       AND "region" IS NULL
+       AND "country" IS NULL
+       AND "countryCode" IS NULL
      ORDER BY "createdAt" ASC
      LIMIT :limit OFFSET :offset`,
     { type: sequelize.QueryTypes.SELECT, replacements: { limit: BATCH_SIZE, offset } },
@@ -44,19 +48,18 @@ async function processBatch (sequelize, offset) {
 
   for (const photo of photos) {
     const geo = await reverseGeocode(parseFloat(photo.lat), parseFloat(photo.lon))
-      console.log('✅ reverse geocoded photo', { id: photo.id, lat: photo.lat, lon: photo.lon, geo })
     if (geo) {
       await sequelize.query(
         `UPDATE "Photos" SET "locality" = :locality, "localityLevel" = :localityLevel, "region" = :region, "country" = :country, "countryCode" = :countryCode WHERE "id" = :id`,
         { replacements: { locality: geo.locality, localityLevel: geo.localityLevel, region: geo.region, country: geo.country, countryCode: geo.countryCode, id: photo.id } },
-      )
-    } else {
+       )
+     } else {
       await sequelize.query(
         `UPDATE "Photos" SET "locality" = '', "localityLevel" = '', "region" = '', "country" = '', "countryCode" = '' WHERE "id" = :id`,
         { replacements: { id: photo.id } },
-      )
-    }
-  }
+       )
+     }
+   }
 
   return photos.length === BATCH_SIZE
 }
@@ -71,14 +74,14 @@ module.exports = {
       hasMore = await processBatch(sequelize, offset)
       offset += BATCH_SIZE
       console.log(`Processed ${offset} photos, hasMore: ${hasMore}`)
-    }
+     }
     console.log('✅ Migration complete: Populated locality for all existing photos')
-  },
+   },
 
   down: async (queryInterface, Sequelize) => {
     console.log('🔄 Rollback: Clear locality columns')
     const sequelize = queryInterface.sequelize
     await sequelize.query(`UPDATE "Photos" SET "locality" = NULL, "localityLevel" = NULL, "region" = NULL, "country" = NULL, "countryCode" = NULL WHERE "locality" IS NOT NULL`)
     console.log('✅ Rollback complete')
-  },
+   },
 }
