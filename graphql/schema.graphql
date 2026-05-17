@@ -416,9 +416,7 @@ type Mutation {
     lon: Float
     radius: Int
     granularity: Granularity
-    photoId: String!
-    uuid: String!
-  ): Boolean!
+   ): Boolean!
 
   removePhotoFromWave(
     waveUuid: String!
