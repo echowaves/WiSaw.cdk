@@ -110,7 +110,7 @@ enum WaveFreezeMode {
   UNFROZEN
 }
 
-enum Granularity {
+enum GroupingLevel {
   DISTRICT
   CITY
   REGION
@@ -125,7 +125,7 @@ type Wave {
   freezeMode: WaveFreezeMode!
   location: AWSJSON
   radius: Int
-  granularity: Granularity
+  groupingLevel: GroupingLevel
   photos: [Photo]
   photosCount: Int
   open: Boolean!
@@ -404,8 +404,8 @@ type Mutation {
     lat: Float
     lon: Float
     radius: Int
-    granularity: Granularity
-  ): Boolean!
+    groupingLevel: GroupingLevel
+   ): Boolean!
 
   updateWave(
     waveUuid: String!
@@ -415,8 +415,8 @@ type Mutation {
     lat: Float
     lon: Float
     radius: Int
-    granularity: Granularity
-   ): Boolean!
+    groupingLevel: GroupingLevel
+    ): Boolean!
 
   removePhotoFromWave(
     waveUuid: String!
@@ -426,8 +426,8 @@ type Mutation {
 
   autoGroupPhotosIntoWaves(
     uuid: String!
-    granularity: Granularity
-   ): AutoGroupResult!
+    groupingLevel: GroupingLevel
+    ): AutoGroupResult!
 
   addPhotoToWave(
     waveUuid: String!

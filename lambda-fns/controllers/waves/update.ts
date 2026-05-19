@@ -17,7 +17,7 @@ export default async function main (
   lat?: number,
   lon?: number,
   radius?: number,
-  granularity?: string,
+  groupingLevel?: string,
   open?: boolean,
   splashDate?: string,
   freezeDate?: string,
@@ -93,9 +93,9 @@ export default async function main (
     setClauses.push(`"freezeMode" = $${paramIndex++}`)
     params.push(normalizedFreezeMode)
   }
-  if (granularity != null) {
-    setClauses.push(`"granularity" = $${paramIndex++}`)
-    params.push(granularity)
+  if (groupingLevel != null) {
+    setClauses.push(`"groupingLevel" = $${paramIndex++}`)
+    params.push(groupingLevel)
   }
 
   const updatedAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS')

@@ -13,7 +13,7 @@ export default async function main (
   lat?: number,
   lon?: number,
   radius?: number,
-  granularity?: string,
+  groupingLevel?: string,
   splashDate?: string,
   freezeDate?: string
 ): Promise<Wave> {
@@ -41,22 +41,22 @@ export default async function main (
   const query = hasLocation
     ? `
       INSERT INTO "Waves" (
-        "waveUuid", "name", "description", "createdBy", "location", "radius", "granularity", "splashDate", "freezeDate", "createdAt", "updatedAt"
+        "waveUuid", "name", "description", "createdBy", "location", "radius", "groupingLevel", "splashDate", "freezeDate", "createdAt", "updatedAt"
       ) VALUES (
         $1, $2, $3, $4, ST_MakePoint($5, $6), $7, $8, $9, $10, $11, $12
       ) RETURNING *
-     `
-     : `
+    `
+    : `
       INSERT INTO "Waves" (
-         "waveUuid", "name", "description", "createdBy", "radius", "granularity", "splashDate", "freezeDate", "createdAt", "updatedAt"
-       ) VALUES (
-         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
-       ) RETURNING *
-     `
+        "waveUuid", "name", "description", "createdBy", "radius", "groupingLevel", "splashDate", "freezeDate", "createdAt", "updatedAt"
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+      ) RETURNING *
+    `
 
   const params = hasLocation
-     ? [waveUuid, name, description, uuid, lon, lat, radius ?? 50, granularity ?? 'CITY', effectiveSplashDate, effectiveFreezeDate, createdAt, updatedAt]
-     : [waveUuid, name, description, uuid, radius ?? 50, granularity ?? 'CITY', effectiveSplashDate, effectiveFreezeDate, createdAt, updatedAt]
+    ? [waveUuid, name, description, uuid, lon, lat, radius ?? 50, groupingLevel ?? 'CITY', effectiveSplashDate, effectiveFreezeDate, createdAt, updatedAt]
+    : [waveUuid, name, description, uuid, radius ?? 50, groupingLevel ?? 'CITY', effectiveSplashDate, effectiveFreezeDate, createdAt, updatedAt]
 
   const result = await psql.query(query, params)
 

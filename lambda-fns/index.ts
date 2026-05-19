@@ -106,7 +106,7 @@ interface AppSyncEvent {
     waveUuid: string
     name: string
     radius: number
-    granularity: string
+    groupingLevel: string
     targetWaveUuid: string
     sourceWaveUuid: string
     sortBy: string
@@ -193,8 +193,8 @@ const queryHandlers: Record<string, HandlerDefinition> = {
   },
   listPhotoLocations: {
     resolver: listPhotoLocations,
-    getArgs: (args) => [args.uuid, args.granularity]
-  },
+    getArgs: (args) => [args.uuid, args.groupingLevel]
+   },
   getUngroupedPhotosCount: {
     resolver: getUngroupedPhotosCount,
     getArgs: (args) => [args.uuid]
@@ -284,11 +284,11 @@ const mutationHandlers: Record<string, HandlerDefinition> = {
   },
   createWave: {
     resolver: createWave,
-    getArgs: (args) => [args.name, args.description, args.uuid, args.lat, args.lon, args.radius, args.granularity, args.splashDate, args.freezeDate]
+    getArgs: (args) => [args.name, args.description, args.uuid, args.lat, args.lon, args.radius, args.groupingLevel, args.splashDate, args.freezeDate]
   },
   updateWave: {
     resolver: updateWave,
-    getArgs: (args) => [args.waveUuid, args.uuid, args.name, args.description, args.lat, args.lon, args.radius, args.granularity, args.open, args.splashDate, args.freezeDate, args.freezeMode]
+    getArgs: (args) => [args.waveUuid, args.uuid, args.name, args.description, args.lat, args.lon, args.radius, args.groupingLevel, args.open, args.splashDate, args.freezeDate, args.freezeMode]
   },
   deleteWave: {
     resolver: deleteWave,
@@ -304,8 +304,8 @@ const mutationHandlers: Record<string, HandlerDefinition> = {
   },
   autoGroupPhotosIntoWaves: {
     resolver: autoGroupPhotosIntoWaves,
-    getArgs: (args) => [args.uuid, args.granularity]
-  },
+    getArgs: (args) => [args.uuid, args.groupingLevel]
+    },
   mergeWaves: {
     resolver: mergeWaves,
     getArgs: (args) => [args.targetWaveUuid, args.sourceWaveUuid, args.uuid, args.name, args.description]
