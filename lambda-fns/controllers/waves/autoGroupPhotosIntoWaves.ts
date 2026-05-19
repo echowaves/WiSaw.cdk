@@ -247,7 +247,7 @@ export default async function main (uuid: string, groupingLevel: string): Promis
      }
 
    // 3. Process photos chronologically
-  const activeWave = activeWaveResult.rows.length > 0 ? activeWaveResult.rows[0] : null
+  let activeWave = activeWaveResult.rows.length > 0 ? activeWaveResult.rows[0] : null
   let currentWaveUuid: string | null = null
   let currentWaveName: string | null = null
   let isNewWave: boolean = false
@@ -298,11 +298,23 @@ export default async function main (uuid: string, groupingLevel: string): Promis
        waveLatest = moment(photo.createdAt)
 
          // Deactivate old active wave
-       if (activeWave != null) {
-         await psql.query(`
-           UPDATE "Waves" SET "isActive" = false WHERE "waveUuid" = $1
-           `, [activeWave.waveUuid])
-        }
+      if (activeWave != null) {
+        await psql.query(`
+          UPDATE "Waves" SET "isActive" = false WHERE "waveUuid" = $1
+          `, [activeWave.waveUuid])
+       }
+
+          // Update activeWave to the newly created wave for subsequent photos
+      activeWave = {
+         ...activeWave,
+        waveUuid: currentWaveUuid,
+        anchorLocality: photoGeo.locality ?? null,
+        anchorDistrict: photoGeo.district ?? null,
+        anchorRegion: photoGeo.region ?? null,
+        anchorCountry: photoGeo.country ?? null,
+        groupingLevel: gl,
+        isActive: true
+       }
       } else {
          // Add photo to active wave
        const now = moment().format('YYYY-MM-DD HH:mm:ss.SSS')
