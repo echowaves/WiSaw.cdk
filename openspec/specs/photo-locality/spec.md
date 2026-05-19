@@ -8,7 +8,8 @@ Define how photo localities are populated via AWS Geo Places reverse geocoding, 
 ### Requirement: Photo Locality Fields
 The Photo type MUST have the following nullable string fields:
 - `locality: String` — city, town, or district name
-- `localityLevel: String` — "locality" or "district"
+- `district: String` — district/area name (separate from locality)
+- `localityLevel: String` — "locality" or "district" (provided by client on creation)
 - `region: String` — state or province name
 - `country: String` — country name
 - `countryCode: String` — ISO 3166-1 alpha-2 country code
@@ -19,11 +20,12 @@ When a photo is created via `createPhoto` mutation:
 - On success: store structured address fields from `Address` object
 - On failure: store empty strings (`""`) for all locality fields
 - Geocode failure MUST NOT prevent photo creation
+- `localityLevel` is provided by the client (defaults to "locality" if omitted)
 
 #### Scenario: Photo creation with successful geocode
 - **GIVEN** a photo at valid coordinates
 - **WHEN** the photo is created
-- **THEN** all 5 locality fields are populated from the geocode result
+- **THEN** all 6 locality fields (including `district`) are populated from the geocode result
 
 #### Scenario: Photo creation with failed geocode
 - **GIVEN** a photo at valid coordinates
@@ -32,8 +34,9 @@ When a photo is created via `createPhoto` mutation:
 
 ### Requirement: Reverse Geocode Address Mapping
 The AWS Geo Places `Address` object MUST be mapped as follows:
-- `locality` ← `Address.Locality ?? Address.District`
-- `localityLevel` ← `"locality"` if Locality present, `"district"` if only District
+- `locality` ← `Address.Locality ?? null`
+- `district` ← `Address.District ?? null`
+- `localityLevel` ← provided by client (defaults to "locality")
 - `region` ← `Address.Region.Name`
 - `country` ← `Address.Country.Name`
 - `countryCode` ← `Address.Country.Code2`
@@ -58,9 +61,10 @@ A database migration MUST backfill locality for existing photos:
 - **THEN** the photo has null locality fields
 
 ### Requirement: Database Schema
-The Photos table MUST gain 5 nullable STRING columns:
-- `locality` STRING NULL
-- `localityLevel` STRING NULL
-- `region` STRING NULL
-- `country` STRING NULL
-- `countryCode` STRING NULL
+The Photos table MUST gain 6 nullable STRING columns (5 existing + 1 new):
+- `locality` STRING NULL (existing — meaning changed, no longer combined)
+- `district` STRING NULL (**NEW**)
+- `localityLevel` STRING NULL (existing)
+- `region` STRING NULL (existing)
+- `country` STRING NULL (existing)
+- `countryCode` STRING NULL (existing)

@@ -33,7 +33,7 @@ When `groupingLevel` is omitted from a mutation:
 
 ### Requirement: Auto-group processes only ungrouped active photos
 
-The system SHALL process active photos that are not linked in `WavePhotos`, ordered by `createdAt` ascending.
+The system SHALL process active photos that are not linked in `WavePhotos`, ordered by `createdAt` ascending. For each photo, locality data (including `district`) SHALL be read from the database — no reverse geocode API calls SHALL be made during auto-grouping.
 
 #### Scenario: Previously grouped photos are excluded
 
@@ -44,6 +44,13 @@ The system SHALL process active photos that are not linked in `WavePhotos`, orde
 
 - **WHEN** user has inactive photos (`active=false`) not linked to any wave
 - **THEN** those photos are not considered by auto-group
+
+#### Scenario: No reverse geocode calls during auto-grouping
+
+- **GIVEN** 100 photos needing auto-grouping
+- **WHEN** `autoGroupPhotosIntoWaves` is called
+- **THEN** zero reverse geocode API calls are made
+- **AND** all locality data is read from database columns
 
 ### Requirement: Auto-group uses field-matching grouping
 
@@ -99,7 +106,7 @@ For each invocation, photos are grouped into the same wave when their locality f
 
 ### Requirement: Auto-group creates at most one wave per invocation
 
-The mutation creates at most one wave per call. Caller must have a `Secrets` record. Created wave has `open=false`, `createdBy=uuid`, creator is inserted into `WaveUsers` with `role='owner'`, `splashDate` is the earliest grouped photo date, and `freezeDate` is the latest grouped photo date. The wave stores the groupingLevel used for grouping.
+The mutation creates at most one wave per call. Caller must have a `Secrets` record. Created wave has `open=false`, `createdBy=uuid`, creator is inserted into `WaveUsers` with `role='owner'`, `splashDate` is the earliest grouped photo date, and `freezeDate` is the latest grouped photo date. The wave stores the groupingLevel used for grouping. Wave name is computed from database locality fields (no reverse geocode calls).
 
 #### Scenario: Missing secret blocks grouping
 
@@ -144,42 +151,30 @@ All selected photos are linked to the created wave through `WavePhotos`. The res
 
 ### Requirement: Wave name uses locality from groupingLevel
 
-Wave name follows `<LocalityName>, <DateRange>`. The anchor photo (first with location) is reverse geocoded, and the locality at the selected groupingLevel is used for the name. If geocode fails, fallback to coordinates format.
+Wave name follows `<LocalityName>, <DateRange>`. The locality at the selected groupingLevel is read from the database (no reverse geocode calls). If the relevant field is null, fallback to coordinates format.
 
-#### Scenario: Wave name uses locality
+- `DISTRICT` → uses `photo.district` from database
+- `CITY` → uses `photo.locality` from database
+- `REGION` → uses `photo.region` from database
+- `COUNTRY` → uses `photo.country` from database
 
-- **GIVEN** anchor photo in Berlin
-- **WHEN** `autoGroupPhotosIntoWaves` is called
-- **THEN** wave name is "Berlin, March 2026"
+#### Scenario: Wave name uses district for DISTRICT grouping
 
-#### Scenario: Wave name fallback on geocode failure
+- **GIVEN** anchor photo with district "Brooklyn" in database
+- **WHEN** `autoGroupPhotosIntoWaves` is called with `groupingLevel: DISTRICT`
+- **THEN** wave name is "Brooklyn, March 2026"
 
-- **GIVEN** anchor photo where geocode fails
-- **WHEN** `autoGroupPhotosIntoWaves` is called
-- **THEN** wave name uses coordinates format
+#### Scenario: Wave name uses locality for CITY grouping
 
-### Requirement: Locality key extraction for wave naming
+- **GIVEN** anchor photo with locality "New York" in database
+- **WHEN** `autoGroupPhotosIntoWaves` is called with `groupingLevel: CITY`
+- **THEN** wave name is "New York, March 2026"
 
-A helper function MUST extract the appropriate locality field for the wave name based on groupingLevel:
+#### Scenario: Wave name fallback on null district
 
-- `DISTRICT` → `Address.Locality` (preferred) or `Address.District` (fallback)
-- `CITY` → `Address.Locality` (preferred) or `Address.District` (fallback)
-- `REGION` → `Address.Region.Name`
-- `COUNTRY` → `Address.Country.Name`
-
-### Requirement: Per-invocation locality cache
-
-During auto-grouping:
-
-- Geocode results MUST be cached per invocation using `"lat,lon"` key
-- Photos at same coordinates reuse cached result
-- Cache cleared between Lambda invocations
-
-#### Scenario: Locality cache reduces API calls
-
-- **GIVEN** 50 photos at same coordinates
-- **WHEN** `autoGroupPhotosIntoWaves` is called
-- **THEN** reverse geocode is called once, not 50 times
+- **GIVEN** anchor photo with null district in database
+- **WHEN** `autoGroupPhotosIntoWaves` is called with `groupingLevel: DISTRICT`
+- **THEN** wave name uses fallback (coordinates or district from locality)
 
 ## REMOVED Requirements
 

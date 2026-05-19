@@ -33,6 +33,7 @@ type Photo {
   width: Int
   height: Int
   locality: String
+  district: String
   localityLevel: String
   region: String
   country: String
@@ -342,7 +343,8 @@ type Mutation {
     lat: Float!
     lon: Float!
     video: Boolean
-  ): Photo!
+    localityLevel: String
+   ): Photo!
 
   watchPhoto(
       photoId: String!

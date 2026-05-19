@@ -1,4 +1,3 @@
-import { GeoPlacesClient, ReverseGeocodeCommand } from '@aws-sdk/client-geo-places'
 import { v4 as uuidv4 } from 'uuid'
 import moment from 'moment'
 import psql from '../../psql'
@@ -20,12 +19,13 @@ interface Photo {
   lon: number | null
   createdAt: string
   locality: string | null
+  district: string | null
   region: string | null
   country: string | null
   countryCode: string | null
 }
 
-interface ReverseGeocodeResult {
+interface GeoResult {
   locality: string | null
   district: string | null
   region: string | null
@@ -35,33 +35,6 @@ interface ReverseGeocodeResult {
 
 const MAX_PHOTOS_PER_WAVE = 1000
 const DEFAULT_GROUPING_LEVEL = 'CITY'
-
-const geoClient = new GeoPlacesClient({})
-
-async function reverseGeocode (lat: number, lon: number): Promise<ReverseGeocodeResult | null> {
-  try {
-    const command = new ReverseGeocodeCommand({
-      QueryPosition: [lon, lat],
-      Language: 'en',
-      MaxResults: 1
-     })
-    const response = await geoClient.send(command)
-    const item = response.ResultItems?.[0]
-    if (item?.Address != null) {
-      const addr = item.Address
-      return {
-        locality: addr.Locality ?? null,
-        district: addr.District ?? null,
-        region: addr.Region?.Name ?? null,
-        country: addr.Country?.Name ?? null,
-        countryCode: addr.Country?.Code2 ?? null
-       }
-     }
-    return null
-   } catch {
-    return null
-   }
-}
 
 /**
  * Compute a grouping key for a photo based on its reverse geocode result and grouping level.
@@ -76,7 +49,7 @@ async function reverseGeocode (lat: number, lon: number): Promise<ReverseGeocode
  * Null values are converted to the string "null" so photos with missing fields
  * can still be grouped together.
  */
-function computeGroupingKey (geo: ReverseGeocodeResult | null, groupingLevel: string): string | null {
+function computeGroupingKey (geo: GeoResult | null, groupingLevel: string): string | null {
   if (geo == null) { return null }
 
   const d = geo.district ?? 'null'
@@ -102,7 +75,7 @@ function computeGroupingKey (geo: ReverseGeocodeResult | null, groupingLevel: st
  * Compute the wave name from the anchor's reverse geocode result and grouping level.
  * Uses the appropriate locality field based on grouping level.
  */
-function computeWaveNameFromKey (geo: ReverseGeocodeResult | null, groupingLevel: string): string | null {
+function computeWaveNameFromKey (geo: GeoResult | null, groupingLevel: string): string | null {
   if (geo == null) { return null }
 
   switch (groupingLevel) {
@@ -210,17 +183,18 @@ export default async function main (uuid: string, groupingLevel?: string): Promi
 
   const gl = groupingLevel ?? DEFAULT_GROUPING_LEVEL
 
-   // Query up to 1000 oldest ungrouped photos (with and without location)
+  // Query up to 1000 oldest ungrouped photos (with and without location)
   const photosResult = await psql.query(`
     SELECT
-         "Photos".id,
+          "Photos".id,
       ST_Y("Photos".location::geometry) AS lat,
       ST_X("Photos".location::geometry) AS lon,
-         "Photos"."createdAt",
-         "Photos"."locality",
-         "Photos"."region",
-         "Photos"."country",
-         "Photos"."countryCode"
+          "Photos"."createdAt",
+          "Photos"."locality",
+          "Photos"."district",
+          "Photos"."region",
+          "Photos"."country",
+          "Photos"."countryCode"
     FROM "Photos"
     LEFT JOIN "WavePhotos" ON "Photos".id = "WavePhotos"."photoId"
     WHERE "Photos".uuid = $1
@@ -228,7 +202,7 @@ export default async function main (uuid: string, groupingLevel?: string): Promi
       AND "WavePhotos"."photoId" IS NULL
     ORDER BY "Photos"."createdAt" ASC
     LIMIT $2
-     `, [uuid, MAX_PHOTOS_PER_WAVE])
+      `, [uuid, MAX_PHOTOS_PER_WAVE])
 
   const photos: Photo[] = photosResult.rows.map((row: any) => ({
     id: row.id,
@@ -236,115 +210,81 @@ export default async function main (uuid: string, groupingLevel?: string): Promi
     lon: row.lon != null ? parseFloat(row.lon) : null,
     createdAt: row.createdAt,
     locality: row.locality ?? null,
+    district: row.district ?? null,
     region: row.region ?? null,
     country: row.country ?? null,
     countryCode: row.countryCode ?? null
-   }))
+     }))
 
-   // Nothing to process
+  // Nothing to process
   if (photos.length === 0) {
     await psql.clean()
     return { waveUuid: null, name: null, photosGrouped: 0, photosRemaining: 0, hasMore: false }
-   }
+    }
 
-   // Per-invocation locality cache to avoid redundant geocode calls
-  const localityCache = new Map<string, ReverseGeocodeResult>()
-
-   // Separate photos into groups by field-matching key
-   // Group 1: Photos with valid grouping keys (grouped by matching fields)
-   // Group 2: Photos without location fields (will get their own wave per photo)
+  // Separate photos into groups by field-matching key
+  // Group 1: Photos with valid grouping keys (grouped by matching fields)
+  // Group 2: Photos without location fields (will get their own wave per photo)
   const groups = new Map<string, Photo[]>()
   const locationlessPhotos: Photo[] = []
 
   for (const photo of photos) {
     if (photo.locality == null && photo.region == null && photo.country == null) {
-       // Photo without location fields - collect for separate handling
+      // Photo without location fields - collect for separate handling
       locationlessPhotos.push(photo)
       continue
-     }
+      }
 
-     // Get reverse geocode result (from DB or cache)
-    const latStr = photo.lat?.toString() ?? ''
-    const lonStr = photo.lon?.toString() ?? ''
-    const cacheKey = `${latStr},${lonStr}`
-    let geo: ReverseGeocodeResult | null = localityCache.get(cacheKey) ?? null
+      // Construct geo object from DB fields (no API calls needed)
+    const geo: GeoResult = {
+      locality: photo.locality,
+      district: photo.district,
+      region: photo.region,
+      country: photo.country,
+      countryCode: photo.countryCode
+      }
 
-    if (geo == null) {
-       // Try to construct from DB fields first
-      if (photo.locality != null || photo.region != null || photo.country != null) {
-         // We don't have district from DB, so construct without it
-        geo = {
-          locality: photo.locality,
-          district: null, // Not available from DB
-          region: photo.region,
-          country: photo.country,
-          countryCode: photo.countryCode
-         }
-       } else if (photo.lat != null && photo.lon != null) {
-         // Geocode if we have coordinates but no locality data
-        geo = await reverseGeocode(photo.lat, photo.lon)
-       }
-
-      if (geo != null) {
-        localityCache.set(cacheKey, geo)
-       }
-     }
-
-     // Compute grouping key
+      // Compute grouping key
     const key = computeGroupingKey(geo, gl)
 
     if (key == null) {
-       // Photo can't be grouped - add to locationless for separate handling
+      // Photo can't be grouped - add to locationless for separate handling
       locationlessPhotos.push(photo)
-     } else {
-       // Add to group
+      } else {
+      // Add to group
       const group = groups.get(key)
       if (group != null) {
         group.push(photo)
-       } else {
+        } else {
         groups.set(key, [photo])
-       }
-     }
-   }
+        }
+      }
+    }
 
-   // Process the largest group first
+  // Process the largest group first
   let bestGroup = locationlessPhotos
 
   for (const [, group] of groups) {
     if (group.length > bestGroup.length) {
       bestGroup = group
-     }
-   }
+      }
+    }
 
-   // If no groups at all, return "nothing to group"
+  // If no groups at all, return "nothing to group"
   if (bestGroup.length === 0) {
     await psql.clean()
     return { waveUuid: null, name: null, photosGrouped: 0, photosRemaining: photos.length, hasMore: photos.length > 0 }
-   }
+    }
 
-   // Compute wave name from the first photo in the best group
+  // Compute wave name from the first photo in the best group
   const anchor = bestGroup[0]
-  const latStr = anchor.lat?.toString() ?? ''
-  const lonStr = anchor.lon?.toString() ?? ''
-  const anchorCacheKey = `${latStr},${lonStr}`
-  let anchorGeo: ReverseGeocodeResult | null = localityCache.get(anchorCacheKey) ?? null
-
-  if (anchorGeo == null) {
-    if (anchor.locality != null || anchor.region != null || anchor.country != null) {
-      anchorGeo = {
-        locality: anchor.locality,
-        district: null, // Not available from DB
-        region: anchor.region,
-        country: anchor.country,
-        countryCode: anchor.countryCode
-       }
-     } else if (anchor.lat != null && anchor.lon != null) {
-      anchorGeo = await reverseGeocode(anchor.lat, anchor.lon)
-     }
-    if (anchorGeo != null) {
-      localityCache.set(anchorCacheKey, anchorGeo)
-     }
-   }
+  const anchorGeo: GeoResult = {
+    locality: anchor.locality,
+    district: anchor.district,
+    region: anchor.region,
+    country: anchor.country,
+    countryCode: anchor.countryCode
+    }
 
   const waveNameFromGeo = computeWaveNameFromKey(anchorGeo, gl)
   const earliest = moment(bestGroup[0].createdAt)

@@ -6,52 +6,39 @@ import { plainToClass } from 'class-transformer'
 
 import psql from '../../psql'
 import { assertValidUuid } from '../../utilities/assertValidUuid'
+import { mapGeocodeResult, defaultToEmpty, type GeocodeResult } from '../../utilities/geocodeResult'
 
 import Photo from '../../models/photo'
 import watch from './watch'
 
 const client = new GeoPlacesClient({})
 
-interface ReverseGeocodeResult {
-  locality: string | null
-  localityLevel: string | null
-  region: string | null
-  country: string | null
-  countryCode: string | null
-}
-
-async function reverseGeocode (lat: number, lon: number): Promise<ReverseGeocodeResult | null> {
+async function reverseGeocode (lat: number, lon: number): Promise<GeocodeResult | null> {
   try {
     const params = {
       QueryPosition: [lon, lat],
       Language: 'en' as const,
       MaxResults: 1,
-     }
+         }
     const command = new ReverseGeocodeCommand(params)
     const response = await client.send(command)
     const item = response.ResultItems?.[0]
     if (item?.Address != null) {
-      const addr = item.Address
-      return {
-        locality: addr.Locality ?? addr.District ?? null,
-        localityLevel: (addr.Locality != null) ? 'locality' : ((addr.District != null) ? 'district' : null),
-        region: addr.Region?.Name ?? null,
-        country: addr.Country?.Name ?? null,
-        countryCode: addr.Country?.Code2 ?? null,
-       }
-     }
+      return mapGeocodeResult(item.Address)
+         }
     return null
-   } catch (error) {
+       } catch (error) {
     console.error('Reverse geocode failed:', error)
     return null
-   }
-}
+       }
+    }
 
 export default async function main (
   uuid: string,
   lat: number,
   lon: number,
   video: boolean,
+  localityLevel: string | undefined,
 ) {
   assertValidUuid(uuid, 'uuid')
 
@@ -63,56 +50,60 @@ export default async function main (
               FROM "AbuseReports"
               INNER JOIN "Photos" on "AbuseReports"."photoId" = "Photos"."id"
               WHERE "Photos"."uuid" = $1
-   `, [uuid])
-   ).rows[0].count
+     `, [uuid])
+     ).rows[0].count
 
   if (abuseCount > 3) {
     throw 'You are banned'
-   }
+       }
 
   const createdAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS')
   const updatedAt = createdAt
   const photoId = uuidv4()
 
-  // Reverse geocode to get locality data
+    // Reverse geocode to get locality data
   const geo = await reverseGeocode(lat, lon)
-  const locality = geo?.locality ?? ''
-  const localityLevel = geo?.localityLevel ?? ''
-  const region = geo?.region ?? ''
-  const country = geo?.country ?? ''
-  const countryCode = geo?.countryCode ?? ''
+  const geoFields = defaultToEmpty(geo ?? mapGeocodeResult({} as any))
+  const locality = geoFields.locality
+  const district = geoFields.district
+  const region = geoFields.region
+  const country = geoFields.country
+  const countryCode = geoFields.countryCode
+  const photoLocalityLevel = localityLevel ?? 'locality'
 
   const photo = (
     await psql.query(`
                     INSERT INTO "Photos"
                       (
-                         "id",
-                         "uuid",
-                         "location",
-                         "video",
-                         "createdAt",
-                         "updatedAt",
-                         "locality",
-                         "localityLevel",
-                         "region",
-                         "country",
-                         "countryCode"
-                     ) values (
-                       $1,
-                       $2,
+                           "id",
+                           "uuid",
+                           "location",
+                           "video",
+                           "createdAt",
+                           "updatedAt",
+                           "locality",
+                           "district",
+                           "localityLevel",
+                           "region",
+                           "country",
+                           "countryCode"
+                       ) values (
+                         $1,
+                         $2,
                       ST_MakePoint($4, $3),
-                       $5,
-                       $6,
-                       $7,
-                       $8,
-                       $9,
-                       $10,
-                       $11,
-                       $12
-                     )
+                         $5,
+                         $6,
+                         $7,
+                         $8,
+                         $9,
+                         $10,
+                         $11,
+                         $12,
+                         $13
+                        )
                     returning *
-                      `, [photoId, uuid, lat, lon, video ? true : false, createdAt, updatedAt, locality, localityLevel, region, country, countryCode])
-   ).rows[0]
+                         `, [photoId, uuid, lat, lon, video, createdAt, updatedAt, locality, district, photoLocalityLevel, region, country, countryCode])
+     ).rows[0]
   await psql.clean()
 
   await watch(photo.id, uuid)
