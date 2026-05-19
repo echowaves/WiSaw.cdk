@@ -38,7 +38,6 @@ export default async function main (
   lat: number,
   lon: number,
   video: boolean,
-  localityLevel: string | undefined,
 ) {
   assertValidUuid(uuid, 'uuid')
 
@@ -61,7 +60,7 @@ export default async function main (
   const updatedAt = createdAt
   const photoId = uuidv4()
 
-    // Reverse geocode to get locality data
+  // Reverse geocode to get locality data
   const geo = await reverseGeocode(lat, lon)
   const geoFields = defaultToEmpty(geo ?? mapGeocodeResult({} as any))
   const locality = geoFields.locality
@@ -69,40 +68,36 @@ export default async function main (
   const region = geoFields.region
   const country = geoFields.country
   const countryCode = geoFields.countryCode
-  const photoLocalityLevel = localityLevel ?? 'locality'
 
   const photo = (
     await psql.query(`
                     INSERT INTO "Photos"
                       (
-                           "id",
-                           "uuid",
-                           "location",
-                           "video",
-                           "createdAt",
-                           "updatedAt",
-                           "locality",
-                           "district",
-                           "localityLevel",
-                           "region",
-                           "country",
-                           "countryCode"
+                            "id",
+                            "uuid",
+                            "location",
+                            "video",
+                            "createdAt",
+                            "updatedAt",
+                            "locality",
+                            "district",
+                            "region",
+                            "country",
+                            "countryCode"
                        ) values (
-                         $1,
-                         $2,
+                          $1,
+                          $2,
                       ST_MakePoint($4, $3),
-                         $5,
-                         $6,
-                         $7,
-                         $8,
-                         $9,
-                         $10,
-                         $11,
-                         $12,
-                         $13
-                        )
+                          $5,
+                          $6,
+                          $7,
+                          $8,
+                          $9,
+                          $10,
+                          $11
+                         )
                     returning *
-                         `, [photoId, uuid, lat, lon, video, createdAt, updatedAt, locality, district, photoLocalityLevel, region, country, countryCode])
+                          `, [photoId, uuid, lat, lon, video, createdAt, updatedAt, locality, district, region, country, countryCode])
      ).rows[0]
   await psql.clean()
 

@@ -7,6 +7,11 @@ export class Wave {
   location: object
   radius: number
   groupingLevel: string | null
+  anchorLocality: string | null
+  anchorDistrict: string | null
+  anchorRegion: string | null
+  anchorCountry: string | null
+  isActive: boolean
   photos: any[]
   photosCount: number
   open: boolean

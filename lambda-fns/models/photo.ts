@@ -11,7 +11,7 @@ class Photo {
   width?: number
   height?: number
   locality: string | null
-  localityLevel: string | null
+  district: string | null
   region: string | null
   country: string | null
   countryCode: string | null

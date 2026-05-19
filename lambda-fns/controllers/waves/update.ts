@@ -18,6 +18,10 @@ export default async function main (
   lon?: number,
   radius?: number,
   groupingLevel?: string,
+  anchorLocality?: string,
+  anchorDistrict?: string,
+  anchorRegion?: string,
+  anchorCountry?: string,
   open?: boolean,
   splashDate?: string,
   freezeDate?: string,
@@ -96,6 +100,22 @@ export default async function main (
   if (groupingLevel != null) {
     setClauses.push(`"groupingLevel" = $${paramIndex++}`)
     params.push(groupingLevel)
+  }
+  if (anchorLocality != null) {
+    setClauses.push(`"anchorLocality" = $${paramIndex++}`)
+    params.push(anchorLocality)
+  }
+  if (anchorDistrict != null) {
+    setClauses.push(`"anchorDistrict" = $${paramIndex++}`)
+    params.push(anchorDistrict)
+  }
+  if (anchorRegion != null) {
+    setClauses.push(`"anchorRegion" = $${paramIndex++}`)
+    params.push(anchorRegion)
+  }
+  if (anchorCountry != null) {
+    setClauses.push(`"anchorCountry" = $${paramIndex++}`)
+    params.push(anchorCountry)
   }
 
   const updatedAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS')
