@@ -37,9 +37,19 @@ interface GeoResult {
 const DEFAULT_GROUPING_LEVEL = 'CITY'
 
 /**
- * Check if a photo fits into a wave based on the wave's groupingLevel
- * and anchor fields.
- */
+* Normalize a geographic value: treat null and empty string as equivalent.
+*/
+function normalizeGeo (val: string | null): string | null {
+  return val == null || val === '' ? null : val
+}
+
+/**
+* Check if a photo fits into a wave based on the wave's groupingLevel
+* and anchor fields.
+*
+* Only compares the fields relevant to the grouping level, and normalizes
+* null/empty strings so they are treated as equivalent.
+*/
 function fitsPhotoInWave (
   photo: PhotoRow,
   wave: any,
@@ -47,15 +57,15 @@ function fitsPhotoInWave (
 ): boolean {
   if (wave == null) return false
 
-  const anchorLocality = wave.anchorLocality ?? null
-  const anchorDistrict = wave.anchorDistrict ?? null
-  const anchorRegion = wave.anchorRegion ?? null
-  const anchorCountry = wave.anchorCountry ?? null
+  const anchorLocality = normalizeGeo(wave.anchorLocality)
+  const anchorDistrict = normalizeGeo(wave.anchorDistrict)
+  const anchorRegion = normalizeGeo(wave.anchorRegion)
+  const anchorCountry = normalizeGeo(wave.anchorCountry)
 
-  const photoLocality = photo.locality ?? null
-  const photoDistrict = photo.district ?? null
-  const photoRegion = photo.region ?? null
-  const photoCountry = photo.country ?? null
+  const photoLocality = normalizeGeo(photo.locality)
+  const photoDistrict = normalizeGeo(photo.district)
+  const photoRegion = normalizeGeo(photo.region)
+  const photoCountry = normalizeGeo(photo.country)
 
   switch (groupingLevel) {
     case 'DISTRICT':
@@ -64,17 +74,20 @@ function fitsPhotoInWave (
              photoRegion === anchorRegion &&
              photoCountry === anchorCountry
     case 'CITY':
+      // CITY grouping: compare locality, region, country — NOT district
       return photoLocality === anchorLocality &&
              photoRegion === anchorRegion &&
              photoCountry === anchorCountry
     case 'REGION':
+      // REGION grouping: compare region, country — NOT locality or district
       return photoRegion === anchorRegion &&
              photoCountry === anchorCountry
     case 'COUNTRY':
+      // COUNTRY grouping: compare country only
       return photoCountry === anchorCountry
     default:
       return false
-    }
+     }
 }
 
 /**
