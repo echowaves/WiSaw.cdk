@@ -94,7 +94,8 @@ export default async function main (
                           $8,
                           $9,
                           $10,
-                          $11
+                          $11,
+                          $12
                          )
                     returning *
                           `, [photoId, uuid, lat, lon, video, createdAt, updatedAt, locality, district, region, country, countryCode])
