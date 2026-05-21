@@ -4,7 +4,6 @@ import { Wave } from '../../models/wave'
 import { plainToClass } from 'class-transformer'
 import { assertValidUuid } from '../../utilities/assertValidUuid'
 import { _assertWaveRole } from './_assertWaveRole'
-import { _isWaveDateFrozen } from './_isWaveDateFrozen'
 import { _isWaveFrozen, _normalizeFreezeMode } from './_isWaveFrozen'
 
 const DEEP_LINK_BASE_URL = process.env.DEEP_LINK_BASE_URL ?? ''
@@ -35,30 +34,6 @@ export default async function main (
 
   await psql.connect()
   await _assertWaveRole(waveUuid, uuid, 'owner')
-
-  // Fetch current wave state for freeze check
-  const waveResult = await psql.query(`
-    SELECT "splashDate", "freezeDate" FROM "Waves" WHERE "waveUuid" = $1
-  `, [waveUuid])
-
-  if (waveResult.rows.length === 0) {
-    await psql.clean()
-    throw new Error('Wave not found')
-  }
-
-  const currentWave = waveResult.rows[0]
-  const isDateFrozen = _isWaveDateFrozen(currentWave)
-
-  // When frozen, only allow freezeDate changes
-  if (isDateFrozen) {
-    const hasNonFreezeChanges = name != null || (description != null && description !== '') ||
-      lat != null || lon != null || radius != null ||
-      open != null || splashDate != null || freezeMode != null
-    if (hasNonFreezeChanges) {
-      await psql.clean()
-      throw new Error('This wave is frozen. Only freeze date can be changed.')
-    }
-  }
 
   // Build dynamic SET clause
   const setClauses: string[] = []

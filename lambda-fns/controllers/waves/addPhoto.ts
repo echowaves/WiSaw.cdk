@@ -34,7 +34,10 @@ export default async function main (
   `, [waveUuid])
   const wave = waveResult.rows[0]
 
-  _assertNotFrozen(wave)
+  // Owner can always add photos, even to frozen waves
+  if (role !== 'owner') {
+    _assertNotFrozen(wave)
+  }
 
   await _assertGeoBounds(waveUuid, photoId)
 

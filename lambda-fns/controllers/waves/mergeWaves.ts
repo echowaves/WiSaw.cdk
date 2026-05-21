@@ -5,7 +5,6 @@ import { plainToClass } from 'class-transformer'
 import { _updatePhotosCount } from './_updatePhotosCount'
 import { assertValidUuid } from '../../utilities/assertValidUuid'
 import { _assertWaveRole } from './_assertWaveRole'
-import { _assertNotDateFrozen } from './_assertNotDateFrozen'
 
 export default async function main (
   targetWaveUuid: string,
@@ -27,16 +26,7 @@ export default async function main (
   await _assertWaveRole(targetWaveUuid, uuid, 'owner')
   await _assertWaveRole(sourceWaveUuid, uuid, 'owner')
 
-  // Both waves must not be frozen
-  const targetWaveResult = await psql.query(`
-    SELECT "splashDate", "freezeDate" FROM "Waves" WHERE "waveUuid" = $1
-  `, [targetWaveUuid])
-  _assertNotDateFrozen(targetWaveResult.rows[0])
-
-  const sourceWaveResult = await psql.query(`
-    SELECT "splashDate", "freezeDate" FROM "Waves" WHERE "waveUuid" = $1
-  `, [sourceWaveUuid])
-  _assertNotDateFrozen(sourceWaveResult.rows[0])
+  // Owner of both waves can merge regardless of freeze status
 
   // Move all photos from source to target (preserves original createdBy)
   await psql.query(`
