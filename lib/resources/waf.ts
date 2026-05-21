@@ -27,7 +27,7 @@ export function createWaf (scope: Construct, apiArn: string): void {
           },
           statement: {
             rateBasedStatement: {
-              limit: 300,
+              limit: 1000,
               aggregateKeyType: 'IP'
             }
           }
