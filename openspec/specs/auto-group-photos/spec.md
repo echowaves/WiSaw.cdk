@@ -134,14 +134,14 @@ The mutation creates at most one wave per call. Caller must have a `Secrets` rec
 
 All selected photos are linked to the created wave through `WavePhotos`. The result returns `photosGrouped`, `photosRemaining`, `hasMore`, `waveUuid`, and `name`.
 
-#### Scenario: Remaining ungrouped photos
+#### Scenario: Remaining ungrouped photos after batch
 
-- **WHEN** ungrouped photos remain after a call
-- **THEN** `hasMore=true` and `photosRemaining>0`
+- **WHEN** the batch limit is reached and ungrouped photos remain
+- **THEN** `hasMore=true` and `photosRemaining` reflects the actual remaining count
 
 #### Scenario: Grouping complete
 
-- **WHEN** no ungrouped photos remain
+- **WHEN** no ungrouped photos remain after processing
 - **THEN** `hasMore=false` and `photosRemaining=0`
 
 #### Scenario: Nothing grouped this invocation
@@ -209,6 +209,46 @@ When a photo is assigned to an existing wave during auto-grouping, `_updatePhoto
 #### Scenario: Photo count updated mid-processing
 - **WHEN** auto-grouping is processing 100 ungrouped photos and photo #50 is inserted into WavePhotos
 - **THEN** `_updatePhotosCount` has been called 49 times already, so `photosCount = 49`
+
+### Requirement: Batch processing with limit
+
+The ungrouped photos query SHALL use a `LIMIT` of 200. After processing the batch, the system SHALL run a COUNT query to determine `photosRemaining` and set `hasMore` accordingly. The client MUST call the mutation repeatedly when `hasMore` is true.
+
+#### Scenario: Large backlog processed in batches
+
+- **GIVEN** a user has 1000 ungrouped photos
+- **WHEN** `autoGroupPhotosIntoWaves` is called
+- **THEN** at most 200 photos are processed
+- **AND** `hasMore=true` and `photosRemaining=800`
+
+#### Scenario: Small backlog processed in single call
+
+- **GIVEN** a user has 50 ungrouped photos
+- **WHEN** `autoGroupPhotosIntoWaves` is called
+- **THEN** all 50 photos are processed
+- **AND** `hasMore=false` and `photosRemaining=0`
+
+### Requirement: Frequency maps scoped to current wave
+
+The locality frequency tracking maps (`localityCounts`, `districtCounts`, `regionCounts`, `countryCounts`, `districtMap`, `regionMap`, `countryMap`) SHALL be cleared when a new wave is created. Frequency data from a previous wave MUST NOT influence the name refinement of subsequent waves.
+
+#### Scenario: Frequency maps reset at wave boundary
+
+- **GIVEN** wave 1 processes 50 photos in "Paris"
+- **AND** the algorithm encounters a photo in "Lyon" that starts wave 2
+- **WHEN** subsequent "Lyon" photos are processed for wave 2
+- **THEN** the wave name reflects "Lyon" frequency data only, not accumulated "Paris" data from wave 1
+
+### Requirement: Bulk INSERT for WavePhotos
+
+Photos assigned to a wave during processing SHALL be inserted into `WavePhotos` using a single multi-row INSERT statement per wave, instead of individual INSERT statements per photo. The `photosCount` SHALL be reconciled with a single `_updatePhotosCount` call per wave rather than per-photo `_incrementPhotosCount` calls.
+
+#### Scenario: Bulk insert performance
+
+- **GIVEN** 150 photos match the current wave in a batch
+- **WHEN** the photos are assigned to the wave
+- **THEN** a single INSERT statement adds all 150 rows to `WavePhotos`
+- **AND** `_updatePhotosCount` is called once for that wave
 
 ## REMOVED Requirements
 
