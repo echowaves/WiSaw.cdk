@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid'
 import moment from 'moment'
 import psql from '../../psql'
-import { _updatePhotosCount } from './_updatePhotosCount'
+import { _updatePhotosCount, _incrementPhotosCount } from './_updatePhotosCount'
 import { assertValidUuid } from '../../utilities/assertValidUuid'
 import { _assertHasSecret } from './_assertHasSecret'
 
@@ -112,6 +112,57 @@ function computeWaveNameFromKey (geo: GeoResult | null, groupingLevel: string): 
     default:
        return geo.locality ?? geo.region ?? geo.country ?? null
      }
+}
+
+/**
+ * Return the key with the highest count in a frequency map.
+ */
+function getMostFrequentLocality (localityCounts: Record<string, number>): string | null {
+  let bestKey: string | null = null
+  let bestCount = 0
+  for (const [key, count] of Object.entries(localityCounts)) {
+    if (count > bestCount) {
+      bestCount = count
+      bestKey = key
+    }
+  }
+  return bestKey
+}
+
+/**
+ * Build a GeoResult from the most-frequent locality and its parallel maps.
+ */
+function buildGeoFromMostFrequent (
+  mostFreqLocality: string | null,
+  districtCounts: Record<string, number>,
+  regionCounts: Record<string, number>,
+  countryCounts: Record<string, number>,
+  districtMap: Record<string, string | null>,
+  regionMap: Record<string, string | null>,
+  countryMap: Record<string, string | null>
+): GeoResult {
+  if (mostFreqLocality == null) return { locality: null, district: null, region: null, country: null, countryCode: null }
+
+  // Find most frequent district for the dominant locality
+  let bestDistrict: string | null = null
+  let bestDistrictCount = 0
+  const entries = Object.entries(districtCounts).filter(([k]) => k.startsWith(mostFreqLocality + '|'))
+  for (const [key, count] of entries) {
+    if (count > bestDistrictCount) {
+      bestDistrictCount = count
+      // Extract district part after the '|' separator
+      const parts = key.split('|')
+      bestDistrict = parts.length > 1 ? parts[1] : null
+    }
+  }
+
+  return {
+    locality: mostFreqLocality,
+    district: bestDistrict ?? districtMap[mostFreqLocality] ?? null,
+    region: regionMap[mostFreqLocality] ?? null,
+    country: countryMap[mostFreqLocality] ?? null,
+    countryCode: null
+  }
 }
 
 function formatCoordinates (lat: number, lon: number): string {
@@ -263,10 +314,20 @@ export default async function main (uuid: string, groupingLevel: string): Promis
   let activeWave = activeWaveResult.rows.length > 0 ? activeWaveResult.rows[0] : null
   let currentWaveUuid: string | null = null
   let currentWaveName: string | null = null
+  let refinementDone: boolean = false
   let isNewWave: boolean = false
   let photosGrouped = 0
   let waveEarliest: moment.Moment | null = null
   let waveLatest: moment.Moment | null = null
+
+   // Frequency maps for most-frequent locality tracking (Tasks 1-2)
+   const localityCounts: Record<string, number> = {}
+   const districtCounts: Record<string, number> = {}
+   const regionCounts: Record<string, number> = {}
+   const countryCounts: Record<string, number> = {}
+   const districtMap: Record<string, string | null> = {}
+   const regionMap: Record<string, string | null> = {}
+   const countryMap: Record<string, string | null> = {}
 
   for (const photo of photos) {
      const waveGroupingLevel = activeWave != null ? activeWave.groupingLevel : null
@@ -306,6 +367,7 @@ export default async function main (uuid: string, groupingLevel: string): Promis
         )
 
        isNewWave = true
+       refinementDone = false
        photosGrouped++
        waveEarliest = moment(photo.createdAt)
        waveLatest = moment(photo.createdAt)
@@ -329,46 +391,102 @@ export default async function main (uuid: string, groupingLevel: string): Promis
         isActive: true
        }
       } else {
-         // Add photo to active wave
-       const now = moment().format('YYYY-MM-DD HH:mm:ss.SSS')
-       await psql.query(`
-         INSERT INTO "WavePhotos" ("waveUuid", "photoId", "createdBy", "createdAt", "updatedAt")
-         VALUES ($1, $2, $3, $4, $5)
-         ON CONFLICT ("waveUuid", "photoId") DO NOTHING
-        `, [activeWave.waveUuid, photo.id, uuid, now, now])
+          // Add photo to active wave
+        const now = moment().format('YYYY-MM-DD HH:mm:ss.SSS')
+        await psql.query(`
+          INSERT INTO "WavePhotos" ("waveUuid", "photoId", "createdBy", "createdAt", "updatedAt")
+          VALUES ($1, $2, $3, $4, $5)
+          ON CONFLICT ("waveUuid", "photoId") DO NOTHING
+         `, [activeWave.waveUuid, photo.id, uuid, now, now])
 
-         // Update wave date range
-       if (waveEarliest == null || moment(photo.createdAt).isBefore(waveEarliest)) {
-         waveEarliest = moment(photo.createdAt)
-        }
-       if (waveLatest == null || moment(photo.createdAt).isAfter(waveLatest)) {
-         waveLatest = moment(photo.createdAt)
-        }
+        // Task 1: Track locality frequency for wave naming refinement
+        const loc = photo.locality ?? 'unknown'
+        localityCounts[loc] = (localityCounts[loc] || 0) + 1
+        districtMap[loc] = photo.district
+        regionMap[loc] = photo.region
+        countryMap[loc] = photo.country
 
-         // Update wave name if needed
-       if (currentWaveUuid == null) {
-         const waveNameFromGeo = computeWaveNameFromKey(photoGeo, gl)
-         const waveName = waveNameFromGeo != null
-            ? `${waveNameFromGeo}, ${formatDateRange(waveEarliest, waveLatest)}`
-            : `${formatCoordinates(photo.lat ?? 0, photo.lon ?? 0)}, ${formatDateRange(waveEarliest, waveLatest)}`
-         currentWaveName = waveName
-         currentWaveUuid = activeWave.waveUuid
-        }
+        // Track combined locality|district frequency for anchor refinement
+        const dKey = `${loc}|${photo.district ?? 'unknown'}`
+        districtCounts[dKey] = (districtCounts[dKey] || 0) + 1
+        regionCounts[loc] = (regionCounts[loc] || 0) + 1
+        countryCounts[loc] = (countryCounts[loc] || 0) + 1
 
-       photosGrouped++
-      }
+          // Update wave date range
+        if (waveEarliest == null || moment(photo.createdAt).isBefore(waveEarliest)) {
+          waveEarliest = moment(photo.createdAt)
+         }
+        if (waveLatest == null || moment(photo.createdAt).isAfter(waveLatest)) {
+          waveLatest = moment(photo.createdAt)
+         }
+
+          // Task 2-4: Refine wave name and anchor fields when dominant locality changes
+        if (!refinementDone) {
+          const mostFreqLocality = getMostFrequentLocality(localityCounts)
+          const refinedGeo = buildGeoFromMostFrequent(
+            mostFreqLocality,
+            districtCounts, regionCounts, countryCounts,
+            districtMap, regionMap, countryMap
+          )
+          const waveNameFromGeo = computeWaveNameFromKey(refinedGeo, gl)
+          const waveName = waveNameFromGeo != null
+             ? `${waveNameFromGeo}, ${formatDateRange(waveEarliest, waveLatest)}`
+             : `${formatCoordinates(photo.lat ?? 0, photo.lon ?? 0)}, ${formatDateRange(waveEarliest, waveLatest)}`
+          currentWaveName = waveName
+
+            // Update active wave anchor fields to reflect dominant locality (Task 3)
+          activeWave = {
+            ...activeWave,
+            anchorLocality: refinedGeo.locality ?? null,
+            anchorDistrict: refinedGeo.district ?? null,
+            anchorRegion: refinedGeo.region ?? null,
+            anchorCountry: refinedGeo.country ?? null
+          }
+
+          refinementDone = true
+         }
+
+        // Atomic increment during processing; final recount at end reconciles any discrepancies
+        await _incrementPhotosCount(activeWave.waveUuid)
+
+        photosGrouped++
+       }
     }
 
-   // Update the current wave's date range
+   // Update the current wave's date range and persisted name (Task 4)
   if (currentWaveUuid != null && waveEarliest != null && waveLatest != null) {
-    await psql.query(`
+     // Compute final refined name using most-frequent locality
+    const mostFreqLocality = getMostFrequentLocality(localityCounts)
+    const refinedGeo = buildGeoFromMostFrequent(
+      mostFreqLocality,
+      districtCounts, regionCounts, countryCounts,
+      districtMap, regionMap, countryMap
+    )
+    const finalWaveNameBase = computeWaveNameFromKey(refinedGeo, gl)
+    const finalWaveName = finalWaveNameBase != null
+       ? `${finalWaveNameBase}, ${formatDateRange(waveEarliest, waveLatest)}`
+       : `${formatCoordinates(0, 0)}, ${formatDateRange(waveEarliest, waveLatest)}`
+
+     currentWaveName = finalWaveName
+
+     await psql.query(`
       UPDATE "Waves" SET
          "splashDate" = $1,
          "freezeDate" = $2,
-         "updatedAt" = $3
-      WHERE "waveUuid" = $4
+         "name" = $3,
+         "anchorLocality" = $4,
+         "anchorDistrict" = $5,
+         "anchorRegion" = $6,
+         "anchorCountry" = $7,
+         "updatedAt" = $8
+      WHERE "waveUuid" = $9
      `, [waveEarliest.format('YYYY-MM-DD HH:mm:ss.SSS'),
         waveLatest.format('YYYY-MM-DD HH:mm:ss.SSS'),
+        finalWaveName,
+        refinedGeo.locality ?? null,
+        refinedGeo.district ?? null,
+        refinedGeo.region ?? null,
+        refinedGeo.country ?? null,
         moment().format('YYYY-MM-DD HH:mm:ss.SSS'),
         currentWaveUuid])
 

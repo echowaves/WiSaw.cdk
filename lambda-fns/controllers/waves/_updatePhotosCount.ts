@@ -15,3 +15,12 @@ export const _updatePhotosCount = async (waveUuid: string) => {
   ).rows[0]
   return wave.photosCount
 }
+
+export const _incrementPhotosCount = async (waveUuid: string): Promise<number> => {
+  const updatedAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS')
+  const result = await psql.query(
+    'UPDATE "Waves" SET "photosCount" = GREATEST("photosCount" + 1, 0), "updatedAt" = $2 WHERE "waveUuid" = $1 RETURNING "photosCount"',
+    [waveUuid, updatedAt]
+  )
+  return result.rows[0]?.photosCount ?? 0
+}
