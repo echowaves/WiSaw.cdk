@@ -4,34 +4,11 @@ const { expect } = require('chai')
 const { describe, it } = require('mocha')
 
 const {
-  haversineKm,
   fitsPhotoInWave,
   DISTANCE_THRESHOLDS_KM
 } = require('../lambda-fns/controllers/waves/_autoGroupGeo.ts')
 
-describe('auto-group: haversineKm', () => {
-  it('returns 0 for identical points', () => {
-    expect(haversineKm(48.856, 2.352, 48.856, 2.352)).to.equal(0)
-  })
-
-  it('computes Paris to Lyon (~392 km)', () => {
-    const d = haversineKm(48.856, 2.352, 45.764, 4.835)
-    expect(d).to.be.within(390, 395)
-  })
-
-  it('computes short distance within Paris (~2.6 km)', () => {
-    // Eiffel Tower to Montmartre approx
-    const d = haversineKm(48.856, 2.352, 48.879, 2.340)
-    expect(d).to.be.within(2, 4)
-  })
-
-  it('computes New York to London (~5570 km)', () => {
-    const d = haversineKm(40.7128, -74.0060, 51.5074, -0.1278)
-    expect(d).to.be.within(5550, 5600)
-  })
-})
-
-describe('auto-group: fitsPhotoInWave', () => {
+describe('auto-group: fitsPhotoInWave (string-match only)', () => {
   const makePhoto = (overrides) => ({
     id: 'p1',
     lat: null,
@@ -84,9 +61,9 @@ describe('auto-group: fitsPhotoInWave', () => {
     expect(fitsPhotoInWave(photo, wave, 'COUNTRY')).to.equal(true)
   })
 
-  // Distance fallback tests
-  it('falls back to distance when strings mismatch but within threshold (CITY)', () => {
-    // Paris to Montmartre: ~2.6 km, threshold is 50 km
+  // Distance fallback is now handled by _filterPhotosInRadius, not fitsPhotoInWave
+  it('returns false when strings mismatch even if within distance threshold', () => {
+    // Paris to Montmartre: ~2.6 km, but string mismatch means fitsPhotoInWave returns false
     const photo = makePhoto({
       locality: 'Paris 9e Arrondissement',
       region: 'Île-de-France',
@@ -101,10 +78,10 @@ describe('auto-group: fitsPhotoInWave', () => {
       anchorLat: 48.856,
       anchorLon: 2.352
     })
-    expect(fitsPhotoInWave(photo, wave, 'CITY')).to.equal(true)
+    expect(fitsPhotoInWave(photo, wave, 'CITY')).to.equal(false)
   })
 
-  it('falls back to distance for geocoding failure (empty strings) within threshold', () => {
+  it('returns false for geocoding failure (empty strings) regardless of distance', () => {
     const photo = makePhoto({
       locality: '',
       region: '',
@@ -119,7 +96,7 @@ describe('auto-group: fitsPhotoInWave', () => {
       anchorLat: 48.856,
       anchorLon: 2.352
     })
-    expect(fitsPhotoInWave(photo, wave, 'CITY')).to.equal(true)
+    expect(fitsPhotoInWave(photo, wave, 'CITY')).to.equal(false)
   })
 
   it('rejects when strings mismatch AND distance exceeds threshold (CITY)', () => {

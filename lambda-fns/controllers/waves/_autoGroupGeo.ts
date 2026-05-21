@@ -15,19 +15,6 @@ export const DISTANCE_THRESHOLDS_KM: Record<string, number> = {
 }
 
 /**
- * Compute Haversine distance in km between two coordinate pairs.
- */
-export function haversineKm (lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371
-  const dLat = (lat2 - lat1) * Math.PI / 180
-  const dLon = (lon2 - lon1) * Math.PI / 180
-  const a = Math.sin(dLat / 2) ** 2 +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-            Math.sin(dLon / 2) ** 2
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
-
-/**
  * Normalize a geographic value: treat null and empty string as equivalent.
  */
 export function normalizeGeo (val: string | null): string | null {
@@ -73,9 +60,8 @@ function stringMatchesGroupingLevel (
 }
 
 /**
- * Check if a photo fits into a wave based on the wave's groupingLevel
- * and anchor fields. Uses string matching first, then falls back to
- * spatial distance if both photo and anchor have valid coordinates.
+ * Check if a photo fits into a wave based on string-matching only.
+ * Distance fallback is handled separately via _filterPhotosInRadius.
  */
 export function fitsPhotoInWave (
   photo: PhotoGeoFields,
@@ -84,17 +70,5 @@ export function fitsPhotoInWave (
 ): boolean {
   if (wave == null) return false
 
-  if (stringMatchesGroupingLevel(photo, wave, groupingLevel)) return true
-
-  // Distance fallback: check if within threshold when both have coordinates
-  const anchorLat: number | null = wave.anchorLat ?? null
-  const anchorLon: number | null = wave.anchorLon ?? null
-  if (photo.lat != null && photo.lon != null && anchorLat != null && anchorLon != null) {
-    const threshold = DISTANCE_THRESHOLDS_KM[groupingLevel]
-    if (threshold != null) {
-      return haversineKm(photo.lat, photo.lon, anchorLat, anchorLon) <= threshold
-    }
-  }
-
-  return false
+  return stringMatchesGroupingLevel(photo, wave, groupingLevel)
 }

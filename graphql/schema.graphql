@@ -317,6 +317,13 @@ type Query {
     uuid: String!
   ): [WaveBan]!
 
+  isLocationInWave(
+    lat: Float!
+    lon: Float!
+    waveUuid: String!
+    uuid: String!
+  ): Boolean!
+
   feedForFriend(
     uuid: String!
     friendUuid: String!

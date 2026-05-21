@@ -54,14 +54,19 @@ The system SHALL process active photos that are not linked in `WavePhotos`, orde
 
 ### Requirement: Auto-group uses field-matching grouping
 
-For each invocation, photos are grouped into the same wave when their locality fields match based on the requested `groupingLevel`. Distance thresholds are removed.
+For each invocation, photos are grouped into the same wave when their locality fields match based on the requested `groupingLevel`. When string-matching fails, the system SHALL fall back to a batch PostGIS `ST_DWithin` check using `_filterPhotosInRadius` with `DISTANCE_THRESHOLDS_KM[groupingLevel]` as the radius override, instead of in-memory haversine calculations.
 
-| GroupingLevel | Fields Required to Match |
-|---------------|--------------------------|
-| DISTRICT       | locality + localityLevel + region + country + countryCode |
-| CITY           | locality + region + country |
-| REGION         | region + country |
-| COUNTRY        | country |
+| GroupingLevel | Fields Required to Match | Distance Fallback Threshold |
+|---------------|--------------------------|----------------------------|
+| DISTRICT       | locality + district + region + country | 15 km |
+| CITY           | locality + region + country | 50 km |
+| REGION         | region + country | 300 km |
+| COUNTRY        | country | 2000 km |
+
+The auto-group loop SHALL use a two-pass approach per wave:
+1. **Pass 1**: String-match each photo against the active wave (sync, in-memory). Partition into matched and unmatched sets.
+2. **Pass 2**: Call `_filterPhotosInRadius(unmatchedIds, waveUuid, DISTANCE_THRESHOLDS_KM[groupingLevel])` once to get the set of unmatched photos within threshold distance.
+3. Walk photos chronologically: if string-matched or in the `ST_DWithin` result set, accumulate for the current wave. On the first photo failing both checks, flush accumulated photos, create a new wave, and repeat.
 
 #### Scenario: Auto-group with CITY groupingLevel
 
@@ -103,6 +108,23 @@ For each invocation, photos are grouped into the same wave when their locality f
 
 - **WHEN** `autoGroupPhotosIntoWaves` runs and some photos have null locality fields
 - **THEN** photos with null locality fields are grouped separately from photos with values, and into their own wave
+
+#### Scenario: String match succeeds — no distance check
+- **WHEN** a photo's locality fields match the active wave's anchor fields for the given groupingLevel
+- **THEN** the photo SHALL be grouped into the wave without any PostGIS query
+
+#### Scenario: String match fails — distance fallback within threshold
+- **WHEN** a photo's locality fields do not match the active wave but the photo's location is within `DISTANCE_THRESHOLDS_KM[groupingLevel]` of the wave's location
+- **THEN** the photo SHALL be grouped into the wave via the batch `ST_DWithin` check
+
+#### Scenario: Both checks fail — new wave created
+- **WHEN** a photo fails both string-matching and the batch `ST_DWithin` distance check
+- **THEN** a new wave SHALL be created starting from that photo
+
+#### Scenario: Batch distance check is one query per wave
+- **GIVEN** 200 photos where 150 string-match and 50 need distance fallback
+- **WHEN** the distance fallback runs for the current wave
+- **THEN** exactly one `ST_DWithin` query SHALL be executed for all 50 unmatched photos, not one per photo
 
 ### Requirement: Auto-group creates at most one wave per invocation
 
@@ -176,8 +198,6 @@ Wave name follows `<LocalityName>, <DateRange>`. The locality at the selected gr
 - **WHEN** `autoGroupPhotosIntoWaves` is called with `groupingLevel: DISTRICT`
 - **THEN** wave name uses fallback (coordinates or district from locality)
 
-## ADDED Requirements
-
 ### Requirement: Wave name refinement by most-frequent locality
 
 Wave name MUST be refined based on the most frequently occurring locality across all photos in a wave, not just the anchor photo's locality. During processing of each photo added to an existing wave, maintain a frequency map of locality values and update the wave name when a new dominant locality emerges.
@@ -249,17 +269,3 @@ Photos assigned to a wave during processing SHALL be inserted into `WavePhotos` 
 - **WHEN** the photos are assigned to the wave
 - **THEN** a single INSERT statement adds all 150 rows to `WavePhotos`
 - **AND** `_updatePhotosCount` is called once for that wave
-
-## REMOVED Requirements
-
-### Requirement: Granularity Distance Mapping
-
-**Reason**: Distance thresholds replaced by field-matching. No more haversine distance calculations for grouping.
-
-**Migration**: The `GRANULARITY_FALLBACKS` constant and `haversineDistance`/`computeClusterRadius` functions are removed from the grouping logic.
-
-### Requirement: Radius is derived from group spread
-
-**Reason**: Distance-based radius computation is removed along with the distance threshold approach. The wave's stored `radius` field will be set to a fixed default value (e.g., 50) since geo-fence radius is no longer meaningful with field-matching grouping.
-
-**Migration**: `computeClusterRadius()` and `haversineDistance()` functions are removed. `radius` defaults to 50 for all new waves.

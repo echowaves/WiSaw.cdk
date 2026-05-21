@@ -1,8 +1,9 @@
 import psql from '../../psql'
+import { _isLocationInRadius } from './_isLocationInRadius'
 
 export const _assertGeoBounds = async (waveUuid: string, photoId: string): Promise<void> => {
   const waveResult = await psql.query(`
-    SELECT "location", "radius" FROM "Waves"
+    SELECT "location" FROM "Waves"
     WHERE "waveUuid" = $1
   `, [waveUuid])
 
@@ -12,24 +13,21 @@ export const _assertGeoBounds = async (waveUuid: string, photoId: string): Promi
   }
 
   const photoResult = await psql.query(`
-    SELECT "location" FROM "Photos"
+    SELECT
+      ST_Y("location"::geometry) AS lat,
+      ST_X("location"::geometry) AS lon
+    FROM "Photos"
     WHERE "id" = $1
   `, [photoId])
 
   const photo = photoResult.rows[0]
-  if (!photo || photo.location === null) {
+  if (!photo || photo.lat === null || photo.lon === null) {
     throw new Error('Photo must have location data for this geo-bounded wave')
   }
 
-  const withinResult = await psql.query(`
-    SELECT ST_DWithin(
-      (SELECT "location"::geography FROM "Photos" WHERE "id" = $1),
-      (SELECT "location"::geography FROM "Waves" WHERE "waveUuid" = $2),
-      $3
-    ) AS within
-  `, [photoId, waveUuid, wave.radius * 1000])
+  const within = await _isLocationInRadius(parseFloat(photo.lat), parseFloat(photo.lon), waveUuid)
 
-  if (!withinResult.rows[0].within) {
+  if (!within) {
     throw new Error('Photo is outside the wave geo-boundaries')
   }
 }
