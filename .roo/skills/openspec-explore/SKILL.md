@@ -93,10 +93,7 @@ This tells you:
 
 ### When no change exists
 
-Think freely. When insights crystallize, you might offer:
-
-- "This feels solid enough to start a change. Want me to create a proposal?"
-- Or keep exploring - no pressure to formalize
+Think freely. Do NOT offer to create proposals, specs, or artifacts unless the user explicitly asks for them. Exploring is valuable in itself.
 
 ### When a change exists
 
@@ -112,23 +109,9 @@ If the user mentions a change or you detect one is relevant:
    - "Your design mentions using Redis, but we just realized SQLite fits better..."
    - "The proposal scopes this to premium users, but we're now thinking everyone..."
 
-3. **Offer to capture when decisions are made**
+3. **Discuss insights about the change** - Reference artifacts as context for your thinking. Do NOT auto-capture decisions or offer to update files unless the user explicitly asks.
 
-    | Insight Type               | Where to Capture               |
-    |----------------------------|--------------------------------|
-    | New requirement discovered | `specs/<capability>/spec.md` |
-    | Requirement changed        | `specs/<capability>/spec.md` |
-    | Design decision made       | `design.md`                  |
-    | Scope changed              | `proposal.md`                |
-    | New work identified        | `tasks.md`                   |
-    | Assumption invalidated     | Relevant artifact              |
-
-   Example offers:
-   - "That's a design decision. Capture it in design.md?"
-   - "This is a new requirement. Add it to specs?"
-   - "This changes scope. Update the proposal?"
-
-4. **The user decides** - Offer and move on. Don't pressure. Don't auto-capture.
+4. **Never push toward formalization** - The user may want to keep exploring indefinitely. Don't suggest creating proposals, specs, designs, or tasks unless they ask.
 
 ---
 

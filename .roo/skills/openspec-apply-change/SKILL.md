@@ -45,8 +45,8 @@ Implement tasks from an OpenSpec change.
    - Dynamic instruction based on current state
 
    **Handle states:**
-   - If `state: "blocked"` (missing artifacts): show message, suggest using openspec-continue-change
-   - If `state: "all_done"`: congratulate, suggest archive
+   - If `state: "blocked"` (missing artifacts): report what's missing and wait for user guidance. Do NOT auto-suggest which command to run or switch modes.
+   - If `state: "all_done"`: congratulate, mention archive is available as an option but do NOT suggest it proactively
    - Otherwise: proceed to implementation
 
 4. **Read context files**
@@ -84,7 +84,7 @@ Implement tasks from an OpenSpec change.
    Display:
    - Tasks completed this session
    - Overall progress: "N/M tasks complete"
-   - If all done: suggest archive
+   - If all done: report completion without suggesting archive (user may want to continue later)
    - If paused: explain why and wait for guidance
 
 **Output During Implementation**
@@ -115,7 +115,7 @@ Working on task 4/7: <task description>
 - [x] Task 2
 ...
 
-All tasks complete! Ready to archive this change.
+All tasks complete.
 ```
 
 **Output On Pause (Issue Encountered)**
@@ -142,7 +142,9 @@ What would you like to do?
 - Keep going through tasks until done or blocked
 - Always read context files before starting (from the apply instructions output)
 - If task is ambiguous, pause and ask before implementing
-- If implementation reveals issues, pause and suggest artifact updates
+- If implementation reveals issues, pause and suggest artifact updates - but do NOT auto-generate new artifacts without explicit user confirmation
+- Do NOT auto-switch to propose mode when blocked; report what's missing and wait for user guidance
+- Do NOT proactively suggest archive after completing tasks (user may want to continue later)
 - Keep code changes minimal and scoped to each task
 - Update task checkbox immediately after completing each task
 - Pause on errors, blockers, or unclear requirements - don't guess
