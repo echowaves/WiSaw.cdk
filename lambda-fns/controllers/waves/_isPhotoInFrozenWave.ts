@@ -1,5 +1,6 @@
 import psql from '../../psql'
 
+// Strict check — used by delete operations that require unfreezing first
 export const _isPhotoInFrozenWave = async (photoId: string): Promise<boolean> => {
   const result = await psql.query(`
     SELECT 1 FROM "WavePhotos" wp

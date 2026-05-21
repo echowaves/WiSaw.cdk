@@ -8,7 +8,7 @@ import { _updateLastComment } from "./_updateLastComment"
 
 import { _notifyAllWatchers } from "../photos/_notifyAllWatchers"
 import watch from "../photos/watch"
-import { _isPhotoInFrozenWave } from "../waves/_isPhotoInFrozenWave"
+import { _isPhotoInFrozenWaveForUser } from "../waves/_isPhotoInFrozenWaveForUser"
 
 export default async function main(
   photoId: string,
@@ -25,7 +25,7 @@ export default async function main(
   }
   await psql.connect()
 
-  if (await _isPhotoInFrozenWave(photoId)) {
+  if (await _isPhotoInFrozenWaveForUser(photoId, uuid)) {
     await psql.clean()
     throw new Error('Cannot comment on a photo that is in a frozen wave')
   }
