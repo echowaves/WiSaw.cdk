@@ -12,6 +12,7 @@ interface AutoGroupResult {
   name: string | null
   photosGrouped: number
   photosRemaining: number
+  wavesCreated: number
   hasMore: boolean
   isNewWave: boolean
 }
@@ -272,7 +273,7 @@ export default async function main (uuid: string, groupingLevel: string): Promis
   // Nothing to process
   if (photos.length === 0) {
     await psql.clean()
-    return { waveUuid: null, name: null, photosGrouped: 0, photosRemaining: 0, hasMore: false, isNewWave: false }
+    return { waveUuid: null, name: null, photosGrouped: 0, photosRemaining: 0, wavesCreated: 0, hasMore: false, isNewWave: false }
   }
 
   // 3. Process photos using two-pass approach per wave segment
@@ -282,6 +283,7 @@ export default async function main (uuid: string, groupingLevel: string): Promis
   let refinementDone: boolean = false
   let isNewWave: boolean = false
   let photosGrouped = 0
+  let wavesCreated = 0
   let waveEarliest: moment.Moment | null = null
   let waveLatest: moment.Moment | null = null
 
@@ -340,6 +342,7 @@ export default async function main (uuid: string, groupingLevel: string): Promis
       isNewWave = true
       refinementDone = false
       photosGrouped++
+      wavesCreated++
       waveEarliest = moment(photo.createdAt)
       waveLatest = moment(photo.createdAt)
 
@@ -524,6 +527,7 @@ export default async function main (uuid: string, groupingLevel: string): Promis
     name: currentWaveName,
     photosGrouped,
     photosRemaining,
+    wavesCreated,
     hasMore: photosRemaining > 0,
     isNewWave
   }

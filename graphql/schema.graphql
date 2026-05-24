@@ -187,6 +187,7 @@ type AutoGroupResult {
   name: String
   photosGrouped: Int!
   photosRemaining: Int!
+  wavesCreated: Int!
   hasMore: Boolean!
   isNewWave: Boolean!
 }
