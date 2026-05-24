@@ -2,11 +2,15 @@ require('ts-node/register/transpile-only')
 
 const { expect } = require('chai')
 const { describe, it } = require('mocha')
+const moment = require('moment')
 
 const {
   fitsPhotoInWave,
   DISTANCE_THRESHOLDS_KM
 } = require('../lambda-fns/controllers/waves/_autoGroupGeo.ts')
+
+const { getSeasonKey } = require('../lambda-fns/controllers/waves/_seasonKey.ts')
+const { formatSeasonName } = require('../lambda-fns/controllers/waves/_seasonName.ts')
 
 describe('auto-group: fitsPhotoInWave (string-match only)', () => {
   const makePhoto = (overrides) => ({
@@ -182,5 +186,91 @@ describe('auto-group: DISTANCE_THRESHOLDS_KM', () => {
       REGION: 300,
       COUNTRY: 2000
     })
+  })
+})
+
+describe('auto-group: season boundaries', () => {
+  it('photos in same season have same season key', () => {
+    const dec = getSeasonKey(moment('2025-12-01'))
+    const jan = getSeasonKey(moment('2026-01-15'))
+    const feb = getSeasonKey(moment('2026-02-28'))
+    expect(dec).to.equal(jan)
+    expect(jan).to.equal(feb)
+    expect(dec).to.equal('2025-WINTER')
+  })
+
+  it('photos crossing season boundary have different season keys', () => {
+    const feb = getSeasonKey(moment('2026-02-28'))
+    const mar = getSeasonKey(moment('2026-03-01'))
+    expect(feb).to.not.equal(mar)
+    expect(feb).to.equal('2025-WINTER')
+    expect(mar).to.equal('2026-SPRING')
+  })
+
+  it('season name formats correctly for wave naming', () => {
+    expect(formatSeasonName('2025-WINTER')).to.equal('Winter 2025')
+    expect(formatSeasonName('2026-SPRING')).to.equal('Spring 2026')
+    expect(formatSeasonName('2026-SUMMER')).to.equal('Summer 2026')
+    expect(formatSeasonName('2026-FALL')).to.equal('Fall 2026')
+  })
+
+  it('same locality + different season = different season keys (would create separate waves)', () => {
+    // Both NYC but different seasons — algorithm would close wave at boundary
+    const winterKey = getSeasonKey(moment('2026-02-15'))
+    const springKey = getSeasonKey(moment('2026-03-15'))
+    expect(winterKey).to.not.equal(springKey)
+  })
+})
+
+describe('auto-group: skip-non-matching behavior (string match level)', () => {
+  const makePhoto = (overrides) => ({
+    id: 'p1',
+    lat: null,
+    lon: null,
+    createdAt: '2025-01-01',
+    locality: null,
+    district: null,
+    region: null,
+    country: null,
+    countryCode: null,
+    ...overrides
+  })
+
+  const makeWave = (overrides) => ({
+    anchorLocality: null,
+    anchorDistrict: null,
+    anchorRegion: null,
+    anchorCountry: null,
+    anchorLat: null,
+    anchorLon: null,
+    ...overrides
+  })
+
+  it('non-matching photo returns false (would be skipped, not break wave)', () => {
+    const nyc = makePhoto({ locality: 'New York', region: 'New York', country: 'US' })
+    const chi = makePhoto({ locality: 'Chicago', region: 'Illinois', country: 'US' })
+    const wave = makeWave({ anchorLocality: 'New York', anchorRegion: 'New York', anchorCountry: 'US' })
+
+    expect(fitsPhotoInWave(nyc, wave, 'CITY')).to.equal(true)
+    expect(fitsPhotoInWave(chi, wave, 'CITY')).to.equal(false)
+    // In new algorithm: chi would be skipped, nyc would be added
+  })
+
+  it('null-geo photo returns false (would be skipped for distance check)', () => {
+    const nullGeo = makePhoto({ locality: null, region: null, country: null })
+    const wave = makeWave({ anchorLocality: 'New York', anchorRegion: 'New York', anchorCountry: 'US' })
+
+    expect(fitsPhotoInWave(nullGeo, wave, 'CITY')).to.equal(false)
+    // In new algorithm: would go to distance fallback, if fails → skipped
+  })
+
+  it('at COUNTRY level, same country matches regardless of city/region differences', () => {
+    const nyc = makePhoto({ locality: 'New York', region: 'New York', country: 'US' })
+    const la = makePhoto({ locality: 'Los Angeles', region: 'California', country: 'US' })
+    const wave = makeWave({ anchorLocality: 'New York', anchorRegion: 'New York', anchorCountry: 'US' })
+
+    expect(fitsPhotoInWave(nyc, wave, 'COUNTRY')).to.equal(true)
+    expect(fitsPhotoInWave(la, wave, 'COUNTRY')).to.equal(true)
+    // Both grouped into same wave at COUNTRY level
   })
 })

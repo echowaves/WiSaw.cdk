@@ -6,6 +6,8 @@ import { assertValidUuid } from '../../utilities/assertValidUuid'
 import { _assertHasSecret } from './_assertHasSecret'
 import { fitsPhotoInWave, DISTANCE_THRESHOLDS_KM } from './_autoGroupGeo'
 import { _filterPhotosInRadius } from './_filterPhotosInRadius'
+import { getSeasonKey } from './_seasonKey'
+import { formatSeasonName } from './_seasonName'
 
 interface AutoGroupResult {
   waveUuid: string | null
@@ -37,31 +39,35 @@ interface GeoResult {
   countryCode: string | null
 }
 
-const DEFAULT_GROUPING_LEVEL = 'CITY'
 const BATCH_LIMIT = 200
+const MAX_PHOTOS_PER_WAVE = 1000
 
 /**
  * Compute the wave name from the anchor's reverse geocode result and grouping level.
  */
-function computeWaveNameFromKey (geo: GeoResult | null, groupingLevel: string): string | null {
+function computeWaveNameFromKey (geo: GeoResult | null, groupingLevel: string, seasonKey: string): string | null {
   if (geo == null) { return null }
 
+  let localityPart: string | null
   switch (groupingLevel) {
     case 'DISTRICT':
-      // For DISTRICT, use District if available, else Locality
-      return geo.district ?? geo.locality ?? geo.region ?? geo.country ?? null
+      localityPart = geo.district ?? geo.locality ?? geo.region ?? geo.country ?? null
+      break
     case 'CITY':
-      // For CITY, use Locality
-      return geo.locality ?? geo.region ?? geo.country ?? null
+      localityPart = geo.locality ?? geo.region ?? geo.country ?? null
+      break
     case 'REGION':
-      // For REGION, use Region
-      return geo.region ?? geo.country ?? null
+      localityPart = geo.region ?? geo.country ?? null
+      break
     case 'COUNTRY':
-      // For COUNTRY, use Country
-      return geo.country ?? null
+      localityPart = geo.country ?? null
+      break
     default:
-      return geo.locality ?? geo.region ?? geo.country ?? null
+      localityPart = geo.locality ?? geo.region ?? geo.country ?? null
   }
+
+  if (localityPart == null) { return null }
+  return `${localityPart}, ${formatSeasonName(seasonKey)}`
 }
 
 /**
@@ -119,23 +125,6 @@ function formatCoordinates (lat: number, lon: number): string {
   const latDir = lat >= 0 ? 'N' : 'S'
   const lonDir = lon >= 0 ? 'E' : 'W'
   return `${Math.abs(lat).toFixed(1)}°${latDir}, ${Math.abs(lon).toFixed(1)}°${lonDir}`
-}
-
-function formatDateRange (earliest: moment.Moment, latest: moment.Moment): string {
-  const sameDay = earliest.isSame(latest, 'day')
-  const sameMonth = earliest.isSame(latest, 'month')
-  const sameYear = earliest.isSame(latest, 'year')
-
-  if (sameDay) {
-    return earliest.format('MMM D, YYYY')
-  }
-  if (sameMonth) {
-    return earliest.format('MMM YYYY')
-  }
-  if (sameYear) {
-    return `${earliest.format('MMM')} – ${latest.format('MMM YYYY')}`
-  }
-  return `${earliest.format('MMM YYYY')} – ${latest.format('MMM YYYY')}`
 }
 
 /**
@@ -222,10 +211,14 @@ async function createWave (
 export default async function main (uuid: string, groupingLevel: string): Promise<AutoGroupResult> {
   assertValidUuid(uuid, 'uuid')
 
+  if (groupingLevel == null) {
+    throw new Error('groupingLevel is required')
+  }
+
   await psql.connect()
   await _assertHasSecret(uuid)
 
-  const gl = groupingLevel ?? DEFAULT_GROUPING_LEVEL
+  const gl = groupingLevel
 
   // 1. Get user's ACTIVE wave (if any)
   const activeWaveResult = await psql.query(`
@@ -276,16 +269,15 @@ export default async function main (uuid: string, groupingLevel: string): Promis
     return { waveUuid: null, name: null, photosGrouped: 0, photosRemaining: 0, wavesCreated: 0, hasMore: false, isNewWave: false }
   }
 
-  // 3. Process photos using two-pass approach per wave segment
+  // 3. Process photos using skip-non-matching approach
   let activeWave = activeWaveResult.rows.length > 0 ? activeWaveResult.rows[0] : null
   let currentWaveUuid: string | null = null
   let currentWaveName: string | null = null
-  let refinementDone: boolean = false
   let isNewWave: boolean = false
   let photosGrouped = 0
   let wavesCreated = 0
-  let waveEarliest: moment.Moment | null = null
-  let waveLatest: moment.Moment | null = null
+  let wavePhotoCount = 0
+  let waveSeasonKey: string | null = null
 
   // Frequency maps for most-frequent locality tracking
   let localityCounts: Record<string, number> = {}
@@ -300,7 +292,140 @@ export default async function main (uuid: string, groupingLevel: string): Promis
   let pendingPhotoIds: string[] = []
   let pendingWaveUuid: string | null = activeWave?.waveUuid ?? null
 
+  // If resuming an existing active wave, load its season key and photo count
+  if (activeWave != null) {
+    waveSeasonKey = activeWave.splashDate != null ? getSeasonKey(moment(activeWave.splashDate)) : null
+    const countResult = await psql.query(`
+      SELECT COUNT(*) AS cnt FROM "WavePhotos" WHERE "waveUuid" = $1
+    `, [activeWave.waveUuid])
+    wavePhotoCount = parseInt(countResult.rows[0]?.cnt ?? '0', 10)
+  }
+
+  // Two-pass: compute which photos match the active wave (string + distance)
+  // Then walk chronologically, skipping non-matching photos
+  async function computeMatches (fromIdx: number): Promise<{ stringMatched: Set<string>, distanceMatched: Set<string> }> {
+    if (activeWave == null) return { stringMatched: new Set(), distanceMatched: new Set() }
+
+    const remaining = photos.slice(fromIdx)
+    const stringMatched = new Set<string>()
+    const unmatchedIds: string[] = []
+
+    for (const p of remaining) {
+      if (fitsPhotoInWave(p, activeWave, gl)) {
+        stringMatched.add(p.id)
+      } else {
+        unmatchedIds.push(p.id)
+      }
+    }
+
+    let distanceMatched = new Set<string>()
+    const threshold = DISTANCE_THRESHOLDS_KM[gl]
+    if (unmatchedIds.length > 0 && threshold != null && activeWave.waveUuid != null) {
+      distanceMatched = await _filterPhotosInRadius(unmatchedIds, activeWave.waveUuid, threshold)
+    }
+
+    return { stringMatched, distanceMatched }
+  }
+
+  async function closeWave (): Promise<void> {
+    if (pendingWaveUuid != null && pendingPhotoIds.length > 0) {
+      await flushWavePhotos(pendingWaveUuid, pendingPhotoIds, uuid)
+      pendingPhotoIds = []
+    }
+
+    // Persist refined name and anchor
+    if (currentWaveUuid != null && waveSeasonKey != null) {
+      const mostFreqLocality = getMostFrequentLocality(localityCounts)
+      const refinedGeo = buildGeoFromMostFrequent(
+        mostFreqLocality,
+        districtCounts, regionCounts, countryCounts,
+        districtMap, regionMap, countryMap
+      )
+      const finalWaveName = computeWaveNameFromKey(refinedGeo, gl, waveSeasonKey) ??
+        `${formatCoordinates(0, 0)}, ${formatSeasonName(waveSeasonKey)}`
+
+      currentWaveName = finalWaveName
+
+      await psql.query(`
+        UPDATE "Waves" SET
+           "name" = $1,
+           "anchorLocality" = $2,
+           "anchorDistrict" = $3,
+           "anchorRegion" = $4,
+           "anchorCountry" = $5,
+           "updatedAt" = $6
+        WHERE "waveUuid" = $7
+       `, [finalWaveName,
+        refinedGeo.locality ?? null,
+        refinedGeo.district ?? null,
+        refinedGeo.region ?? null,
+        refinedGeo.country ?? null,
+        moment().format('YYYY-MM-DD HH:mm:ss.SSS'),
+        currentWaveUuid])
+    }
+
+    if (activeWave != null) {
+      await psql.query(`
+        UPDATE "Waves" SET "isActive" = false WHERE "waveUuid" = $1
+      `, [activeWave.waveUuid])
+    }
+
+    activeWave = null
+    wavePhotoCount = 0
+    waveSeasonKey = null
+    localityCounts = {}
+    districtCounts = {}
+    regionCounts = {}
+    countryCounts = {}
+    districtMap = {}
+    regionMap = {}
+    countryMap = {}
+  }
+
+  async function startWave (photo: PhotoRow): Promise<void> {
+    const photoGeo: GeoResult = {
+      locality: photo.locality,
+      district: photo.district,
+      region: photo.region,
+      country: photo.country,
+      countryCode: photo.countryCode
+    }
+
+    const photoDate = moment(photo.createdAt)
+    waveSeasonKey = getSeasonKey(photoDate)
+
+    const waveName = computeWaveNameFromKey(photoGeo, gl, waveSeasonKey) ??
+      `${formatCoordinates(photo.lat ?? 0, photo.lon ?? 0)}, ${formatSeasonName(waveSeasonKey)}`
+
+    currentWaveUuid = await createWave(
+      waveName, uuid, photo.lon, photo.lat, 50,
+      photoDate.format('YYYY-MM-DD HH:mm:ss.SSS'),
+      photoDate.format('YYYY-MM-DD HH:mm:ss.SSS'),
+      gl, photoGeo
+    )
+
+    pendingWaveUuid = currentWaveUuid
+    currentWaveName = waveName
+    isNewWave = true
+    wavesCreated++
+    wavePhotoCount = 0
+
+    activeWave = {
+      waveUuid: currentWaveUuid,
+      anchorLocality: photoGeo.locality ?? null,
+      anchorDistrict: photoGeo.district ?? null,
+      anchorRegion: photoGeo.region ?? null,
+      anchorCountry: photoGeo.country ?? null,
+      anchorLat: photo.lat,
+      anchorLon: photo.lon,
+      groupingLevel: gl,
+      isActive: true
+    }
+  }
+
   let photoIdx = 0
+  let { stringMatched, distanceMatched } = await computeMatches(photoIdx)
+
   while (photoIdx < photos.length) {
     const photo = photos[photoIdx]
     const waveGroupingLevel = activeWave != null ? activeWave.groupingLevel : null
@@ -308,200 +433,118 @@ export default async function main (uuid: string, groupingLevel: string): Promis
 
     if (activeWave == null || levelChanged) {
       // No active wave or grouping level changed — create new wave from this photo
-      if (pendingWaveUuid != null && pendingPhotoIds.length > 0) {
-        await flushWavePhotos(pendingWaveUuid, pendingPhotoIds, uuid)
-        pendingPhotoIds = []
-      }
-
-      const photoGeo: GeoResult = {
-        locality: photo.locality,
-        district: photo.district,
-        region: photo.region,
-        country: photo.country,
-        countryCode: photo.countryCode
-      }
-
-      const earliest = waveEarliest ?? moment(photo.createdAt)
-      const latest = waveLatest ?? moment(photo.createdAt)
-      const dateRange = formatDateRange(earliest, latest)
-
-      const waveNameFromGeo = computeWaveNameFromKey(photoGeo, gl)
-      const waveName = waveNameFromGeo != null
-        ? `${waveNameFromGeo}, ${dateRange}`
-        : `${formatCoordinates(photo.lat ?? 0, photo.lon ?? 0)}, ${dateRange}`
-
-      currentWaveUuid = await createWave(
-        waveName, uuid, photo.lon, photo.lat, 50,
-        earliest.format('YYYY-MM-DD HH:mm:ss.SSS'),
-        latest.format('YYYY-MM-DD HH:mm:ss.SSS'),
-        gl, photoGeo
-      )
-
-      pendingWaveUuid = currentWaveUuid
-      pendingPhotoIds = [photo.id]
-      isNewWave = true
-      refinementDone = false
-      photosGrouped++
-      wavesCreated++
-      waveEarliest = moment(photo.createdAt)
-      waveLatest = moment(photo.createdAt)
-
-      localityCounts = {}
-      districtCounts = {}
-      regionCounts = {}
-      countryCounts = {}
-      districtMap = {}
-      regionMap = {}
-      countryMap = {}
-
       if (activeWave != null) {
-        await psql.query(`
-          UPDATE "Waves" SET "isActive" = false WHERE "waveUuid" = $1
-        `, [activeWave.waveUuid])
+        await closeWave()
       }
+      await startWave(photo)
 
-      activeWave = {
-        ...activeWave,
-        waveUuid: currentWaveUuid,
-        anchorLocality: photoGeo.locality ?? null,
-        anchorDistrict: photoGeo.district ?? null,
-        anchorRegion: photoGeo.region ?? null,
-        anchorCountry: photoGeo.country ?? null,
-        anchorLat: photo.lat,
-        anchorLon: photo.lon,
-        groupingLevel: gl,
-        isActive: true
-      }
+      pendingPhotoIds = [photo.id]
+      photosGrouped++
+      wavePhotoCount = 1
+
+      // Recompute matches for remaining photos against new wave
+      const matches = await computeMatches(photoIdx + 1)
+      stringMatched = matches.stringMatched
+      distanceMatched = matches.distanceMatched
 
       photoIdx++
       continue
     }
 
-    // Two-pass approach: check remaining photos against active wave
-    const remaining = photos.slice(photoIdx)
+    // Check if photo matches the active wave
+    const photoMatches = stringMatched.has(photo.id) || distanceMatched.has(photo.id)
 
-    // Pass 1: String match
-    const stringMatchedIds = new Set<string>()
-    const unmatchedIds: string[] = []
-    for (const p of remaining) {
-      if (fitsPhotoInWave(p, activeWave, gl)) {
-        stringMatchedIds.add(p.id)
-      } else {
-        unmatchedIds.push(p.id)
-      }
+    if (!photoMatches) {
+      // Skip non-matching photo — leave ungrouped for next iteration
+      photoIdx++
+      continue
     }
 
-    // Pass 2: Batch ST_DWithin for unmatched photos
-    const threshold = DISTANCE_THRESHOLDS_KM[gl]
-    let distanceMatchedIds = new Set<string>()
-    if (unmatchedIds.length > 0 && threshold != null && activeWave.waveUuid != null) {
-      distanceMatchedIds = await _filterPhotosInRadius(unmatchedIds, activeWave.waveUuid, threshold)
+    // Photo matches — check season boundary
+    const photoSeasonKey = getSeasonKey(moment(photo.createdAt))
+    if (waveSeasonKey != null && photoSeasonKey !== waveSeasonKey) {
+      // Season boundary — close current wave, start new one
+      await closeWave()
+      await startWave(photo)
+
+      pendingPhotoIds = [photo.id]
+      photosGrouped++
+      wavePhotoCount = 1
+
+      const matches = await computeMatches(photoIdx + 1)
+      stringMatched = matches.stringMatched
+      distanceMatched = matches.distanceMatched
+
+      photoIdx++
+      continue
     }
 
-    // Walk chronologically, accumulating matched photos
-    let advancedCount = 0
-    for (const p of remaining) {
-      if (stringMatchedIds.has(p.id) || distanceMatchedIds.has(p.id)) {
-        // Photo fits — accumulate
-        pendingPhotoIds.push(p.id)
+    // Check photo count limit
+    if (wavePhotoCount >= MAX_PHOTOS_PER_WAVE) {
+      // Count limit — close current wave, start new one
+      await closeWave()
+      await startWave(photo)
 
-        const loc = p.locality ?? 'unknown'
-        localityCounts[loc] = (localityCounts[loc] ?? 0) + 1
-        districtMap[loc] = p.district
-        regionMap[loc] = p.region
-        countryMap[loc] = p.country
+      pendingPhotoIds = [photo.id]
+      photosGrouped++
+      wavePhotoCount = 1
 
-        const dKey = `${loc}|${p.district ?? 'unknown'}`
-        districtCounts[dKey] = (districtCounts[dKey] ?? 0) + 1
-        regionCounts[loc] = (regionCounts[loc] ?? 0) + 1
-        countryCounts[loc] = (countryCounts[loc] ?? 0) + 1
+      const matches = await computeMatches(photoIdx + 1)
+      stringMatched = matches.stringMatched
+      distanceMatched = matches.distanceMatched
 
-        if (waveEarliest == null || moment(p.createdAt).isBefore(waveEarliest)) {
-          waveEarliest = moment(p.createdAt)
-        }
-        if (waveLatest == null || moment(p.createdAt).isAfter(waveLatest)) {
-          waveLatest = moment(p.createdAt)
-        }
-
-        if (!refinementDone) {
-          const mostFreqLocality = getMostFrequentLocality(localityCounts)
-          const refinedGeo = buildGeoFromMostFrequent(
-            mostFreqLocality,
-            districtCounts, regionCounts, countryCounts,
-            districtMap, regionMap, countryMap
-          )
-          const waveNameFromGeo = computeWaveNameFromKey(refinedGeo, gl)
-          const waveName = waveNameFromGeo != null
-            ? `${waveNameFromGeo}, ${formatDateRange(waveEarliest, waveLatest)}`
-            : `${formatCoordinates(p.lat ?? 0, p.lon ?? 0)}, ${formatDateRange(waveEarliest, waveLatest)}`
-          currentWaveName = waveName
-
-          activeWave = {
-            ...activeWave,
-            anchorLocality: refinedGeo.locality ?? null,
-            anchorDistrict: refinedGeo.district ?? null,
-            anchorRegion: refinedGeo.region ?? null,
-            anchorCountry: refinedGeo.country ?? null
-          }
-
-          refinementDone = true
-        }
-
-        photosGrouped++
-        advancedCount++
-      } else {
-        // First miss — break, will create new wave on next iteration
-        break
-      }
+      photoIdx++
+      continue
     }
 
-    photoIdx += advancedCount
-    if (advancedCount === 0) {
-      // Current photo doesn't fit — create new wave on next iteration
-      // Clear active wave so next iteration creates a new one
-      if (pendingWaveUuid != null && pendingPhotoIds.length > 0) {
-        await flushWavePhotos(pendingWaveUuid, pendingPhotoIds, uuid)
-        pendingPhotoIds = []
-      }
-      activeWave = null
-    }
+    // Photo fits — accumulate
+    pendingPhotoIds.push(photo.id)
+    photosGrouped++
+    wavePhotoCount++
+
+    // Update frequency maps
+    const loc = photo.locality ?? 'unknown'
+    localityCounts[loc] = (localityCounts[loc] ?? 0) + 1
+    districtMap[loc] = photo.district
+    regionMap[loc] = photo.region
+    countryMap[loc] = photo.country
+
+    const dKey = `${loc}|${photo.district ?? 'unknown'}`
+    districtCounts[dKey] = (districtCounts[dKey] ?? 0) + 1
+    regionCounts[loc] = (regionCounts[loc] ?? 0) + 1
+    countryCounts[loc] = (countryCounts[loc] ?? 0) + 1
+
+    photoIdx++
   }
 
-  // Flush remaining pending photos
+  // Flush remaining pending photos and update wave name
   if (pendingWaveUuid != null && pendingPhotoIds.length > 0) {
     await flushWavePhotos(pendingWaveUuid, pendingPhotoIds, uuid)
+    pendingPhotoIds = []
   }
 
-  // Update the current wave's date range and persisted name (Task 4)
-  if (currentWaveUuid != null && waveEarliest != null && waveLatest != null) {
-    // Compute final refined name using most-frequent locality
+  if (currentWaveUuid != null && waveSeasonKey != null) {
     const mostFreqLocality = getMostFrequentLocality(localityCounts)
     const refinedGeo = buildGeoFromMostFrequent(
       mostFreqLocality,
       districtCounts, regionCounts, countryCounts,
       districtMap, regionMap, countryMap
     )
-    const finalWaveNameBase = computeWaveNameFromKey(refinedGeo, gl)
-    const finalWaveName = finalWaveNameBase != null
-      ? `${finalWaveNameBase}, ${formatDateRange(waveEarliest, waveLatest)}`
-      : `${formatCoordinates(0, 0)}, ${formatDateRange(waveEarliest, waveLatest)}`
+    const finalWaveName = computeWaveNameFromKey(refinedGeo, gl, waveSeasonKey) ??
+      `${formatCoordinates(0, 0)}, ${formatSeasonName(waveSeasonKey)}`
 
     currentWaveName = finalWaveName
 
     await psql.query(`
       UPDATE "Waves" SET
-         "splashDate" = $1,
-         "freezeDate" = $2,
-         "name" = $3,
-         "anchorLocality" = $4,
-         "anchorDistrict" = $5,
-         "anchorRegion" = $6,
-         "anchorCountry" = $7,
-         "updatedAt" = $8
-      WHERE "waveUuid" = $9
-     `, [waveEarliest.format('YYYY-MM-DD HH:mm:ss.SSS'),
-      waveLatest.format('YYYY-MM-DD HH:mm:ss.SSS'),
-      finalWaveName,
+         "name" = $1,
+         "anchorLocality" = $2,
+         "anchorDistrict" = $3,
+         "anchorRegion" = $4,
+         "anchorCountry" = $5,
+         "updatedAt" = $6
+      WHERE "waveUuid" = $7
+     `, [finalWaveName,
       refinedGeo.locality ?? null,
       refinedGeo.district ?? null,
       refinedGeo.region ?? null,
