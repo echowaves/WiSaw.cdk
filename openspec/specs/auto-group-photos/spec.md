@@ -69,32 +69,63 @@ For each invocation, photos are grouped into the same wave when their locality f
 | REGION         | region + country | 300 km |
 | COUNTRY        | country | 2000 km |
 
-The auto-group loop SHALL use a **skip-non-matching** approach:
-1. **Pass 1**: String-match each photo against the active wave (sync, in-memory). Partition into matched, unmatched-but-could-distance-match, and skipped sets.
-2. **Pass 2**: Call `_filterPhotosInRadius(unmatchedIds, waveUuid, DISTANCE_THRESHOLDS_KM[groupingLevel])` once to get the set of unmatched photos within threshold distance.
-3. Walk photos chronologically: if string-matched or in the `ST_DWithin` result set, check season and count limits — if same season and count < 1000, add to wave. If different season or count reached 1000, close wave and start new wave from this photo.
-4. **Photos that fail both string-match and distance check SHALL be skipped** (left ungrouped for the next iteration), NOT used to break the current wave.
-5. **After the processing loop, if `photosGrouped` is 0 and an active wave exists, the system SHALL deactivate the active wave** so the next call can start fresh with a new anchor. This prevents infinite loops when no ungrouped photos match the current wave's locality.
+The auto-group loop SHALL use a **search-and-reuse** approach:
+1. Take the first ungrouped photo. Call `findOrCreateWave(photo)` to find an existing matching wave or create a new one.
+2. **Pass 1**: String-match each remaining photo against the current wave (sync, in-memory). Partition into matched, unmatched-but-could-distance-match, and skipped sets.
+3. **Pass 2**: Call `_filterPhotosInRadius(unmatchedIds, waveUuid, DISTANCE_THRESHOLDS_KM[groupingLevel])` once to get the set of unmatched photos within threshold distance.
+4. Walk photos chronologically: if string-matched or in the `ST_DWithin` result set, check season and count limits — if same season and count < 1000, add to wave. If different season or count reached 1000, close wave and call `findOrCreateWave` for this photo.
+5. **Photos that fail both string-match and distance check SHALL be skipped** (left ungrouped for the next iteration), NOT used to break the current wave.
+6. **The system SHALL NOT use an `isActive` flag.** There is no persistent cursor. Each invocation starts by searching for a matching wave or creating one. This makes infinite loops structurally impossible — every invocation processes at least the first ungrouped photo.
 
-#### Scenario: Stale active wave deactivated on zero progress
+`findOrCreateWave(photo)` SHALL:
+1. Query existing waves owned by the user (`createdBy = uuid`) matching the photo's locality fields (scoped by `groupingLevel`) OR within `ST_DWithin` distance threshold, with `photosCount < 1000` and same `groupingLevel`.
+2. Filter candidates by season: `getSeasonKey(wave.splashDate) === getSeasonKey(photo.createdAt)`.
+3. Select the most recently created matching wave (`ORDER BY createdAt DESC`).
+4. If a match is found, resume the wave (load its photo count and locality frequency distribution).
+5. If no match is found, create a new wave from the photo.
 
-- **GIVEN** an active wave anchored on "New York" at CITY level
-- **AND** 200 ungrouped photos all from "Los Angeles"
-- **WHEN** `autoGroupPhotosIntoWaves` is called
-- **THEN** all 200 photos are skipped (none match "New York")
-- **AND** the active "New York" wave is deactivated (`isActive = false`)
-- **AND** `photosGrouped = 0`, `hasMore = true`
-- **WHEN** the next call is made
-- **THEN** no active wave exists, so a new wave is created from the first "Los Angeles" photo
-- **AND** photos are grouped normally
+#### Scenario: Non-contiguous photos reuse existing wave
 
-#### Scenario: Zero-progress does not loop infinitely
+- **GIVEN** a wave "New York, Winter 2025" with 100 photos, owned by the user
+- **AND** 200 ungrouped photos: 100 from LA, then 100 from NYC
+- **WHEN** `autoGroupPhotosIntoWaves` is called with `groupingLevel: CITY`
+- **THEN** the first photo is from LA → no existing LA wave → create "Los Angeles, Winter 2025"
+- **AND** LA photos are grouped, NYC photos are skipped
+- **WHEN** called again
+- **THEN** the first photo is from NYC → existing "New York, Winter 2025" wave found
+- **AND** NYC photos are added to the existing wave (now 200 photos)
+- **AND** no duplicate NYC wave is created
 
-- **GIVEN** an active wave whose locality matches none of the remaining ungrouped photos
-- **WHEN** `autoGroupPhotosIntoWaves` is called repeatedly
-- **THEN** the first call deactivates the stale wave
-- **AND** the second call creates a new wave and makes progress
-- **AND** the loop terminates
+#### Scenario: findOrCreateWave uses distance fallback
+
+- **GIVEN** a wave with anchor coordinates at 40.7°N / 74.0°W, groupingLevel CITY
+- **AND** an ungrouped photo with null locality but coordinates 40.8°N / 73.9°W (within 50 km)
+- **WHEN** `findOrCreateWave` is called for this photo
+- **THEN** the existing wave is matched via `ST_DWithin` distance fallback
+- **AND** the photo is added to the existing wave
+
+#### Scenario: findOrCreateWave picks most recent wave
+
+- **GIVEN** two waves matching the same photo: "NYC, Winter 2025" created Jan 1 and "NYC, Winter 2025" created Jan 15
+- **WHEN** `findOrCreateWave` is called
+- **THEN** the Jan 15 wave is selected (most recently created)
+
+#### Scenario: findOrCreateWave respects count limit
+
+- **GIVEN** a matching wave with 999 photos
+- **WHEN** `findOrCreateWave` is called and no other matching wave exists
+- **THEN** the wave is resumed (has room for 1 more photo)
+- **WHEN** the next photo also matches but would exceed 1000
+- **THEN** closeWave is called, then `findOrCreateWave` is called again for the overflow photo
+- **AND** if no other matching wave with room exists, a new wave is created
+
+#### Scenario: findOrCreateWave respects season boundary
+
+- **GIVEN** a wave "New York, Winter 2025" with 500 photos
+- **AND** an ungrouped NYC photo created in March 2026 (Spring season)
+- **WHEN** `findOrCreateWave` is called
+- **THEN** the Winter wave does NOT match (different season)
+- **AND** a new wave "New York, Spring 2026" is created
 
 #### Scenario: Auto-group skips non-matching photos
 
@@ -146,9 +177,18 @@ The auto-group loop SHALL use a **skip-non-matching** approach:
 - **THEN** first 1000 photos are in one wave
 - **AND** remaining 500 photos are in a second wave
 
+#### Scenario: No infinite loop possible
+
+- **GIVEN** 200 ungrouped photos all from "Los Angeles"
+- **AND** no existing wave matches
+- **WHEN** `autoGroupPhotosIntoWaves` is called
+- **THEN** a new wave is created from the first photo
+- **AND** `photosGrouped >= 1` (at minimum the first photo is always grouped)
+- **AND** there is no stale cursor to deactivate
+
 ### Requirement: Auto-group creates at most one wave per invocation
 
-The mutation creates at most one wave per call. Caller must have a `Secrets` record. Created wave has `open=false`, `createdBy=uuid`, creator is inserted into `WaveUsers` with `role='owner'`, `splashDate` is the earliest grouped photo date, and `freezeDate` is the latest grouped photo date. The wave stores the groupingLevel used for grouping. Wave name is computed from database locality fields (no reverse geocode calls).
+The mutation creates at most one NEW wave per call, but MAY reuse an existing wave. Caller must have a `Secrets` record. Created wave has `open=false`, `createdBy=uuid`, creator is inserted into `WaveUsers` with `role='owner'`, `splashDate` is the earliest grouped photo date, and `freezeDate` is the latest grouped photo date. The wave stores the groupingLevel used for grouping. Wave name is computed from database locality fields (no reverse geocode calls).
 
 #### Scenario: Missing secret blocks grouping
 
@@ -171,6 +211,13 @@ The mutation creates at most one wave per call. Caller must have a `Secrets` rec
 - **GIVEN** `updateWave` called with `groupingLevel: REGION`
 - **WHEN** the wave is updated
 - **THEN** the groupingLevel column is updated to REGION
+
+#### Scenario: Existing wave reused without creating new
+
+- **GIVEN** a matching wave exists with room for more photos
+- **WHEN** `autoGroupPhotosIntoWaves` is called
+- **THEN** `wavesCreated = 0` and `isNewWave = false`
+- **AND** the `waveUuid` in the result is the existing wave's UUID
 
 ### Requirement: Grouped photos are linked and counts returned
 
@@ -233,11 +280,19 @@ Wave name follows `<LocalityName>, <Season> <Year>`. The locality at the selecte
 
 ### Requirement: Wave name refinement by most-frequent locality
 
-Wave name MUST be refined based on the most frequently occurring locality across all photos in a wave, not just the anchor photo's locality. During processing of each photo added to an existing wave, maintain a frequency map of locality values and update the wave name when a new dominant locality emerges.
+Wave name MUST be refined based on the most frequently occurring locality across ALL photos in a wave, not just the current batch. When resuming an existing wave, the system SHALL load the full locality frequency distribution from `WavePhotos` joined to `Photos` before processing new photos. New photos are accumulated on top of the existing distribution. The refined name reflects the full population.
 
 #### Scenario: Wave name uses most-frequent locality
+
 - **WHEN** auto-grouping processes 10 photos where 8 are from "Berlin-Mitte" and 2 are from "Potsdam"
 - **THEN** the wave name reflects "Berlin-Mitte, Month Year", not "Potsdam, Month Year"
+
+#### Scenario: Name refinement on resume considers all photos
+
+- **GIVEN** an existing wave with 800 photos from "Berlin-Mitte" and 50 from "Potsdam"
+- **WHEN** 50 new "Potsdam" photos are added to the wave
+- **THEN** the frequency map is {Berlin-Mitte: 800, Potsdam: 100}
+- **AND** the wave name remains "Berlin-Mitte, ..." (not renamed to Potsdam)
 
 ### Requirement: Anchor fields updated during processing
 

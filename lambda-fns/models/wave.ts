@@ -11,7 +11,6 @@ export class Wave {
   anchorDistrict: string | null
   anchorRegion: string | null
   anchorCountry: string | null
-  isActive: boolean
   photos: any[]
   photosCount: number
   open: boolean

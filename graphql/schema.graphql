@@ -130,7 +130,6 @@ type Wave {
   anchorDistrict: String
   anchorRegion: String
   anchorCountry: String
-  isActive: Boolean!
   photos: [Photo]
   photosCount: Int
   open: Boolean!
