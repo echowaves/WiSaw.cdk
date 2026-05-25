@@ -127,6 +127,13 @@ function formatCoordinates (lat: number, lon: number): string {
   return `${Math.abs(lat).toFixed(1)}°${latDir}, ${Math.abs(lon).toFixed(1)}°${lonDir}`
 }
 
+function coordinateFallbackName (lat: number | null, lon: number | null, seasonKey: string): string {
+  if (lat != null && lon != null) {
+    return `${formatCoordinates(lat, lon)}, ${formatSeasonName(seasonKey)}`
+  }
+  return `Unlocated, ${formatSeasonName(seasonKey)}`
+}
+
 /**
  * Bulk-insert photo IDs into WavePhotos and update the photos count.
  */
@@ -278,6 +285,8 @@ export default async function main (uuid: string, groupingLevel: string): Promis
   let wavesCreated = 0
   let wavePhotoCount = 0
   let waveSeasonKey: string | null = null
+  let anchorLat: number | null = activeWave?.anchorLat ?? null
+  let anchorLon: number | null = activeWave?.anchorLon ?? null
 
   // Frequency maps for most-frequent locality tracking
   let localityCounts: Record<string, number> = {}
@@ -342,7 +351,7 @@ export default async function main (uuid: string, groupingLevel: string): Promis
         districtMap, regionMap, countryMap
       )
       const finalWaveName = computeWaveNameFromKey(refinedGeo, gl, waveSeasonKey) ??
-        `${formatCoordinates(0, 0)}, ${formatSeasonName(waveSeasonKey)}`
+        coordinateFallbackName(anchorLat, anchorLon, waveSeasonKey)
 
       currentWaveName = finalWaveName
 
@@ -373,6 +382,8 @@ export default async function main (uuid: string, groupingLevel: string): Promis
     activeWave = null
     wavePhotoCount = 0
     waveSeasonKey = null
+    anchorLat = null
+    anchorLon = null
     localityCounts = {}
     districtCounts = {}
     regionCounts = {}
@@ -395,7 +406,7 @@ export default async function main (uuid: string, groupingLevel: string): Promis
     waveSeasonKey = getSeasonKey(photoDate)
 
     const waveName = computeWaveNameFromKey(photoGeo, gl, waveSeasonKey) ??
-      `${formatCoordinates(photo.lat ?? 0, photo.lon ?? 0)}, ${formatSeasonName(waveSeasonKey)}`
+      coordinateFallbackName(photo.lat, photo.lon, waveSeasonKey)
 
     currentWaveUuid = await createWave(
       waveName, uuid, photo.lon, photo.lat, 50,
@@ -421,6 +432,8 @@ export default async function main (uuid: string, groupingLevel: string): Promis
       groupingLevel: gl,
       isActive: true
     }
+    anchorLat = photo.lat
+    anchorLon = photo.lon
   }
 
   let photoIdx = 0
@@ -536,7 +549,7 @@ export default async function main (uuid: string, groupingLevel: string): Promis
       districtMap, regionMap, countryMap
     )
     const finalWaveName = computeWaveNameFromKey(refinedGeo, gl, waveSeasonKey) ??
-      `${formatCoordinates(0, 0)}, ${formatSeasonName(waveSeasonKey)}`
+      coordinateFallbackName(anchorLat, anchorLon, waveSeasonKey)
 
     currentWaveName = finalWaveName
 

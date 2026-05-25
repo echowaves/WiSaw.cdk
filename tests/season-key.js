@@ -84,3 +84,43 @@ describe('formatSeasonName', () => {
     expect(formatSeasonName('2026-FALL')).to.equal('Fall 2026')
   })
 })
+
+describe('coordinateFallbackName logic (null island prevention)', () => {
+  // Mirrors the coordinateFallbackName function from autoGroupPhotosIntoWaves.ts
+  // Can't import directly due to psql module PEM cert dependency
+  function coordinateFallbackName (lat, lon, seasonKey) {
+    if (lat != null && lon != null) {
+      const latDir = lat >= 0 ? 'N' : 'S'
+      const lonDir = lon >= 0 ? 'E' : 'W'
+      const coords = `${Math.abs(lat).toFixed(1)}°${latDir}, ${Math.abs(lon).toFixed(1)}°${lonDir}`
+      return `${coords}, ${formatSeasonName(seasonKey)}`
+    }
+    return `Unlocated, ${formatSeasonName(seasonKey)}`
+  }
+
+  it('uses actual coordinates when available', () => {
+    expect(coordinateFallbackName(42.3, -71.1, '2025-WINTER'))
+      .to.equal('42.3°N, 71.1°W, Winter 2025')
+  })
+
+  it('never produces 0.0°N, 0.0°E for null coordinates', () => {
+    const name = coordinateFallbackName(null, null, '2025-WINTER')
+    expect(name).to.equal('Unlocated, Winter 2025')
+    expect(name).to.not.include('0.0°')
+  })
+
+  it('handles southern/eastern hemisphere', () => {
+    expect(coordinateFallbackName(-33.9, 18.4, '2026-SUMMER'))
+      .to.equal('33.9°S, 18.4°E, Summer 2026')
+  })
+
+  it('handles partial null (only lat null)', () => {
+    const name = coordinateFallbackName(null, -71.1, '2025-WINTER')
+    expect(name).to.equal('Unlocated, Winter 2025')
+  })
+
+  it('handles partial null (only lon null)', () => {
+    const name = coordinateFallbackName(42.3, null, '2025-WINTER')
+    expect(name).to.equal('Unlocated, Winter 2025')
+  })
+})
