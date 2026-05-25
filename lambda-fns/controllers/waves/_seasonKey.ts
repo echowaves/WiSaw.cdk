@@ -27,3 +27,36 @@ export function getSeasonKey (date: moment.Moment): string {
 
   return `${seasonYear}-${season}`
 }
+
+const SEASON_START_MONTH: Record<Season, number> = {
+  WINTER: 11, // Dec (0-indexed)
+  SPRING: 2, // Mar
+  SUMMER: 5, // Jun
+  FALL: 8 // Sep
+}
+
+const SEASON_END_MONTH: Record<Season, number> = {
+  WINTER: 1, // Feb (0-indexed)
+  SPRING: 4, // May
+  SUMMER: 7, // Aug
+  FALL: 10 // Nov
+}
+
+export function getSeasonBoundaries (seasonKey: string): { splashDate: string, freezeDate: string } {
+  const [yearStr, season] = seasonKey.split('-') as [string, Season]
+  const year = parseInt(yearStr, 10)
+
+  const startMonth = SEASON_START_MONTH[season]
+  const startYear = season === 'WINTER' ? year : year
+  const splashDate = moment({ year: startYear, month: startMonth, day: 1 })
+    .startOf('day')
+    .format('YYYY-MM-DD HH:mm:ss.SSS')
+
+  const endMonth = SEASON_END_MONTH[season]
+  const endYear = season === 'WINTER' ? year + 1 : year
+  const freezeDate = moment({ year: endYear, month: endMonth, day: 1 })
+    .endOf('month')
+    .format('YYYY-MM-DD HH:mm:ss.SSS')
+
+  return { splashDate, freezeDate }
+}

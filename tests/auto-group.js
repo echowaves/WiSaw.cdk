@@ -9,8 +9,9 @@ const {
   DISTANCE_THRESHOLDS_KM
 } = require('../lambda-fns/controllers/waves/_autoGroupGeo.ts')
 
-const { getSeasonKey } = require('../lambda-fns/controllers/waves/_seasonKey.ts')
+const { getSeasonKey, getSeasonBoundaries } = require('../lambda-fns/controllers/waves/_seasonKey.ts')
 const { formatSeasonName } = require('../lambda-fns/controllers/waves/_seasonName.ts')
+const { _isWaveFrozen } = require('../lambda-fns/controllers/waves/_isWaveFrozen.ts')
 
 describe('auto-group: fitsPhotoInWave (string-match only)', () => {
   const makePhoto = (overrides) => ({
@@ -471,5 +472,75 @@ describe('auto-group: frequency distribution on resume', () => {
 
     expect(bestKey).to.equal('Berlin-Mitte')
     // Wave name stays "Berlin-Mitte, ..." not "Potsdam, ..."
+  })
+})
+
+describe('auto-group: season-aligned wave freeze dates', () => {
+  it('new wave gets season boundary dates, not photo date', () => {
+    // When creating a wave for a Spring 2026 photo, the dates should be
+    // season boundaries, not the photo's createdAt
+    const photoDate = moment('2026-04-15')
+    const seasonKey = getSeasonKey(photoDate)
+    expect(seasonKey).to.equal('2026-SPRING')
+
+    const { splashDate, freezeDate } = getSeasonBoundaries(seasonKey)
+    expect(splashDate).to.equal('2026-03-01 00:00:00.000')
+    expect(freezeDate).to.equal('2026-05-31 23:59:59.999')
+
+    // NOT the photo date
+    expect(splashDate).to.not.equal(photoDate.format('YYYY-MM-DD HH:mm:ss.SSS'))
+    expect(freezeDate).to.not.equal(photoDate.format('YYYY-MM-DD HH:mm:ss.SSS'))
+  })
+})
+
+describe('auto-group: findMatchingWave frozen wave filtering', () => {
+  it('skips waves frozen by AUTO mode (past freeze date)', () => {
+    // Wave with freezeDate in the past → frozen under AUTO
+    const wave = {
+      splashDate: '2025-12-01 00:00:00.000',
+      freezeDate: '2026-02-28 23:59:59.999',
+      freezeMode: 'AUTO'
+    }
+    // Current date (May 2026) is past freezeDate → frozen
+    expect(_isWaveFrozen(wave)).to.equal(true)
+    // findMatchingWave would skip this wave
+  })
+
+  it('skips waves with freezeMode FROZEN', () => {
+    // Wave explicitly set to FROZEN, even with future dates
+    const wave = {
+      splashDate: '2026-03-01 00:00:00.000',
+      freezeDate: '2099-12-31 23:59:59.999',
+      freezeMode: 'FROZEN'
+    }
+    expect(_isWaveFrozen(wave)).to.equal(true)
+    // findMatchingWave would skip this wave
+  })
+
+  it('does NOT skip unfrozen wave in current season', () => {
+    // Wave with season-aligned dates for a season that includes now
+    const now = moment()
+    const seasonKey = getSeasonKey(now)
+    const { splashDate, freezeDate } = getSeasonBoundaries(seasonKey)
+    const wave = {
+      splashDate,
+      freezeDate,
+      freezeMode: 'AUTO'
+    }
+    // Current date is within splashDate..freezeDate → NOT frozen
+    expect(_isWaveFrozen(wave)).to.equal(false)
+    // findMatchingWave would return this wave
+  })
+
+  it('does NOT skip explicitly UNFROZEN wave', () => {
+    // Wave with UNFROZEN overrides date rules
+    const wave = {
+      splashDate: '2020-01-01 00:00:00.000',
+      freezeDate: '2020-03-01 23:59:59.999',
+      freezeMode: 'UNFROZEN'
+    }
+    // Dates say frozen, but UNFROZEN overrides
+    expect(_isWaveFrozen(wave)).to.equal(false)
+    // findMatchingWave would return this wave
   })
 })

@@ -6,8 +6,9 @@ import { assertValidUuid } from '../../utilities/assertValidUuid'
 import { _assertHasSecret } from './_assertHasSecret'
 import { fitsPhotoInWave, DISTANCE_THRESHOLDS_KM } from './_autoGroupGeo'
 import { _filterPhotosInRadius } from './_filterPhotosInRadius'
-import { getSeasonKey } from './_seasonKey'
+import { getSeasonKey, getSeasonBoundaries } from './_seasonKey'
 import { formatSeasonName } from './_seasonName'
+import { _isWaveFrozen } from './_isWaveFrozen'
 
 interface AutoGroupResult {
   waveUuid: string | null
@@ -308,7 +309,7 @@ async function findMatchingWave (
   for (const wave of result.rows) {
     if (wave.splashDate != null) {
       const waveSeasonKey = getSeasonKey(moment(wave.splashDate))
-      if (waveSeasonKey === photoSeasonKey) {
+      if (waveSeasonKey === photoSeasonKey && !_isWaveFrozen(wave)) {
         return wave
       }
     }
@@ -544,10 +545,11 @@ export default async function main (uuid: string, groupingLevel: string): Promis
       const waveName = computeWaveNameFromKey(photoGeo, gl, waveSeasonKey) ??
         coordinateFallbackName(photo.lat, photo.lon, waveSeasonKey)
 
+      const seasonDates = getSeasonBoundaries(photoSeasonKey)
       currentWaveUuid = await createWave(
         waveName, uuid, photo.lon, photo.lat, 50,
-        photoDate.format('YYYY-MM-DD HH:mm:ss.SSS'),
-        photoDate.format('YYYY-MM-DD HH:mm:ss.SSS'),
+        seasonDates.splashDate,
+        seasonDates.freezeDate,
         gl, photoGeo
       )
 

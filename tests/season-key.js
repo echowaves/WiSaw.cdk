@@ -4,7 +4,7 @@ const { expect } = require('chai')
 const { describe, it } = require('mocha')
 const moment = require('moment')
 
-const { getSeasonKey } = require('../lambda-fns/controllers/waves/_seasonKey.ts')
+const { getSeasonKey, getSeasonBoundaries } = require('../lambda-fns/controllers/waves/_seasonKey.ts')
 const { formatSeasonName } = require('../lambda-fns/controllers/waves/_seasonName.ts')
 
 describe('getSeasonKey', () => {
@@ -122,5 +122,38 @@ describe('coordinateFallbackName logic (null island prevention)', () => {
   it('handles partial null (only lon null)', () => {
     const name = coordinateFallbackName(42.3, null, '2025-WINTER')
     expect(name).to.equal('Unlocated, Winter 2025')
+  })
+})
+
+describe('getSeasonBoundaries', () => {
+  it('returns correct boundaries for SPRING', () => {
+    const { splashDate, freezeDate } = getSeasonBoundaries('2026-SPRING')
+    expect(splashDate).to.equal('2026-03-01 00:00:00.000')
+    expect(freezeDate).to.equal('2026-05-31 23:59:59.999')
+  })
+
+  it('returns correct boundaries for SUMMER', () => {
+    const { splashDate, freezeDate } = getSeasonBoundaries('2026-SUMMER')
+    expect(splashDate).to.equal('2026-06-01 00:00:00.000')
+    expect(freezeDate).to.equal('2026-08-31 23:59:59.999')
+  })
+
+  it('returns correct boundaries for FALL', () => {
+    const { splashDate, freezeDate } = getSeasonBoundaries('2026-FALL')
+    expect(splashDate).to.equal('2026-09-01 00:00:00.000')
+    expect(freezeDate).to.equal('2026-11-30 23:59:59.999')
+  })
+
+  it('returns correct boundaries for WINTER (spans year boundary)', () => {
+    const { splashDate, freezeDate } = getSeasonBoundaries('2025-WINTER')
+    expect(splashDate).to.equal('2025-12-01 00:00:00.000')
+    expect(freezeDate).to.equal('2026-02-28 23:59:59.999')
+  })
+
+  it('handles leap year for WINTER freeze date', () => {
+    const { splashDate, freezeDate } = getSeasonBoundaries('2027-WINTER')
+    expect(splashDate).to.equal('2027-12-01 00:00:00.000')
+    // 2028 is a leap year
+    expect(freezeDate).to.equal('2028-02-29 23:59:59.999')
   })
 })
