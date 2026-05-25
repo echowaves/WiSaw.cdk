@@ -517,6 +517,11 @@ export default async function main (uuid: string, groupingLevel: string): Promis
     photoIdx++
   }
 
+  // Deactivate stale wave if no photos were grouped (prevents infinite loop)
+  if (photosGrouped === 0 && activeWave != null) {
+    await closeWave()
+  }
+
   // Flush remaining pending photos and update wave name
   if (pendingWaveUuid != null && pendingPhotoIds.length > 0) {
     await flushWavePhotos(pendingWaveUuid, pendingPhotoIds, uuid)

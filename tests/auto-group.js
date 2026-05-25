@@ -274,3 +274,55 @@ describe('auto-group: skip-non-matching behavior (string match level)', () => {
     // Both grouped into same wave at COUNTRY level
   })
 })
+
+describe('auto-group: stale wave detection (infinite loop prevention)', () => {
+  const makePhoto = (overrides) => ({
+    id: 'p1',
+    lat: null,
+    lon: null,
+    createdAt: '2025-01-01',
+    locality: null,
+    district: null,
+    region: null,
+    country: null,
+    countryCode: null,
+    ...overrides
+  })
+
+  const makeWave = (overrides) => ({
+    anchorLocality: null,
+    anchorDistrict: null,
+    anchorRegion: null,
+    anchorCountry: null,
+    anchorLat: null,
+    anchorLon: null,
+    ...overrides
+  })
+
+  it('all photos from different city fail string match against active wave (stale wave scenario)', () => {
+    // This verifies the precondition for the infinite loop:
+    // active wave is NYC, all photos are LA — none match
+    const wave = makeWave({ anchorLocality: 'New York', anchorRegion: 'New York', anchorCountry: 'US' })
+    const photos = [
+      makePhoto({ id: 'p1', locality: 'Los Angeles', region: 'California', country: 'US' }),
+      makePhoto({ id: 'p2', locality: 'Los Angeles', region: 'California', country: 'US' }),
+      makePhoto({ id: 'p3', locality: 'Los Angeles', region: 'California', country: 'US' })
+    ]
+
+    // All photos fail string match at CITY level
+    for (const photo of photos) {
+      expect(fitsPhotoInWave(photo, wave, 'CITY')).to.equal(false)
+    }
+    // In the algorithm: all are skipped, photosGrouped = 0,
+    // stale wave detection closes the wave so next call can proceed
+  })
+
+  it('null-geo photos fail string match against geo-anchored wave (stale wave scenario)', () => {
+    const wave = makeWave({ anchorLocality: 'New York', anchorRegion: 'New York', anchorCountry: 'US' })
+    const nullPhoto = makePhoto({ locality: null, region: null, country: null })
+
+    expect(fitsPhotoInWave(nullPhoto, wave, 'CITY')).to.equal(false)
+    // Would be skipped, and if all remaining photos are null-geo,
+    // stale wave detection kicks in
+  })
+})
