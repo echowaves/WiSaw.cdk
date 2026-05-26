@@ -39,7 +39,7 @@ interface GeoResult {
   countryCode: string | null
 }
 
-const BATCH_LIMIT = 200
+const BATCH_LIMIT = 1000
 const MAX_PHOTOS_PER_WAVE = 1000
 
 /**
@@ -77,6 +77,7 @@ function getMostFrequentLocality (localityCounts: Record<string, number>): strin
   let bestKey: string | null = null
   let bestCount = 0
   for (const [key, count] of Object.entries(localityCounts)) {
+    if (key === 'unknown') continue
     if (count > bestCount) {
       bestCount = count
       bestKey = key

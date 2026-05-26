@@ -568,3 +568,43 @@ describe('auto-group: findMatchingWave frozen wave filtering', () => {
     expect(wouldAutoGroupReuse(wave)).to.equal(true)
   })
 })
+
+describe('auto-group: getMostFrequentLocality excludes unknown', () => {
+  // Mirrors the logic in getMostFrequentLocality from autoGroupPhotosIntoWaves.ts
+  function getMostFrequentLocality (localityCounts) {
+    let bestKey = null
+    let bestCount = 0
+    for (const [key, count] of Object.entries(localityCounts)) {
+      if (key === 'unknown') continue
+      if (count > bestCount) {
+        bestCount = count
+        bestKey = key
+      }
+    }
+    return bestKey
+  }
+
+  it('returns real locality when unknown has higher count', () => {
+    const counts = { 'unknown': 150, 'Berlin': 50 }
+    expect(getMostFrequentLocality(counts)).to.equal('Berlin')
+  })
+
+  it('returns null when all entries are unknown', () => {
+    const counts = { 'unknown': 200 }
+    expect(getMostFrequentLocality(counts)).to.equal(null)
+  })
+
+  it('returns most frequent real locality ignoring unknown', () => {
+    const counts = { 'unknown': 300, 'Berlin': 50, 'Munich': 80 }
+    expect(getMostFrequentLocality(counts)).to.equal('Munich')
+  })
+
+  it('returns null for empty map', () => {
+    expect(getMostFrequentLocality({})).to.equal(null)
+  })
+
+  it('works normally when no unknown entries exist', () => {
+    const counts = { 'Berlin': 100, 'Munich': 50 }
+    expect(getMostFrequentLocality(counts)).to.equal('Berlin')
+  })
+})
