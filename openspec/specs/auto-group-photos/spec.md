@@ -80,9 +80,10 @@ The auto-group loop SHALL use a **search-and-reuse** approach:
 `findOrCreateWave(photo)` SHALL:
 1. Query existing waves owned by the user (`createdBy = uuid`) matching the photo's locality fields (scoped by `groupingLevel`) OR within `ST_DWithin` distance threshold, with `photosCount < 1000` and same `groupingLevel`.
 2. Filter candidates by season: `getSeasonKey(wave.splashDate) === getSeasonKey(photo.createdAt)`.
-3. Select the most recently created matching wave (`ORDER BY createdAt DESC`).
-4. If a match is found, resume the wave (load its photo count and locality frequency distribution).
-5. If no match is found, create a new wave from the photo.
+3. **Skip waves that are explicitly user-frozen (`freezeMode = 'FROZEN'`)**. Waves with `freezeMode = 'AUTO'` (or NULL) or `freezeMode = 'UNFROZEN'` SHALL NOT be skipped, regardless of whether their `freezeDate` is in the past. Date-based freeze is a user-facing concept and SHALL NOT prevent auto-grouping from filling waves across batches.
+4. Select the most recently created matching wave (`ORDER BY createdAt DESC`).
+5. If a match is found, resume the wave (load its photo count and locality frequency distribution).
+6. If no match is found, create a new wave from the photo.
 
 #### Scenario: Non-contiguous photos reuse existing wave
 
@@ -95,6 +96,28 @@ The auto-group loop SHALL use a **search-and-reuse** approach:
 - **THEN** the first photo is from NYC → existing "New York, Winter 2025" wave found
 - **AND** NYC photos are added to the existing wave (now 200 photos)
 - **AND** no duplicate NYC wave is created
+
+#### Scenario: Historical wave reused across batches
+
+- **GIVEN** 500 ungrouped photos from "Berlin, Summer 2024"
+- **AND** no existing wave matches
+- **WHEN** `autoGroupPhotosIntoWaves` is called (batch 1, 200 photos)
+- **THEN** a new wave "Berlin, Summer 2024" is created with `freezeDate = 2024-08-31`
+- **AND** 200 photos are grouped into it
+- **WHEN** called again (batch 2, 200 photos)
+- **THEN** `findMatchingWave` finds the existing "Berlin, Summer 2024" wave
+- **AND** the wave is NOT skipped despite `freezeDate < now`
+- **AND** 200 more photos are added (wave now has 400 photos)
+- **WHEN** called again (batch 3, 100 photos)
+- **THEN** remaining 100 photos are added (wave now has 500 photos)
+
+#### Scenario: Explicitly frozen wave skipped by auto-grouping
+
+- **GIVEN** a wave "Tokyo, Fall 2025" with `freezeMode = 'FROZEN'` and 50 photos
+- **AND** 100 ungrouped photos from Tokyo in Fall 2025
+- **WHEN** `autoGroupPhotosIntoWaves` is called
+- **THEN** `findMatchingWave` skips the frozen wave
+- **AND** a new wave is created for the Tokyo photos
 
 #### Scenario: findOrCreateWave uses distance fallback
 

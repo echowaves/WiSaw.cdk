@@ -8,7 +8,6 @@ import { fitsPhotoInWave, DISTANCE_THRESHOLDS_KM } from './_autoGroupGeo'
 import { _filterPhotosInRadius } from './_filterPhotosInRadius'
 import { getSeasonKey, getSeasonBoundaries } from './_seasonKey'
 import { formatSeasonName } from './_seasonName'
-import { _isWaveFrozen } from './_isWaveFrozen'
 
 interface AutoGroupResult {
   waveUuid: string | null
@@ -309,7 +308,7 @@ async function findMatchingWave (
   for (const wave of result.rows) {
     if (wave.splashDate != null) {
       const waveSeasonKey = getSeasonKey(moment(wave.splashDate))
-      if (waveSeasonKey === photoSeasonKey && !_isWaveFrozen(wave)) {
+      if (waveSeasonKey === photoSeasonKey && wave.freezeMode !== 'FROZEN') {
         return wave
       }
     }

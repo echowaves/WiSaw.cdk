@@ -494,27 +494,49 @@ describe('auto-group: season-aligned wave freeze dates', () => {
 })
 
 describe('auto-group: findMatchingWave frozen wave filtering', () => {
-  it('skips waves frozen by AUTO mode (past freeze date)', () => {
-    // Wave with freezeDate in the past → frozen under AUTO
+  // findMatchingWave uses `wave.freezeMode !== 'FROZEN'` (not _isWaveFrozen)
+  // so date-frozen waves are reusable by auto-grouping across batches.
+
+  function wouldAutoGroupReuse (wave) {
+    // Mirrors the filter logic in findMatchingWave's season loop
+    return wave.freezeMode !== 'FROZEN'
+  }
+
+  it('reuses historical wave with AUTO freeze mode (date-frozen) across batches', () => {
+    // Wave from Summer 2024 — freezeDate is in the past
     const wave = {
-      splashDate: '2025-12-01 00:00:00.000',
-      freezeDate: '2026-02-28 23:59:59.999',
+      splashDate: '2024-06-01 00:00:00.000',
+      freezeDate: '2024-08-31 23:59:59.999',
       freezeMode: 'AUTO'
     }
-    // Current date (May 2026) is past freezeDate → frozen
+    // _isWaveFrozen says true (date-frozen), but auto-grouping ignores date freeze
     expect(_isWaveFrozen(wave)).to.equal(true)
-    // findMatchingWave would skip this wave
+    // findMatchingWave would still reuse this wave
+    expect(wouldAutoGroupReuse(wave)).to.equal(true)
+  })
+
+  it('reuses historical wave with null freezeMode (default AUTO) across batches', () => {
+    // Older waves may have null freezeMode (defaults to AUTO behavior)
+    const wave = {
+      splashDate: '2024-06-01 00:00:00.000',
+      freezeDate: '2024-08-31 23:59:59.999',
+      freezeMode: null
+    }
+    expect(_isWaveFrozen(wave)).to.equal(true)
+    // null !== 'FROZEN' → reusable
+    expect(wouldAutoGroupReuse(wave)).to.equal(true)
   })
 
   it('skips waves with freezeMode FROZEN', () => {
-    // Wave explicitly set to FROZEN, even with future dates
+    // Wave explicitly set to FROZEN by user
     const wave = {
       splashDate: '2026-03-01 00:00:00.000',
       freezeDate: '2099-12-31 23:59:59.999',
       freezeMode: 'FROZEN'
     }
     expect(_isWaveFrozen(wave)).to.equal(true)
-    // findMatchingWave would skip this wave
+    // findMatchingWave skips explicitly frozen waves
+    expect(wouldAutoGroupReuse(wave)).to.equal(false)
   })
 
   it('does NOT skip unfrozen wave in current season', () => {
@@ -530,6 +552,7 @@ describe('auto-group: findMatchingWave frozen wave filtering', () => {
     // Current date is within splashDate..freezeDate → NOT frozen
     expect(_isWaveFrozen(wave)).to.equal(false)
     // findMatchingWave would return this wave
+    expect(wouldAutoGroupReuse(wave)).to.equal(true)
   })
 
   it('does NOT skip explicitly UNFROZEN wave', () => {
@@ -542,5 +565,6 @@ describe('auto-group: findMatchingWave frozen wave filtering', () => {
     // Dates say frozen, but UNFROZEN overrides
     expect(_isWaveFrozen(wave)).to.equal(false)
     // findMatchingWave would return this wave
+    expect(wouldAutoGroupReuse(wave)).to.equal(true)
   })
 })
