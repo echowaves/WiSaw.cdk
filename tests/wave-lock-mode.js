@@ -35,6 +35,8 @@ describe('wave freeze mode helpers', () => {
 
 describe('updateWave owner-only freeze mode contract', () => {
   it('keeps owner guard and handles freezeMode persistence paths', () => {
+    // nosemgrep: audit.security.audit-dynamic-file-path.user-controlled-file-path
+    // False positive: path uses only __dirname + hardcoded relative path, no user input
     const updatePath = path.resolve(__dirname, '../lambda-fns/controllers/waves/update.ts')
     const source = fs.readFileSync(updatePath, 'utf8')
 
