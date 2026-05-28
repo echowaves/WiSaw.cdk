@@ -2,16 +2,20 @@ import psql from '../../psql'
 import moment from 'moment'
 
 export const _updatePhotosCount = async (waveUuid: string) => {
-  const updatedAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS')
   const wave =
   (await psql.query(
-    `UPDATE "Waves" SET "photosCount" =
-      (SELECT COUNT(*) FROM "WavePhotos"
-       JOIN "Photos" ON "Photos"."id" = "WavePhotos"."photoId"
-       WHERE "WavePhotos"."waveUuid" = $1 AND "Photos"."active" = true),
-      "updatedAt" = $3
+    `UPDATE "Waves" SET
+      "photosCount" = sub.cnt,
+      "updatedAt" = sub.last_photo_date,
+      "freezeDate" = sub.last_photo_date
+      FROM (
+        SELECT COUNT(*) AS cnt, MAX("Photos"."createdAt") AS last_photo_date
+        FROM "WavePhotos"
+        JOIN "Photos" ON "Photos"."id" = "WavePhotos"."photoId"
+        WHERE "WavePhotos"."waveUuid" = $1 AND "Photos"."active" = true
+      ) sub
       WHERE "waveUuid" = $2
-      RETURNING *`, [waveUuid, waveUuid, updatedAt])
+      RETURNING *`, [waveUuid, waveUuid])
   ).rows[0]
   return wave.photosCount
 }

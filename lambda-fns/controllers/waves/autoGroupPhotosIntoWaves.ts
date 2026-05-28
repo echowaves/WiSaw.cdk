@@ -166,10 +166,10 @@ async function createWave (
   splashDate: string,
   freezeDate: string,
   groupingLevel: string,
-  anchorGeo: GeoResult
+  anchorGeo: GeoResult,
+  photoCreatedAt: string
 ): Promise<string> {
   const waveUuid = uuidv4()
-  const now = moment().format('YYYY-MM-DD HH:mm:ss.SSS')
 
   if (lon != null && lat != null) {
     await psql.query(`
@@ -187,7 +187,7 @@ async function createWave (
         `, [waveUuid, waveName, '', uuid, lon, lat, radius ?? 50, groupingLevel,
       anchorGeo.locality ?? null, anchorGeo.district ?? null,
       anchorGeo.region ?? null, anchorGeo.country ?? null,
-      splashDate, freezeDate, now, now])
+      splashDate, photoCreatedAt, photoCreatedAt, photoCreatedAt])
   } else {
     await psql.query(`
       INSERT INTO "Waves" (
@@ -204,14 +204,14 @@ async function createWave (
         `, [waveUuid, waveName, '', uuid, radius ?? 50, groupingLevel,
       anchorGeo.locality ?? null, anchorGeo.district ?? null,
       anchorGeo.region ?? null, anchorGeo.country ?? null,
-      splashDate, freezeDate, now, now])
+      splashDate, photoCreatedAt, photoCreatedAt, photoCreatedAt])
   }
 
   await psql.query(`
     INSERT INTO "WaveUsers" (
          "waveUuid", "uuid", "role", "createdAt", "updatedAt"
        ) VALUES ($1, $2, $3, $4, $5)
-     `, [waveUuid, uuid, 'owner', now, now])
+     `, [waveUuid, uuid, 'owner', photoCreatedAt, photoCreatedAt])
 
   return waveUuid
 }
@@ -444,15 +444,13 @@ export default async function main (uuid: string, groupingLevel: string): Promis
            "anchorLocality" = $2,
            "anchorDistrict" = $3,
            "anchorRegion" = $4,
-           "anchorCountry" = $5,
-           "updatedAt" = $6
-        WHERE "waveUuid" = $7
+           "anchorCountry" = $5
+        WHERE "waveUuid" = $6
        `, [finalWaveName,
         refinedGeo.locality ?? null,
         refinedGeo.district ?? null,
         refinedGeo.region ?? null,
         refinedGeo.country ?? null,
-        moment().format('YYYY-MM-DD HH:mm:ss.SSS'),
         currentWaveUuid])
     }
 
@@ -550,7 +548,8 @@ export default async function main (uuid: string, groupingLevel: string): Promis
         waveName, uuid, photo.lon, photo.lat, 50,
         seasonDates.splashDate,
         seasonDates.freezeDate,
-        gl, photoGeo
+        gl, photoGeo,
+        photo.createdAt
       )
 
       pendingWaveUuid = currentWaveUuid
@@ -720,15 +719,13 @@ export default async function main (uuid: string, groupingLevel: string): Promis
          "anchorLocality" = $2,
          "anchorDistrict" = $3,
          "anchorRegion" = $4,
-         "anchorCountry" = $5,
-         "updatedAt" = $6
-      WHERE "waveUuid" = $7
+         "anchorCountry" = $5
+      WHERE "waveUuid" = $6
      `, [finalWaveName,
       refinedGeo.locality ?? null,
       refinedGeo.district ?? null,
       refinedGeo.region ?? null,
       refinedGeo.country ?? null,
-      moment().format('YYYY-MM-DD HH:mm:ss.SSS'),
       currentWaveUuid])
   }
 

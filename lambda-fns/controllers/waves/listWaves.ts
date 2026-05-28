@@ -58,7 +58,7 @@ export default async function main (
     JOIN "WaveUsers" ON "Waves"."waveUuid" = "WaveUsers"."waveUuid"
     WHERE "WaveUsers"."uuid" = $1
     ${searchClause}
-    ORDER BY "Waves".${sortField} ${direction}
+    ORDER BY "Waves".${sortField} ${direction}, "Waves"."waveUuid" ASC
     LIMIT ${limit}
     OFFSET ${offset}
   `
