@@ -328,6 +328,16 @@ export default async function main (uuid: string, groupingLevel: string): Promis
   await psql.connect()
   await _assertHasSecret(uuid)
 
+  // Acquire per-user advisory lock to prevent concurrent execution
+  const lockResult = await psql.query(
+    "SELECT pg_try_advisory_lock(hashtext('autoGroup:' || $1)) AS locked",
+    [uuid]
+  )
+  if (lockResult.rows[0]?.locked !== true) {
+    await psql.clean()
+    return { waveUuid: null, name: null, photosGrouped: 0, photosRemaining: -1, wavesCreated: 0, hasMore: true, isNewWave: false }
+  }
+
   const gl = groupingLevel
 
   // 1. Get ungrouped photos with LIMIT
@@ -365,8 +375,7 @@ export default async function main (uuid: string, groupingLevel: string): Promis
 
   // Nothing to process
   if (photos.length === 0) {
-    await psql.clean()
-    return { waveUuid: null, name: null, photosGrouped: 0, photosRemaining: 0, wavesCreated: 0, hasMore: false, isNewWave: false }
+    await psql.query("SELECT pg_advisory_unlock(hashtext('autoGroup:' || $1))", [uuid])
   }
 
   // 2. State variables
@@ -425,7 +434,7 @@ export default async function main (uuid: string, groupingLevel: string): Promis
       pendingPhotoIds = []
     }
 
-    // Persist refined name and anchor
+    // Persist refined name (anchor fields are stable identity — not mutated)
     if (currentWaveUuid != null && waveSeasonKey != null) {
       const mostFreqLocality = getMostFrequentLocality(localityCounts)
       const refinedGeo = buildGeoFromMostFrequent(
@@ -439,19 +448,9 @@ export default async function main (uuid: string, groupingLevel: string): Promis
       currentWaveName = finalWaveName
 
       await psql.query(`
-        UPDATE "Waves" SET
-           "name" = $1,
-           "anchorLocality" = $2,
-           "anchorDistrict" = $3,
-           "anchorRegion" = $4,
-           "anchorCountry" = $5
-        WHERE "waveUuid" = $6
-       `, [finalWaveName,
-        refinedGeo.locality ?? null,
-        refinedGeo.district ?? null,
-        refinedGeo.region ?? null,
-        refinedGeo.country ?? null,
-        currentWaveUuid])
+        UPDATE "Waves" SET "name" = $1
+        WHERE "waveUuid" = $2
+       `, [finalWaveName, currentWaveUuid])
     }
 
     currentWave = null
@@ -714,19 +713,9 @@ export default async function main (uuid: string, groupingLevel: string): Promis
     currentWaveName = finalWaveName
 
     await psql.query(`
-      UPDATE "Waves" SET
-         "name" = $1,
-         "anchorLocality" = $2,
-         "anchorDistrict" = $3,
-         "anchorRegion" = $4,
-         "anchorCountry" = $5
-      WHERE "waveUuid" = $6
-     `, [finalWaveName,
-      refinedGeo.locality ?? null,
-      refinedGeo.district ?? null,
-      refinedGeo.region ?? null,
-      refinedGeo.country ?? null,
-      currentWaveUuid])
+      UPDATE "Waves" SET "name" = $1
+      WHERE "waveUuid" = $2
+     `, [finalWaveName, currentWaveUuid])
   }
 
   // Count remaining ungrouped photos
@@ -740,6 +729,7 @@ export default async function main (uuid: string, groupingLevel: string): Promis
   `, [uuid])
   const photosRemaining = parseInt(remainingResult.rows[0]?.cnt ?? '0', 10)
 
+  await psql.query("SELECT pg_advisory_unlock(hashtext('autoGroup:' || $1))", [uuid])
   await psql.clean()
   return {
     waveUuid: currentWaveUuid,

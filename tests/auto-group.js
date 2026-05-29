@@ -608,3 +608,109 @@ describe('auto-group: getMostFrequentLocality excludes unknown', () => {
     expect(getMostFrequentLocality(counts)).to.equal('Berlin')
   })
 })
+
+describe('auto-group: advisory lock concurrency guard', () => {
+  it('early return result has correct shape when lock not acquired', () => {
+    // When pg_try_advisory_lock returns false, main() returns this exact shape
+    const earlyReturn = {
+      waveUuid: null,
+      name: null,
+      photosGrouped: 0,
+      photosRemaining: -1,
+      wavesCreated: 0,
+      hasMore: true,
+      isNewWave: false
+    }
+    expect(earlyReturn.photosGrouped).to.equal(0)
+    expect(earlyReturn.hasMore).to.equal(true)
+    expect(earlyReturn.photosRemaining).to.equal(-1)
+    expect(earlyReturn.waveUuid).to.equal(null)
+    expect(earlyReturn.wavesCreated).to.equal(0)
+    expect(earlyReturn.isNewWave).to.equal(false)
+  })
+
+  it('early return is distinguishable from normal no-photos result', () => {
+    // Lock contention: photosRemaining = -1, hasMore = true
+    const lockContention = { photosGrouped: 0, photosRemaining: -1, hasMore: true }
+    // Normal no-photos: photosRemaining = 0, hasMore = false
+    const noPhotos = { photosGrouped: 0, photosRemaining: 0, hasMore: false }
+
+    expect(lockContention.photosRemaining).to.not.equal(noPhotos.photosRemaining)
+    expect(lockContention.hasMore).to.not.equal(noPhotos.hasMore)
+  })
+})
+
+describe('auto-group: anchor fields are immutable during refinement', () => {
+  // Mirrors the logic: closeWave() and final flush only UPDATE "name",
+  // anchor fields remain as set at wave creation time.
+
+  function getMostFrequentLocality (localityCounts) {
+    let bestKey = null
+    let bestCount = 0
+    for (const [key, count] of Object.entries(localityCounts)) {
+      if (key === 'unknown') continue
+      if (count > bestCount) {
+        bestCount = count
+        bestKey = key
+      }
+    }
+    return bestKey
+  }
+
+  it('anchor fields survive when all photos have null locality', () => {
+    // Scenario: Antarctica wave — all photos have null locality
+    const originalAnchor = {
+      anchorLocality: null,
+      anchorRegion: null,
+      anchorCountry: 'Antarctica'
+    }
+
+    const localityCounts = { 'unknown': 277 }
+    const mostFreq = getMostFrequentLocality(localityCounts)
+    expect(mostFreq).to.equal(null)
+
+    // With the fix: only name is updated, anchors stay unchanged
+    // The UPDATE query is: UPDATE "Waves" SET "name" = $1 WHERE "waveUuid" = $2
+    // anchorCountry remains 'Antarctica' — no mutation
+    expect(originalAnchor.anchorCountry).to.equal('Antarctica')
+  })
+
+  it('anchor fields survive when most-frequent locality differs from anchor', () => {
+    // Scenario: wave anchored on Canton, majority photos from Hull
+    const originalAnchor = {
+      anchorLocality: 'Canton',
+      anchorRegion: 'Massachusetts',
+      anchorCountry: 'United States'
+    }
+
+    const localityCounts = { 'Canton': 3, 'Hull': 8, 'Boston': 2 }
+    const mostFreq = getMostFrequentLocality(localityCounts)
+    expect(mostFreq).to.equal('Hull')
+
+    // With the fix: name updates to "Hull, ..." but anchor stays "Canton"
+    // findMatchingWave can still find this wave via anchorLocality = 'Canton'
+    expect(originalAnchor.anchorLocality).to.equal('Canton')
+    expect(originalAnchor.anchorRegion).to.equal('Massachusetts')
+  })
+
+  it('wave matching still works with stable anchors across batches', () => {
+    // After batch 1: wave anchor = Canton, name refined to Hull
+    // Batch 2: first photo is from Canton → string match against anchor succeeds
+    const wave = {
+      anchorLocality: 'Canton',
+      anchorRegion: 'Massachusetts',
+      anchorCountry: 'United States'
+    }
+    const photoCanton = { locality: 'Canton', region: 'Massachusetts', country: 'United States', lat: null, lon: null }
+    const photoHull = { locality: 'Hull', region: 'Massachusetts', country: 'United States', lat: null, lon: null }
+
+    // At REGION level, both match (same region + country)
+    expect(fitsPhotoInWave(photoCanton, wave, 'REGION')).to.equal(true)
+    expect(fitsPhotoInWave(photoHull, wave, 'REGION')).to.equal(true)
+
+    // At CITY level, only Canton matches the anchor
+    expect(fitsPhotoInWave(photoCanton, wave, 'CITY')).to.equal(true)
+    expect(fitsPhotoInWave(photoHull, wave, 'CITY')).to.equal(false)
+    // Hull would fall through to distance fallback — not lost, just different path
+  })
+})

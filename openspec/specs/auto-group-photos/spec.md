@@ -6,6 +6,38 @@ Define how photos are grouped into waves using field-matching based on reverse g
 
 ## Requirements
 
+### Requirement: Concurrent execution guard
+
+The `autoGroupPhotosIntoWaves` mutation SHALL acquire a PostgreSQL advisory lock scoped to the user UUID before processing. If the lock cannot be acquired (another invocation is already running for the same user), the mutation SHALL return early with `photosGrouped: 0`, `hasMore: true`, and no other side effects.
+
+The lock SHALL be acquired using `pg_try_advisory_lock(hashtext('autoGroup:' || uuid))` and released using `pg_advisory_unlock` before closing the database connection.
+
+#### Scenario: Concurrent call returns early
+
+- **GIVEN** an `autoGroupPhotosIntoWaves` call is in progress for user U
+- **WHEN** a second call for user U is invoked concurrently
+- **THEN** the second call returns `{ photosGrouped: 0, photosRemaining: -1, hasMore: true, wavesCreated: 0, isNewWave: false, waveUuid: null, name: null }`
+- **AND** no waves or WavePhotos are created by the second call
+
+#### Scenario: Lock released after processing
+
+- **GIVEN** `autoGroupPhotosIntoWaves` acquires the advisory lock
+- **WHEN** processing completes (normally or via error)
+- **THEN** the advisory lock is released before the database connection is cleaned up
+
+#### Scenario: Lock released on Lambda crash
+
+- **GIVEN** `autoGroupPhotosIntoWaves` acquires the advisory lock
+- **WHEN** the Lambda invocation crashes or times out
+- **THEN** the database connection is closed by `serverless-postgres`
+- **AND** the advisory lock is automatically released by PostgreSQL
+
+#### Scenario: Different users not blocked
+
+- **GIVEN** `autoGroupPhotosIntoWaves` is running for user A
+- **WHEN** a call for user B is invoked
+- **THEN** user B's call proceeds normally (different lock key)
+
 ### Requirement: GroupingLevel Enum
 
 A `GroupingLevel` enum MUST be available in the GraphQL schema with values:
@@ -333,13 +365,23 @@ If all photos in the wave have null locality, `getMostFrequentLocality` SHALL re
 - **THEN** `getMostFrequentLocality` returns null
 - **AND** the wave name falls back to "40.7°N, 74.0°W, Season Year"
 
-### Requirement: Anchor fields updated during processing
+### Requirement: Anchor fields are immutable during processing
 
-When the dominant locality changes during wave processing (e.g., more photos arrive with a different locality than the anchor), the following fields MUST be updated to reflect the new dominant locality: `anchorLocality`, `anchorDistrict`, `anchorRegion`, `anchorCountry`, and wave location (lat/lon).
+When the dominant locality changes during wave processing (e.g., more photos arrive with a different locality than the anchor), the anchor fields (`anchorLocality`, `anchorDistrict`, `anchorRegion`, `anchorCountry`) SHALL NOT be updated. Only the wave `name` SHALL be updated to reflect the most-frequent locality. Anchor fields are stable identity fields used for wave matching and SHALL remain as set at wave creation time.
 
-#### Scenario: Anchor fields updated during refinement
+#### Scenario: Anchor fields unchanged during refinement
+
 - **WHEN** a wave anchored on "Potsdam" receives 5 subsequent photos from "Berlin-Mitte"
-- **THEN** `anchorLocality` is updated to "Berlin-Mitte" and related anchor fields follow
+- **THEN** `anchorLocality` remains "Potsdam"
+- **AND** the wave `name` is updated to reflect "Berlin-Mitte" (the most-frequent locality)
+
+#### Scenario: Null-locality wave retains original anchors
+
+- **GIVEN** a wave created with `anchorCountry = "Antarctica"` and `anchorRegion = NULL`
+- **WHEN** 277 photos are processed, all with null locality
+- **THEN** `anchorCountry` remains "Antarctica"
+- **AND** `anchorRegion` remains NULL
+- **AND** subsequent batches can still match the wave via `anchorCountry = 'Antarctica'`
 
 ### Requirement: Wave name persisted after refinement
 
