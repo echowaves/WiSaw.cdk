@@ -7,7 +7,7 @@ export const _updatePhotosCount = async (waveUuid: string) => {
     `UPDATE "Waves" SET
       "photosCount" = sub.cnt,
       "updatedAt" = sub.last_photo_date,
-      "freezeDate" = sub.last_photo_date
+       "freezeDate" = sub.last_photo_date + INTERVAL '1 month'
       FROM (
         SELECT COUNT(*) AS cnt, MAX("Photos"."createdAt") AS last_photo_date
         FROM "WavePhotos"

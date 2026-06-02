@@ -475,21 +475,52 @@ describe('auto-group: frequency distribution on resume', () => {
   })
 })
 
-describe('auto-group: season-aligned wave freeze dates', () => {
-  it('new wave gets season boundary dates, not photo date', () => {
+describe('auto-group: photo-derived wave freeze dates', () => {
+  it('new wave gets photo-derived dates with 1-month grace period', () => {
     // When creating a wave for a Spring 2026 photo, the dates should be
-    // season boundaries, not the photo's createdAt
+    // photo-derived, not season-aligned
     const photoDate = moment('2026-04-15')
-    const seasonKey = getSeasonKey(photoDate)
-    expect(seasonKey).to.equal('2026-SPRING')
+    const expectedSplash = photoDate.format('YYYY-MM-DD HH:mm:ss.SSS')
+    const expectedFreeze = photoDate.add(1, 'month').format('YYYY-MM-DD HH:mm:ss.SSS')
 
-    const { splashDate, freezeDate } = getSeasonBoundaries(seasonKey)
-    expect(splashDate).to.equal('2026-03-01 00:00:00.000')
-    expect(freezeDate).to.equal('2026-05-31 23:59:59.999')
+    expect(expectedSplash).to.equal('2026-04-15 00:00:00.000')
+    expect(expectedFreeze).to.equal('2026-05-15 00:00:00.000')
 
-    // NOT the photo date
-    expect(splashDate).to.not.equal(photoDate.format('YYYY-MM-DD HH:mm:ss.SSS'))
-    expect(freezeDate).to.not.equal(photoDate.format('YYYY-MM-DD HH:mm:ss.SSS'))
+    // NOT season boundaries
+    expect(expectedSplash).to.not.equal('2026-03-01 00:00:00.000')
+    expect(expectedFreeze).to.not.equal('2026-05-31 23:59:59.999')
+  })
+
+  it('adding photos shifts freezeDate forward by 1 month', () => {
+    // Wave created with first photo on 2026-01-15
+    const firstPhoto = moment('2026-01-15')
+    const initialFreeze = firstPhoto.clone().add(1, 'month').format('YYYY-MM-DD HH:mm:ss.SSS')
+    expect(initialFreeze).to.equal('2026-02-15 00:00:00.000')
+
+    // New photo arrives on 2026-03-20 (later than first photo)
+    const newPhoto = moment('2026-03-20')
+    const updatedFreeze = newPhoto.clone().add(1, 'month').format('YYYY-MM-DD HH:mm:ss.SSS')
+    expect(updatedFreeze).to.equal('2026-04-20 00:00:00.000')
+
+    // freezeDate shifts forward
+    expect(moment(updatedFreeze).isAfter(initialFreeze)).to.equal(true)
+  })
+
+  it('adding older photos does not shift freezeDate backward', () => {
+    // Wave created with first photo on 2026-03-20
+    const firstPhoto = moment('2026-03-20')
+    const initialFreeze = firstPhoto.clone().add(1, 'month').format('YYYY-MM-DD HH:mm:ss.SSS')
+    expect(initialFreeze).to.equal('2026-04-20 00:00:00.000')
+
+    // New photo arrives on 2026-02-01 (earlier than first photo)
+    const newPhoto = moment('2026-02-01')
+    const newPhotoFreeze = newPhoto.clone().add(1, 'month').format('YYYY-MM-DD HH:mm:ss.SSS')
+    expect(newPhotoFreeze).to.equal('2026-03-01 00:00:00.000')
+
+    // MAX(photo.createdAt) = 2026-03-20 (the newer photo), so freezeDate stays
+    const updatedFreeze = moment.max([firstPhoto, newPhoto]).clone().add(1, 'month').format('YYYY-MM-DD HH:mm:ss.SSS')
+    expect(updatedFreeze).to.equal('2026-04-20 00:00:00.000')
+    expect(updatedFreeze).to.equal(initialFreeze)
   })
 })
 
@@ -501,7 +532,6 @@ describe('auto-group: findMatchingWave frozen wave filtering', () => {
     // Mirrors the filter logic in findMatchingWave's season loop
     return wave.freezeMode !== 'FROZEN'
   }
-
   it('reuses historical wave with AUTO freeze mode (date-frozen) across batches', () => {
     // Wave from Summer 2024 — freezeDate is in the past
     const wave = {

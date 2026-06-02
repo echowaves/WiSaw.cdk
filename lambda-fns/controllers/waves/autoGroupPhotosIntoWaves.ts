@@ -6,7 +6,7 @@ import { assertValidUuid } from '../../utilities/assertValidUuid'
 import { _assertHasSecret } from './_assertHasSecret'
 import { fitsPhotoInWave, DISTANCE_THRESHOLDS_KM } from './_autoGroupGeo'
 import { _filterPhotosInRadius } from './_filterPhotosInRadius'
-import { getSeasonKey, getSeasonBoundaries } from './_seasonKey'
+import { getSeasonKey } from './_seasonKey'
 import { formatSeasonName } from './_seasonName'
 
 interface AutoGroupResult {
@@ -542,11 +542,12 @@ export default async function main (uuid: string, groupingLevel: string): Promis
       const waveName = computeWaveNameFromKey(photoGeo, gl, waveSeasonKey) ??
         coordinateFallbackName(photo.lat, photo.lon, waveSeasonKey)
 
-      const seasonDates = getSeasonBoundaries(photoSeasonKey)
+      const splashDate = photo.createdAt
+      const freezeDate = moment(photo.createdAt).add(1, 'month').format('YYYY-MM-DD HH:mm:ss.SSS')
       currentWaveUuid = await createWave(
         waveName, uuid, photo.lon, photo.lat, 50,
-        seasonDates.splashDate,
-        seasonDates.freezeDate,
+        splashDate,
+        freezeDate,
         gl, photoGeo,
         photo.createdAt
       )
