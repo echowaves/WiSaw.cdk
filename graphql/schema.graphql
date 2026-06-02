@@ -429,7 +429,11 @@ type Mutation {
     lon: Float
     radius: Int
     groupingLevel: GroupingLevel
-    ): Boolean!
+    open: Boolean
+    splashDate: String
+    freezeDate: String
+    freezeMode: String
+  ): Boolean!
 
   removePhotoFromWave(
     waveUuid: String!

@@ -14,6 +14,8 @@
 ### Requirement: updateWave is owner-only with frozen restrictions
 `updateWave` is owner-only. On frozen waves, owners MAY update any field including freezeDate and other properties. Non-owners are rejected regardless of freeze state. Optional `null` and `undefined` inputs are treated as not provided; empty description string clears description.
 
+**Schema contract**: The `updateWave` mutation accepts the following optional parameters: `name`, `description`, `lat`, `lon`, `radius`, `groupingLevel`, `open`, `splashDate`, `freezeDate`, `freezeMode`.
+
 #### Scenario: Owner updates frozen wave freely
 - **WHEN** the caller is the owner of a frozen wave AND sends any valid update payload
 - **THEN** the system SHALL apply all changes without restriction
