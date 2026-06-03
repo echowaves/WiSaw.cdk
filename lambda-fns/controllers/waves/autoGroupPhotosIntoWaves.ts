@@ -376,6 +376,7 @@ export default async function main (uuid: string, groupingLevel: string): Promis
   // Nothing to process
   if (photos.length === 0) {
     await psql.query("SELECT pg_advisory_unlock(hashtext('autoGroup:' || $1))", [uuid])
+    return { waveUuid: null, name: null, photosGrouped: 0, photosRemaining: 0, wavesCreated: 0, hasMore: false, isNewWave: false }
   }
 
   // 2. State variables
@@ -472,6 +473,8 @@ export default async function main (uuid: string, groupingLevel: string): Promis
    * or create a new wave. Sets all state variables for the current wave.
    */
   async function findOrCreateWave (photo: PhotoRow): Promise<void> {
+    if (photo == null || photo.id == null) return
+
     const photoGeo: GeoResult = {
       locality: photo.locality,
       district: photo.district,
