@@ -704,6 +704,13 @@ export default async function main (uuid: string, groupingLevel: string): Promis
     pendingPhotoIds = []
   }
 
+  // Backend fix: Detect and handle stale wave (zero-progress case)
+  // If no photos were grouped but we have an active wave, close it to prevent
+  // infinite loop when photos are counted but never inserted
+  if (photosGrouped === 0 && currentWave != null) {
+    await closeWave()
+  }
+
   if (currentWaveUuid != null && waveSeasonKey != null) {
     const mostFreqLocality = getMostFrequentLocality(localityCounts)
     const refinedGeo = buildGeoFromMostFrequent(
