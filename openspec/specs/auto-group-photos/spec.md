@@ -507,3 +507,51 @@ When searching for an existing wave to reuse, `findMatchingWave` SHALL skip any 
 - **AND** a new photo matches the wave's locality, season, and grouping level
 - **WHEN** `findMatchingWave` searches for a reusable wave
 - **THEN** the wave is returned for reuse (explicit UNFROZEN overrides date rules)
+
+### Requirement: No Infinite Loop on Zero Progress
+
+The system MUST detect and recover from zero-progress batches where photos were counted but not inserted into `WavePhotos`.
+
+#### Scenario: Zero progress with active wave
+
+- **GIVEN** an active wave exists from a previous call with `currentWave != null`
+- **GIVEN** `photosGrouped === 0` (photos were counted but not flushed)
+- **WHEN** the main processing loop completes
+- **THEN** `closeWave()` is called to deactivate the stale wave
+- **AND** `currentWave` is set to null
+- **AND** the result has `photosGrouped: 0`, `hasMore: true`, and `photosRemaining > 0`
+
+#### Scenario: Stale wave from null photo ID
+
+- **GIVEN** a photo has `id === null`
+- **WHEN** `findOrCreateWave()` is called with that photo
+- **THEN** the function returns early without setting `currentWave` or `pendingWaveUuid`
+- **AND** `photosGrouped` is NOT incremented
+- **AND** on next loop iteration, stale wave detection triggers `closeWave()`
+
+#### Scenario: Frontend stuck state detection (client-side)
+
+- **GIVEN** the client receives a result with `photosGrouped === 0 && hasMore === true`
+- **WHEN** the `do...while(hasMore)` loop checks this condition
+- **THEN** the loop breaks to prevent infinite loop
+- **AND** the client can retry with a fresh auto-group call
+
+### Requirement: Photos Inserted When Grouped
+
+The system MUST insert photos into `WavePhotos` when they are counted as grouped.
+
+#### Scenario: Normal grouping
+
+- **GIVEN** photos are matched to a wave
+- **WHEN** they are added to `pendingPhotoIds` and `photosGrouped` is incremented
+- **THEN** `flushWavePhotos()` is called (either via `closeWave()` or end-of-batch)
+- **AND** photos are inserted into `WavePhotos` table
+
+#### Scenario: Photos not counted without being inserted
+
+- **GIVEN** a photo's `id` is null
+- **WHEN** `findOrCreateWave()` is called with that photo
+- **THEN** the function returns early
+- **AND** `photosGrouped` is NOT incremented
+- **AND** `pendingWaveUuid` is NOT set
+- **AND** no insert attempt is made
