@@ -7,6 +7,6 @@ exclude_paths:
   - "openspec/**"
   - "scripts/**"
   - "migrations/**"  
+  - ".roo/**"
+  - ".github/**"
 exclude_patterns:
-
-
