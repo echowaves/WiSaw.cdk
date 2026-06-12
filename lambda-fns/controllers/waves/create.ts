@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid'
-import moment from 'moment'
+import dayjs, { type Dayjs } from 'dayjs'
 import psql from '../../psql'
 import { Wave } from '../../models/wave'
 import { plainToClass } from 'class-transformer'
@@ -27,11 +27,11 @@ export default async function main (
   }
 
   const waveUuid = uuidv4()
-  const createdAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS')
+  const createdAt = dayjs().toISOString()
   const updatedAt = createdAt
 
   const effectiveSplashDate = splashDate ?? createdAt
-  const effectiveFreezeDate = freezeDate ?? moment().add(30, 'days').format('YYYY-MM-DD HH:mm:ss.SSS')
+  const effectiveFreezeDate = freezeDate ?? dayjs().add(30, 'days').toISOString()
 
   if (new Date(effectiveFreezeDate) <= new Date(effectiveSplashDate)) {
     throw new Error('freezeDate must be after splashDate')

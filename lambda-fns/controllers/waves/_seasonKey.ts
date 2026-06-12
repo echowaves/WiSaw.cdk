@@ -1,4 +1,4 @@
-import moment from 'moment'
+import dayjs, { type Dayjs } from 'dayjs'
 
 type Season = 'WINTER' | 'SPRING' | 'SUMMER' | 'FALL'
 
@@ -17,7 +17,7 @@ const MONTH_TO_SEASON: Record<number, Season> = {
   11: 'WINTER' // Dec
 }
 
-export function getSeasonKey (date: moment.Moment): string {
+export function getSeasonKey (date: Dayjs): string {
   const month = date.month() // 0-indexed
   const year = date.year()
   const season = MONTH_TO_SEASON[month]
@@ -48,15 +48,15 @@ export function getSeasonBoundaries (seasonKey: string): { splashDate: string, f
 
   const startMonth = SEASON_START_MONTH[season]
   const startYear = season === 'WINTER' ? year : year
-  const splashDate = moment({ year: startYear, month: startMonth, day: 1 })
+  const splashDate = dayjs().year(startYear).month(startMonth).date(1)
     .startOf('day')
-    .format('YYYY-MM-DD HH:mm:ss.SSS')
+    .toISOString()
 
   const endMonth = SEASON_END_MONTH[season]
   const endYear = season === 'WINTER' ? year + 1 : year
-  const freezeDate = moment({ year: endYear, month: endMonth, day: 1 })
+  const freezeDate = dayjs().year(endYear).month(endMonth).date(1)
     .endOf('month')
-    .format('YYYY-MM-DD HH:mm:ss.SSS')
+    .toISOString()
 
   return { splashDate, freezeDate }
 }

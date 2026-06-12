@@ -1,4 +1,4 @@
-import moment from "moment"
+import dayjs, { type Dayjs } from 'dayjs'
 
 import { plainToClass } from "class-transformer"
 
@@ -42,7 +42,7 @@ export default async function main(
 
   // no records with this nickName found -- create new secret record
   if (existingSecret.length === 0) {
-    const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
+    const createdAt = dayjs().toISOString()
     const updatedAt = createdAt
 
     // here validate values before inserting into DB

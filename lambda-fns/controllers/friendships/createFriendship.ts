@@ -1,4 +1,4 @@
-import moment from "moment"
+import dayjs, { type Dayjs } from 'dayjs'
 
 import { v4 as uuidv4 } from "uuid"
 
@@ -13,7 +13,7 @@ export default async function main(uuid: string) {
   // here validate values before inserting into DB
   assertValidUuid(uuid, 'uuid')
 
-  const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
+  const createdAt = dayjs().toISOString()
 
   const friendshipUuid = uuidv4()
 

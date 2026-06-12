@@ -1,4 +1,4 @@
-import moment from "moment"
+import dayjs, { type Dayjs } from 'dayjs'
  
 import psql from "../../psql"
 import { traceLog } from '../../utilities/trace'
@@ -258,7 +258,7 @@ const _recognizeImage = async ({
   // console.log(`_recognizeImage ended 3  ${Key}`)
 
   try {
-    const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
+    const createdAt = dayjs().toISOString()
 
     const searchableText = [
       ...metaData.Labels.map((l: any) => l.Name).filter(Boolean),
@@ -303,7 +303,7 @@ const _activatePhoto = async ({ photoId }: { photoId: string }) => {
   // console.log(`_activatePhoto started  ${photoId}`)
 
   try {
-    const updatedAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
+    const updatedAt = dayjs().toISOString()
 
     await psql.connect()
     await psql.query(`    
@@ -336,7 +336,7 @@ const _extractImageDimensions = async ({
     const height = metadata.height
 
     if (width && height) {
-      const updatedAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
+      const updatedAt = dayjs().toISOString()
 
       await psql.connect()
       await psql.query(`    

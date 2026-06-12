@@ -1,4 +1,4 @@
-import moment from 'moment'
+import dayjs, { type Dayjs } from 'dayjs'
 import psql from '../../psql'
 import { Wave } from '../../models/wave'
 import { plainToClass } from 'class-transformer'
@@ -32,7 +32,7 @@ export default async function main (
   await _assertNotBanned(waveUuid, uuid)
 
   // Insert user as contributor (ignore if already member)
-  const now = moment().format('YYYY-MM-DD HH:mm:ss.SSS')
+  const now = dayjs().toISOString()
   await psql.query(`
     INSERT INTO "WaveUsers" ("waveUuid", "uuid", "role", "createdAt", "updatedAt")
     VALUES ($1, $2, 'contributor', $3, $4)

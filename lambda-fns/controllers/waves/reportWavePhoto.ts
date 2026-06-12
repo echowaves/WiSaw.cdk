@@ -1,4 +1,4 @@
-import moment from 'moment'
+import dayjs, { type Dayjs } from 'dayjs'
 import psql from '../../psql'
 import { assertValidUuid } from '../../utilities/assertValidUuid'
 import { _getWaveRole } from './_getWaveRole'
@@ -21,7 +21,7 @@ export default async function main (
     throw new Error('You are not a member of this wave')
   }
 
-  const createdAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS')
+  const createdAt = dayjs().toISOString()
 
   const result = (
     await psql.query(`

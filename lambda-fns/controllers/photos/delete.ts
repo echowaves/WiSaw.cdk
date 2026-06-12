@@ -5,7 +5,7 @@ import { _updatePhotosCount } from '../waves/_updatePhotosCount'
 // import Photo from '../../models/photo'
 
 export default async function main (photoId: string, uuid: string): Promise<string> {
-  // const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
+  // const createdAt = dayjs().toISOString()
   assertValidUuid(photoId, 'photoId')
   assertValidUuid(uuid, 'uuid')
 

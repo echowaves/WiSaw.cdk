@@ -1,4 +1,4 @@
-import moment from 'moment'
+import dayjs, { type Dayjs } from 'dayjs'
 import psql from '../../psql'
 import { Wave } from '../../models/wave'
 import { plainToClass } from 'class-transformer'
@@ -93,7 +93,7 @@ export default async function main (
     params.push(anchorCountry)
   }
 
-  const updatedAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS')
+  const updatedAt = dayjs().toISOString()
   setClauses.push(`"updatedAt" = $${paramIndex++}`)
   params.push(updatedAt)
 

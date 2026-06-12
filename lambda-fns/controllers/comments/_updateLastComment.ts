@@ -1,9 +1,9 @@
-import moment from "moment"
+import dayjs, { type Dayjs } from 'dayjs'
 
 import psql from "../../psql"
 
 export const _updateLastComment = async (photoId: string) => {
-  const updatedAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
+  const updatedAt = dayjs().toISOString()
 
   await psql.connect()
   const photo = (

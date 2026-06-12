@@ -1,4 +1,4 @@
-import moment from "moment"
+import dayjs, { type Dayjs } from 'dayjs'
 
 import psql from "../../psql"
 
@@ -7,7 +7,7 @@ import psql from "../../psql"
 
 export const _notifyAllWatchers = async (photoId: string) => {
   // this is when it happens
-  const watchedAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
+  const watchedAt = dayjs().toISOString()
 
   await psql.connect()
   await psql.query(`

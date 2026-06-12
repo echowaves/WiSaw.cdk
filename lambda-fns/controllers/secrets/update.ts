@@ -1,4 +1,4 @@
-import moment from "moment"
+import dayjs, { type Dayjs } from 'dayjs'
 
 import { plainToClass } from "class-transformer"
 
@@ -29,7 +29,7 @@ export default async function main(
 ) {
   assertValidUuid(uuid, 'uuid')
 
-  const updatedAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
+  const updatedAt = dayjs().toISOString()
   const secretValid = newSecret.length >= 5 && newSecret.length <= 512
 
   if (!secretValid) {

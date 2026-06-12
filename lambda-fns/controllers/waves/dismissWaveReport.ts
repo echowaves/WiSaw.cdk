@@ -1,4 +1,4 @@
-import moment from 'moment'
+import dayjs, { type Dayjs } from 'dayjs'
 import psql from '../../psql'
 import { assertValidUuid } from '../../utilities/assertValidUuid'
 import { _assertWaveRole } from './_assertWaveRole'
@@ -41,7 +41,7 @@ export default async function main (
   `, [waveUuid])
   _assertNotDateFrozen(waveResult.rows[0])
 
-  const now = moment().format('YYYY-MM-DD HH:mm:ss.SSS')
+  const now = dayjs().toISOString()
 
   await psql.query(`
     UPDATE "AbuseReports"

@@ -7,7 +7,7 @@ const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3')
 const { RekognitionClient, DetectLabelsCommand, DetectModerationLabelsCommand, DetectTextCommand } = require('@aws-sdk/client-rekognition')
 const ServerlessClient = require('serverless-postgres')
 const sharp = require('sharp')
-const moment = require('moment')
+const dayjs = require('dayjs')
 
 const rdsCa = fs.readFileSync(path.join(__dirname, '../lambda-fns/certs/global-bundle.pem'), 'utf8')
 
@@ -199,7 +199,7 @@ async function saveRecognitions(photoId, metaData) {
       await db.connect()
     }
 
-    const updatedAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
+    const updatedAt = dayjs().toISOString()
     await db.query(
       `UPDATE "Recognitions" 
        SET "metaData" = $1, "updatedAt" = $2

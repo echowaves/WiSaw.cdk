@@ -1,20 +1,20 @@
-import moment from 'moment'
+import dayjs, { type Dayjs } from 'dayjs'
 import psql from '../../psql'
 
 import { plainToClass } from 'class-transformer'
 import Photo from '../../models/photo'
 import { buildSearchClause } from '../../utilities/searchClause'
 
-async function _retrievePhotos (currentDate: moment.Moment, daysAgo: number, lat: number, lon: number, searchTerm?: string): Promise<Photo[]> {
+async function _retrievePhotos (currentDate: Dayjs, daysAgo: number, lat: number, lon: number, searchTerm?: string): Promise<Photo[]> {
   const dateFrom = currentDate
     .clone()
     .subtract(daysAgo, 'days')
-    .format('YYYY-MM-DD HH:mm:ss.SSS')
+    .toISOString()
   const dateTo = currentDate
     .clone()
     .add(1, 'days')
     .subtract(daysAgo, 'days')
-    .format('YYYY-MM-DD HH:mm:ss.SSS')
+    .toISOString()
   const rowNumberOffset = 100 * daysAgo
 
   const { clause: searchClause, params: searchParams } = buildSearchClause(searchTerm, 6)
@@ -44,7 +44,7 @@ async function _retrievePhotos (currentDate: moment.Moment, daysAgo: number, lat
   ).rows
   // console.log({results})
   const photos = results.map((photo: any) => plainToClass(Photo, photo))
-  // .sort((a: Photo, b: Photo) => moment(b.createdAt).diff(moment(a.createdAt)))
+  // .sort((a: Photo, b: Photo) => dayjs(b.createdAt).diff(dayjs(a.createdAt)))
 
   return photos
 }
@@ -62,8 +62,8 @@ export default async function main (
     noMoreData: boolean
     nextPage: number | null
   }> {
-  const currentDate = moment()
-  const whenToStopDate = moment(whenToStop)
+  const currentDate = dayjs()
+  const whenToStopDate = dayjs(whenToStop)
 
   await psql.connect()
 

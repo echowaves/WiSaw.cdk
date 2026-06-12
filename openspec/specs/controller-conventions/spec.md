@@ -22,15 +22,11 @@ Controllers map DB rows to model classes with `plainToClass` when model serializ
 - **THEN** plainToClass mapping preserves model serialization behavior
 
 ### Requirement: Timestamp format reflects implementation usage
-Most create/update paths use `moment().format("YYYY-MM-DD HH:mm:ss.SSS")`; legacy exceptions can exist in specific controllers.
+All create/update paths use `dayjs().toISOString()` to produce valid ISO 8601 `AWSDateTime` strings.
 
 #### Scenario: Standard timestamp precision path
-- **WHEN** controller follows current convention
-- **THEN** timestamps are generated with millisecond precision format
-
-#### Scenario: Legacy timestamp exception path
-- **WHEN** specific controller retains historical format
-- **THEN** behavior is documented as an implementation exception
+- **WHEN** controller creates or updates a record
+- **THEN** timestamp is generated with `dayjs().toISOString()` producing valid ISO 8601 format (e.g. `"2026-06-12T02:43:30.793Z"`)
 
 ### Requirement: Side effects execute after primary mutation
 Primary DB mutation runs first; counters/watchers/notifications are handled by helper side effects afterward.

@@ -1,4 +1,4 @@
-import moment from "moment"
+import dayjs, { type Dayjs } from 'dayjs'
 
 import psql from "../../psql"
 import { assertValidUuid } from '../../utilities/assertValidUuid'
@@ -6,7 +6,7 @@ import { assertValidUuid } from '../../utilities/assertValidUuid'
 export default async function main(uuid: string, description: string) {
   assertValidUuid(uuid, 'uuid')
 
-  const createdAt = moment().format("YYYY-MM-DD HH:mm:ss.SSS")
+  const createdAt = dayjs().toISOString()
   await psql.connect()
   const result = (
     await psql.query(`

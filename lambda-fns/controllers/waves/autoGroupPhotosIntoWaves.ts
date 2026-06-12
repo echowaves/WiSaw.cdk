@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid'
-import moment from 'moment'
+import dayjs, { type Dayjs } from 'dayjs'
 import psql from '../../psql'
 import { _updatePhotosCount } from './_updatePhotosCount'
 import { assertValidUuid } from '../../utilities/assertValidUuid'
@@ -140,7 +140,7 @@ function coordinateFallbackName (lat: number | null, lon: number | null, seasonK
  */
 async function flushWavePhotos (waveUuid: string, photoIds: string[], uuid: string): Promise<void> {
   if (photoIds.length === 0) return
-  const now = moment().format('YYYY-MM-DD HH:mm:ss.SSS')
+  const now = dayjs().toISOString()
   const values: any[] = []
   const placeholders: string[] = []
   let idx = 1
@@ -308,7 +308,7 @@ async function findMatchingWave (
   // Filter by season in code
   for (const wave of result.rows) {
     if (wave.splashDate != null) {
-      const waveSeasonKey = getSeasonKey(moment(wave.splashDate))
+      const waveSeasonKey = getSeasonKey(dayjs(wave.splashDate))
       if (waveSeasonKey === photoSeasonKey && wave.freezeMode !== 'FROZEN') {
         return wave
       }
@@ -483,7 +483,7 @@ export default async function main (uuid: string, groupingLevel: string): Promis
       countryCode: photo.countryCode
     }
 
-    const photoDate = moment(photo.createdAt)
+    const photoDate = dayjs(photo.createdAt)
     const photoSeasonKey = getSeasonKey(photoDate)
 
     // Search for a matching existing wave
@@ -546,7 +546,7 @@ export default async function main (uuid: string, groupingLevel: string): Promis
         coordinateFallbackName(photo.lat, photo.lon, waveSeasonKey)
 
       const splashDate = photo.createdAt
-      const freezeDate = moment(photo.createdAt).add(1, 'month').format('YYYY-MM-DD HH:mm:ss.SSS')
+      const freezeDate = dayjs(photo.createdAt).add(1, 'month').toISOString()
       currentWaveUuid = await createWave(
         waveName, uuid, photo.lon, photo.lat, 50,
         splashDate,
@@ -620,7 +620,7 @@ export default async function main (uuid: string, groupingLevel: string): Promis
     }
 
     // Photo matches — check season boundary
-    const photoSeasonKey = getSeasonKey(moment(photo.createdAt))
+    const photoSeasonKey = getSeasonKey(dayjs(photo.createdAt))
     if (waveSeasonKey != null && photoSeasonKey !== waveSeasonKey) {
       // Season boundary — close current wave, find or create new one
       await closeWave()

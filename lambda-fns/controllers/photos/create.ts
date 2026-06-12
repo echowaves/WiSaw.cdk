@@ -1,4 +1,4 @@
-import moment from 'moment'
+import dayjs, { type Dayjs } from 'dayjs'
 import { v4 as uuidv4 } from 'uuid'
 import { GeoPlacesClient, ReverseGeocodeCommand } from '@aws-sdk/client-geo-places'
 
@@ -56,7 +56,7 @@ export default async function main (
     throw 'You are banned'
        }
 
-  const createdAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS')
+  const createdAt = dayjs().toISOString()
   const updatedAt = createdAt
   const photoId = uuidv4()
 

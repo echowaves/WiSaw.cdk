@@ -1,5 +1,5 @@
 import psql from '../../psql'
-import moment from 'moment'
+import dayjs, { type Dayjs } from 'dayjs'
 
 export const _updatePhotosCount = async (waveUuid: string) => {
   const wave =
@@ -21,7 +21,7 @@ export const _updatePhotosCount = async (waveUuid: string) => {
 }
 
 export const _incrementPhotosCount = async (waveUuid: string): Promise<number> => {
-  const updatedAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS')
+  const updatedAt = dayjs().toISOString()
   const result = await psql.query(
     'UPDATE "Waves" SET "photosCount" = GREATEST("photosCount" + 1, 0), "updatedAt" = $2 WHERE "waveUuid" = $1 RETURNING "photosCount"',
     [waveUuid, updatedAt]

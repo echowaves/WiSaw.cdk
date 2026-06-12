@@ -1,4 +1,4 @@
-import moment from 'moment'
+import dayjs, { type Dayjs } from 'dayjs'
 
 import psql from '../../psql'
 import { assertValidUuid } from '../../utilities/assertValidUuid'
@@ -67,7 +67,7 @@ export default async function main (
     await _updatePhotosCount(existing.waveUuid)
   }
 
-  const createdAt = moment().format('YYYY-MM-DD HH:mm:ss')
+  const createdAt = dayjs().toISOString()
   const updatedAt = createdAt
 
   await psql.query(`
