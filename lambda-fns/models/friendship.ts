@@ -3,6 +3,8 @@ class Friendship {
   uuid1: string
   uuid2: string
 
+  photosCount?: number | null
+
   createdAt: string
 }
 

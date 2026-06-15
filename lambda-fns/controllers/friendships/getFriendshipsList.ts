@@ -15,13 +15,13 @@ export default async function main(
 
   const friendships =
   (await psql.query(`
-  
-  SELECT *
-      FROM "Friendships"
-      WHERE "uuid1" = $1
-      OR "uuid2" = $1
-    `, [uuid])
-  ).rows
+    
+    SELECT *
+        FROM "Friendships"
+        WHERE "uuid1" = $1
+        OR "uuid2" = $1
+      `, [uuid])
+    ).rows
 
   // Extract friend UUIDs from confirmed friendships
   const friendUuids: string[] = []
@@ -31,29 +31,43 @@ export default async function main(
     }
   }
 
-  // Batch-load up to 5 recent active photos per friend
+   // Batch-load up to 5 recent active photos AND counts per friend
   const photosByFriend: Record<string, any[]> = {}
+  const countsByFriend: Record<string, number> = {}
   if (friendUuids.length > 0) {
     const photosQuery = `
-      SELECT ranked.*
+      SELECT sub.*, cnt.friend_photo_count
       FROM (
-        SELECT "Photos".*,
-               ROW_NUMBER() OVER (PARTITION BY "Photos"."uuid" ORDER BY "Photos"."updatedAt" DESC) AS row_num
+        SELECT ranked.*,
+               COUNT(*) OVER (PARTITION BY "uuid") AS friend_photo_count
+        FROM (
+          SELECT "Photos".*,
+                 ROW_NUMBER() OVER (PARTITION BY "Photos"."uuid" ORDER BY "Photos"."updatedAt" DESC) AS row_num
+          FROM "Photos"
+          WHERE "Photos"."uuid" = ANY($1)
+          AND "Photos"."active" = true
+         ) ranked
+        WHERE row_num <= 5
+       ) sub
+      JOIN (
+        SELECT "uuid", COUNT(*) AS friend_photo_count
         FROM "Photos"
-        WHERE "Photos"."uuid" = ANY($1)
-        AND "Photos"."active" = true
-      ) ranked
-      WHERE row_num <= 5
-    `
+        WHERE "uuid" = ANY($1)
+        AND "active" = true
+        GROUP BY "uuid"
+       ) cnt ON sub.uuid = cnt.uuid
+      `
     const photosResults = (await psql.query(photosQuery, [friendUuids])).rows
     for (const row of photosResults) {
-      if (photosByFriend[row.uuid] == null) {
-        photosByFriend[row.uuid] = []
+      const friendUuid = row.uuid
+      if (photosByFriend[friendUuid] == null) {
+        photosByFriend[friendUuid] = []
+        countsByFriend[friendUuid] = row.friend_photo_count ?? 0
       }
       const photo = plainToClass(Photo, { ...row, row_number: row.row_num })
-      photosByFriend[row.uuid].push(photo.toJSON())
+      photosByFriend[friendUuid].push(photo.toJSON())
     }
-  }
+   }
 
   await psql.clean()
 
@@ -61,6 +75,7 @@ export default async function main(
     const friendship = plainToClass(Friendship, f)
     const friendUuid = f.uuid1 === uuid ? f.uuid2 : f.uuid1
     ;(friendship as any).photos = friendUuid != null ? (photosByFriend[friendUuid] ?? []) : []
+    ;(friendship as any).photosCount = friendUuid != null ? (countsByFriend[friendUuid] ?? 0) : 0
     return friendship
   })
 }

@@ -196,6 +196,7 @@ type Friendship {
   uuid1: String! 
   uuid2: String # if uuid2 is null == friendship is not confirmed
   photos: [Photo]
+  photosCount: Int
   createdAt: AWSDateTime!  
 }
 
