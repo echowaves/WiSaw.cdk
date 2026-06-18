@@ -14,7 +14,7 @@ export default async function main (
   const limit = 20
   const offset = pageNumber * limit
 
-  const { clause: searchClause, params: searchParams } = buildSearchClause(searchTerm, 2)
+  const { clause: searchClause, params: searchParams } = buildSearchClause(searchTerm, 3)
 
   const query = `
     SELECT p.*
