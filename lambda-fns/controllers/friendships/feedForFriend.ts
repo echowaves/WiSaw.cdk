@@ -69,8 +69,10 @@ export default async function main (
   const query = `
     SELECT p.*
     FROM "Photos" p
+    INNER JOIN "Watchers" w
+      ON p.id = w."photoId"
     WHERE
-      p."uuid" = $1
+      w.uuid = $1
     AND p.active = true
     ${searchClause}
     ORDER BY p.${sortField} ${direction}

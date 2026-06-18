@@ -1,0 +1,13 @@
+name: 2026-06-18-backend-feed-for-friend-fix
+title: "Backend: Fix feedForFriend resolver to find shared photos"
+description: |
+  The feedForFriend resolver incorrectly queries photos where p.uuid = friendUuid
+  instead of finding photos shared with the friend via the Watchers table.
+  
+  Root cause: The SQL query filters photos by the friend's user UUID instead of
+  finding photos where the friend is a watcher.
+  
+  Impact: Users see "No Photos Yet" when clicking on friend photo strips, even when
+  friends have shared photos.
+  
+  Fix: Change the query to JOIN with the Watchers table and filter by w.uuid = friendUuid.
