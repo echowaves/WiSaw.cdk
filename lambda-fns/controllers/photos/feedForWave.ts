@@ -1,8 +1,6 @@
-import psql from '../../psql'
-import { plainToClass } from 'class-transformer'
-import Photo from '../../models/photo'
 import { assertValidUuid } from '../../utilities/assertValidUuid'
 import { buildSearchClause } from '../../utilities/searchClause'
+import { fetchPaginatedPhotos } from '../../utilities/paginatedPhotos'
 
 const ALLOWED_SORT_FIELDS: Record<string, string> = {
   createdAt: '"createdAt"',
@@ -22,7 +20,7 @@ export default async function main (
   sortBy?: string,
   sortDirection?: string
 ): Promise<{
-    photos: Photo[]
+    photos: any[]
     batch: string
     noMoreData: boolean
     nextPage: number | null
@@ -41,14 +39,10 @@ export default async function main (
   const limit = 100
   const offset = pageNumber * limit
 
-  await psql.connect()
-
-  const { clause: searchClause, params: searchParams } = buildSearchClause(searchTerm, 2)
+  const { clause: searchClause, params: searchParams } = buildSearchClause(searchTerm, 3)
 
   const query = `
-    SELECT
-      row_number() OVER (ORDER BY p.${sortField} ${direction}) + ${offset} as row_number,
-      p.*
+    SELECT p.*
     FROM "Photos" p
     INNER JOIN "WavePhotos" wp
       ON p.id = wp."photoId"
@@ -57,27 +51,15 @@ export default async function main (
     AND p.active = true
     ${searchClause}
     ORDER BY p.${sortField} ${direction}
-    LIMIT ${limit}
-    OFFSET ${offset}
+    LIMIT $2
+    OFFSET $3
   `
 
-  const results =
-  (await psql.query(query, [waveUuid, ...searchParams])
-  ).rows
-  await psql.clean()
-
-  const photos = results.map((photo: any) => plainToClass(Photo, photo))
-
-  let noMoreData = false
-
-  if (photos.length < limit) {
-    noMoreData = true
-  }
-
-  return {
-    photos,
-    batch,
-    noMoreData,
-    nextPage: noMoreData ? null : pageNumber + 1
-  }
+  return await fetchPaginatedPhotos({
+    query,
+    params: [waveUuid, limit, offset, ...searchParams],
+    pageNumber,
+    batchSize: limit,
+    batch
+  })
 }

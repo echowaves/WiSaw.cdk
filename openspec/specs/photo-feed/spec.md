@@ -1,15 +1,23 @@
 ## ADDED Requirements
 
-### Requirement: Feed endpoints return shared PhotoFeed envelope
-Feed queries return `photos`, `batch`, `noMoreData`, and `nextPage` according to each controller's pagination logic.
+### Requirement: Shared pagination utility handles connection lifecycle
+All photo feed controllers use `fetchPaginatedPhotos()` which manages `psql.connect()`/`clean()` with try/finally, maps rows via `plainToClass(Photo)`, and computes `noMoreData`/`nextPage`.
 
 #### Scenario: Batch token round-trips
 - **WHEN** client supplies batch token
 - **THEN** response echoes same batch token
 
 #### Scenario: Page has more data
-- **WHEN** controller determines additional data is available
-- **THEN** `noMoreData=false` and `nextPage` is non-null
+- **WHEN** `photos.length >= batchSize` and `noMoreDataOverride` is not set
+- **THEN** `noMoreData=false` and `nextPage=pageNumber+1`
+
+#### Scenario: Page is last
+- **WHEN** `photos.length < batchSize` and `noMoreDataOverride` is not set
+- **THEN** `noMoreData=true` and `nextPage=null`
+
+#### Scenario: noMoreDataOverride forces single-page
+- **WHEN** `noMoreDataOverride=true` is passed to utility
+- **THEN** `noMoreData=true` and `nextPage=null` regardless of `photos.length`
 
 ### Requirement: Feed search uses shared buildSearchClause helper
 Search filtering is built from Recognitions searchable text and active Comments text via `buildSearchClause`.
@@ -33,12 +41,12 @@ With `searchTerm`, `feedByDate` scans forward windows until results/stop/cap; wi
 - **WHEN** stop condition is reached before matches
 - **THEN** response returns no data with terminal pagination state
 
-### Requirement: feedForTextSearch currently behaves as single-page
-Current implementation returns one page and sets `noMoreData=true` and `nextPage=null`.
+### Requirement: feedForTextSearch returns single-page results
+The feedForTextSearch controller passes `noMoreDataOverride: true` to the shared utility, which forces `noMoreData=true` and `nextPage=null` regardless of result count. This preserves the existing single-page behavior while using the shared pagination infrastructure.
 
 #### Scenario: Text search returns partial result set
 - **WHEN** more records may exist beyond first page
-- **THEN** controller still reports single-page terminal state
+- **THEN** utility forces `noMoreData=true` and `nextPage=null` via `noMoreDataOverride` flag
 
 ### Requirement: Navigation boundaries return null-photo payload
 `getPhotoAllNext`/`getPhotoAllPrev` return `{ photo: null, comments: [], recognitions: [] }` when no neighboring photo exists.

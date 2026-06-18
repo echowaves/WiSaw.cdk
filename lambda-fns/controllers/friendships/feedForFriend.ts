@@ -1,8 +1,6 @@
-import psql from '../../psql'
-import { plainToClass } from 'class-transformer'
-import Photo from '../../models/photo'
 import { assertValidUuid } from '../../utilities/assertValidUuid'
 import { buildSearchClause } from '../../utilities/searchClause'
+import { fetchPaginatedPhotos } from '../../utilities/paginatedPhotos'
 
 const ALLOWED_SORT_FIELDS: Record<string, string> = {
   createdAt: '"createdAt"',
@@ -23,7 +21,7 @@ export default async function main (
   sortBy?: string,
   sortDirection?: string
 ): Promise<{
-    photos: Photo[]
+    photos: any[]
     batch: string
     noMoreData: boolean
     nextPage: number | null
@@ -40,22 +38,27 @@ export default async function main (
     throw new Error('Invalid sort direction')
   }
 
-  await psql.connect()
-
   // Validate accepted friendship exists
-  const friendship = (await psql.query(`
-    SELECT 1 FROM "Friendships"
-    WHERE "uuid2" IS NOT NULL
-      AND (
-        ("uuid1" = $1 AND "uuid2" = $2)
-        OR
-        ("uuid1" = $2 AND "uuid2" = $1)
-      )
-    LIMIT 1
-  `, [uuid, friendUuid])).rows
+  const psql = (await import('../../psql')).default
+  await psql.connect()
+  try {
+    const friendshipResult = (await psql.query(
+      `SELECT 1 FROM "Friendships"
+       WHERE "uuid2" IS NOT NULL
+         AND (
+           ("uuid1" = $1 AND "uuid2" = $2)
+           OR
+           ("uuid1" = $2 AND "uuid2" = $1)
+         )
+       LIMIT 1`,
+      [uuid, friendUuid]
+    )).rows
 
-  if (friendship.length === 0) {
-    throw new Error('No accepted friendship exists between these users')
+    if (friendshipResult.length === 0) {
+      throw new Error('No accepted friendship exists between these users')
+    }
+  } finally {
+    await psql.clean()
   }
 
   const limit = 100
@@ -64,36 +67,22 @@ export default async function main (
   const { clause: searchClause, params: searchParams } = buildSearchClause(searchTerm, 2)
 
   const query = `
-    SELECT
-      row_number() OVER (ORDER BY p.${sortField} ${direction}) + ${offset} as row_number,
-      p.*
+    SELECT p.*
     FROM "Photos" p
     WHERE
       p."uuid" = $1
     AND p.active = true
     ${searchClause}
     ORDER BY p.${sortField} ${direction}
-    LIMIT ${limit}
-    OFFSET ${offset}
+    LIMIT $2
+    OFFSET $3
   `
 
-  const results =
-  (await psql.query(query, [friendUuid, ...searchParams])
-  ).rows
-  await psql.clean()
-
-  const photos = results.map((photo: any) => plainToClass(Photo, photo))
-
-  let noMoreData = false
-
-  if (photos.length < limit) {
-    noMoreData = true
-  }
-
-  return {
-    photos,
-    batch,
-    noMoreData,
-    nextPage: noMoreData ? null : pageNumber + 1
-  }
+  return await fetchPaginatedPhotos({
+    query,
+    params: [friendUuid, limit, offset, ...searchParams],
+    pageNumber,
+    batchSize: limit,
+    batch
+  })
 }
