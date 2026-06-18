@@ -30,6 +30,11 @@ export default async function main(friendshipUuid: string, uuid: string) {
     throw new Error(`Friendship already confirmed`)
   }
 
+  if (existing[0].uuid1 === uuid) {
+    await psql.clean()
+    throw new Error(`Cannot accept self-friendship`)
+  }
+
   const friendship = (
     await psql.query(`
                         UPDATE "Friendships"

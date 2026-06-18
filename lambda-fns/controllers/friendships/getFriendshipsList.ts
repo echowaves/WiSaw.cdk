@@ -27,6 +27,10 @@ export default async function main(
   const friendUuids: string[] = []
   for (const f of friendships) {
     if (f.uuid2 != null) {
+      // Skip self-friendships
+      if (f.uuid1 === f.uuid2) {
+        continue
+      }
       friendUuids.push(f.uuid1 === uuid ? f.uuid2 : f.uuid1)
     }
   }

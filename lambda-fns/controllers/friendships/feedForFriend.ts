@@ -29,6 +29,11 @@ export default async function main (
   assertValidUuid(uuid, 'uuid')
   assertValidUuid(friendUuid, 'friendUuid')
 
+  // Reject self-feed
+  if (uuid === friendUuid) {
+    throw new Error('Cannot fetch feed for self')
+  }
+
   const sortField = ALLOWED_SORT_FIELDS[sortBy ?? 'updatedAt']
   if (sortField == null) {
     throw new Error('Invalid sort field')
