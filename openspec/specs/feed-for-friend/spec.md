@@ -1,9 +1,11 @@
 ### Requirement: Paginated photo feed for a friend
 The system SHALL provide a `feedForFriend` GraphQL query that returns a paginated feed of active photos belonging to a specific friend, identified by `friendUuid`.
 
+**IMPORTANT**: Photos are owned by the user who took them, stored in the `Photos.uuid` column. The `feedForFriend` query MUST NOT use the `Watchers` table - it must query photos directly by owner UUID.
+
 #### Scenario: Retrieve first page of friend's photos
 - **WHEN** `feedForFriend(uuid, friendUuid, pageNumber: 0, batch)` is called with valid UUIDs and an accepted friendship exists
-- **THEN** the system returns up to 100 active photos where `Photos.uuid = friendUuid`, ordered by `updatedAt` descending by default, with `row_number` annotations
+- **THEN** the system returns up to 100 active photos where `Photos.uuid = friendUuid` (friend is the photo owner), ordered by `updatedAt` descending by default, with `row_number` annotations
 
 #### Scenario: Pagination works correctly
 - **WHEN** `feedForFriend` is called with `pageNumber > 0`

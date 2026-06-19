@@ -1,14 +1,18 @@
 import psql from '../../psql'
 
-import {plainToClass,} from 'class-transformer'
+import { plainToClass } from 'class-transformer'
 import Friendship from '../../models/friendship'
 import Photo from '../../models/photo'
 import { assertValidUuid } from '../../utilities/assertValidUuid'
 
-
-export default async function main(
+export default async function main (
   uuid: string
-) {
+): Promise<{
+    friendships: any[]
+    friendUuids: string[]
+    photosByFriend: Record<string, any[]>
+    countsByFriend: Record<string, number>
+  }> {
   assertValidUuid(uuid, 'uuid')
 
   await psql.connect()
@@ -16,12 +20,13 @@ export default async function main(
   const friendships =
   (await psql.query(`
     
-    SELECT *
+    SELECT DISTINCT ON (LEAST(uuid1, uuid2), GREATEST(uuid1, uuid2)) *
         FROM "Friendships"
         WHERE "uuid1" = $1
         OR "uuid2" = $1
+        ORDER BY LEAST(uuid1, uuid2), GREATEST(uuid1, uuid2), "createdAt" DESC
       `, [uuid])
-    ).rows
+  ).rows
 
   // Extract friend UUIDs from confirmed friendships
   const friendUuids: string[] = []
@@ -35,7 +40,7 @@ export default async function main(
     }
   }
 
-   // Batch-load up to 5 recent active photos AND counts per friend
+  // Batch-load up to 5 recent active photos AND counts per friend
   const photosByFriend: Record<string, any[]> = {}
   const countsByFriend: Record<string, number> = {}
   if (friendUuids.length > 0) {
@@ -71,7 +76,7 @@ export default async function main(
       const photo = plainToClass(Photo, { ...row, row_number: row.row_num })
       photosByFriend[friendUuid].push(photo.toJSON())
     }
-   }
+  }
 
   await psql.clean()
 

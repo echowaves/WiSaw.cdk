@@ -74,10 +74,8 @@ export default async function main (
   const query = `
     SELECT p.*
     FROM "Photos" p
-    INNER JOIN "Watchers" w
-      ON p.id = w."photoId"
     WHERE
-      w.uuid = $1
+      p.uuid = $1
     AND p.active = true
     ${searchClause}
     ORDER BY p.${sortField} ${direction}
@@ -85,11 +83,13 @@ export default async function main (
     OFFSET $3
   `
 
-  return await fetchPaginatedPhotos({
+  const result = await fetchPaginatedPhotos({
     query,
     params: [friendUuid, limit, offset, ...searchParams],
     pageNumber,
     batchSize: limit,
     batch
   })
+
+  return result
 }
