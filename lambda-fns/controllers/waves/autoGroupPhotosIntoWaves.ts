@@ -328,15 +328,16 @@ export default async function main (uuid: string, groupingLevel: string): Promis
   await psql.connect()
   await _assertHasSecret(uuid)
 
-  // Acquire per-user advisory lock to prevent concurrent execution
-  const lockResult = await psql.query(
-    "SELECT pg_try_advisory_lock(hashtext('autoGroup:' || $1)) AS locked",
-    [uuid]
-  )
-  if (lockResult.rows[0]?.locked !== true) {
-    await psql.clean()
-    return { waveUuid: null, name: null, photosGrouped: 0, photosRemaining: -1, wavesCreated: 0, hasMore: true, isNewWave: false }
-  }
+  try {
+    // Acquire per-user advisory lock to prevent concurrent execution
+    const lockResult = await psql.query(
+      "SELECT pg_try_advisory_lock(hashtext('autoGroup:' || $1)) AS locked",
+      [uuid]
+    )
+    if (lockResult.rows[0]?.locked !== true) {
+      await psql.clean()
+      return { waveUuid: null, name: null, photosGrouped: 0, photosRemaining: -1, wavesCreated: 0, hasMore: true, isNewWave: false }
+    }
 
   const gl = groupingLevel
 
@@ -750,5 +751,16 @@ export default async function main (uuid: string, groupingLevel: string): Promis
     wavesCreated,
     hasMore: photosRemaining > 0,
     isNewWave
+  }
+  } catch (err) {
+    // Ensure lock is released even on error
+    try {
+      await psql.query("SELECT pg_advisory_unlock(hashtext('autoGroup:' || $1))", [uuid])
+    } catch (unlockErr) {
+      console.error('Failed to release advisory lock:', unlockErr)
+    }
+    throw err
+  } finally {
+    await psql.clean()
   }
 }
