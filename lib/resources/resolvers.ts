@@ -59,9 +59,22 @@ export function createResolvers (scope: Construct, api: appsync.GraphqlApi, lamb
     { typeName: 'Mutation', fieldName: 'removeUserFromWave' },
     { typeName: 'Mutation', fieldName: 'reportWavePhoto' },
     { typeName: 'Mutation', fieldName: 'dismissWaveReport' },
-    { typeName: 'Mutation', fieldName: 'banUserFromWave' }
+    { typeName: 'Mutation', fieldName: 'banUserFromWave' },
+    { typeName: 'Mutation', fieldName: '_notifyPhotoUploadComplete' }
   ]
+
+  const subscriptionFields = [
+    { typeName: 'Subscription', fieldName: '_notifyPhotoUploadComplete' }
+  ]
+
   fields.forEach(({ typeName, fieldName }) =>
+    lambdaDs.createResolver(`${typeName}-${fieldName}-Resolver`, {
+      typeName,
+      fieldName
+    })
+  )
+
+  subscriptionFields.forEach(({ typeName, fieldName }) =>
     lambdaDs.createResolver(`${typeName}-${fieldName}-Resolver`, {
       typeName,
       fieldName
