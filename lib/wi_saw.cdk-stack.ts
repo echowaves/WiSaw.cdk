@@ -22,7 +22,7 @@ export class WiSawCdkStack extends cdk.Stack {
 
     const api = createAppSyncApi(this)
 
-    const lambdas = createLambdas(this, config)
+    const lambdas = createLambdas(this, config, api)
     const { wisawFn } = lambdas
 
     const buckets = createBuckets(this, lambdas)
