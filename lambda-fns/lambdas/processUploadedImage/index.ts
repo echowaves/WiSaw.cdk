@@ -2,7 +2,7 @@ import psql from '../../psql'
 import { traceLog } from '../../utilities/trace'
 import dayjs from 'dayjs'
 
-import autoGroupPhotosIntoWaves from '../../../controllers/waves/autoGroupPhotosIntoWaves'
+import autoGroupPhotosIntoWaves from '../../controllers/waves/autoGroupPhotosIntoWaves'
 
 import { DetectLabelsCommand, DetectModerationLabelsCommand, DetectTextCommand, RekognitionClient } from "@aws-sdk/client-rekognition"
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3"
