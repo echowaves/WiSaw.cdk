@@ -555,3 +555,106 @@ The system MUST insert photos into `WavePhotos` when they are counted as grouped
 - **AND** `photosGrouped` is NOT incremented
 - **AND** `pendingWaveUuid` is NOT set
 - **AND** no insert attempt is made
+
+---
+
+### Requirement: Auto-grouping triggered after photo upload
+
+**WHEN** a photo is uploaded via S3 event  
+**THEN** the `processUploadedImage` Lambda SHALL trigger auto-grouping automatically  
+**AND** auto-grouping SHALL use `groupingLevel: 'CITY'` (50km)
+
+#### Scenario: New photo upload triggers auto-grouping
+
+- **GIVEN** user uploads a new photo with geocode data
+- **WHEN** S3 event triggers `processUploadedImage` Lambda
+- **AND** photo activation completes
+- **THEN** `autoGroupPhotosIntoWaves(uuid, 'CITY')` is called
+- **AND** photos are grouped into appropriate waves
+
+#### Scenario: Historical photos processed on first upload
+
+- **GIVEN** user has 5,000 historical ungrouped photos
+- **WHEN** user uploads first photo
+- **THEN** auto-grouping processes ALL ungrouped photos in batches
+- **AND** waves are created for each batch
+- **AND** photos are grouped into waves
+
+#### Scenario: Subsequent uploads process single photo
+
+- **GIVEN** user has no ungrouped photos
+- **WHEN** user uploads another photo
+- **THEN** auto-grouping checks count and skips (0 ungrouped)
+- **AND** no waves created, no errors
+
+### Requirement: Subscription notification on upload complete
+
+**WHEN** photo upload + auto-grouping completes  
+**THEN** `_notifyPhotoUploadComplete` subscription SHALL publish to all clients  
+**AND** payload SHALL contain `photoId`, `waveUuid?`, `photosGrouped`
+
+The controller queries the database to determine which wave the photo was grouped into. The `name` field is omitted since it can be inferred from the `photoId`.
+
+#### Scenario: Client receives upload completion notification
+
+- **GIVEN** client subscribed to `onPhotoUploadComplete(photoId: "...")`
+- **WHEN** photo upload completes (including auto-grouping)
+- **THEN** subscription publishes with PhotoUploadResult payload
+- **AND** client receives notification
+- **AND** client refreshes UI
+
+#### Scenario: Notification includes wave info when applicable
+
+- **GIVEN** auto-grouping grouped the photo into an existing or new wave
+- **WHEN** subscription publishes
+- **THEN** payload includes `waveUuid` and `photosGrouped`
+- **AND** `photosGrouped` reflects total photos grouped in this run
+
+#### Scenario: No wave created
+
+- **GIVEN** auto-grouping found no ungrouped photos
+- **WHEN** subscription publishes
+- **THEN** payload includes `waveUuid: null` and `photosGrouped: 0`
+
+### Requirement: Backward compatibility with client-initiated mutation
+
+**WHEN** client calls `autoGroupPhotosIntoWaves` mutation  
+**THEN** mutation SHALL work exactly as before  
+**AND** `groupingLevel` parameter SHALL still be accepted
+
+#### Scenario: Client calls mutation manually
+
+- **GIVEN** client calls `autoGroupPhotosIntoWaves(uuid, 'REGION')`
+- **THEN** mutation executes with REGION grouping level
+- **AND** result includes correct grouping level data
+- **AND** server-side auto-grouping still works independently
+
+### Requirement: PhotoUploadResult type for upload notifications
+
+The GraphQL schema MUST include a `PhotoUploadResult` type for upload notification payloads.
+
+**Fields:**
+- `photoId: String!` — The ID of the photo that was uploaded
+- `waveUuid: String` — The UUID of the wave the photo was grouped into (nullable)
+- `photosGrouped: Int!` — Total photos grouped in this auto-grouping run
+
+### Requirement: onPhotoUploadComplete subscription
+
+The GraphQL schema MUST include an `onPhotoUploadComplete` subscription that publishes when photo upload and auto-grouping completes.
+
+**Signature:**
+```graphql
+onPhotoUploadComplete(photoId: String!, photosGrouped: Int!): PhotoUploadResult
+  @aws_subscribe(mutations: ["_notifyPhotoUploadComplete"])
+```
+
+**Usage:**
+```graphql
+subscription {
+  onPhotoUploadComplete(photoId: "abc-123", photosGrouped: 1500) {
+    photoId
+    waveUuid
+    photosGrouped
+  }
+}
+```
