@@ -71,6 +71,7 @@ import createFriendship from './controllers/friendships/createFriendship'
 import deleteFriendship from './controllers/friendships/delete'
 
 import updateSecret from './controllers/secrets/update'
+import notifyPhotoUploadComplete from './controllers/photos/_notifyPhotoUploadComplete'
 
 // import AbuseReport from './models/abuseReport'
 // import Photo from './models/photo'
@@ -354,6 +355,10 @@ const mutationHandlers: Record<string, HandlerDefinition> = {
   banUserFromWave: {
     resolver: banUserFromWave,
     getArgs: (args) => [args.waveUuid, args.targetUuid, args.uuid, args.reason]
+  },
+  _notifyPhotoUploadComplete: {
+    resolver: notifyPhotoUploadComplete,
+    getArgs: (args) => [args.photoId, args.photosGrouped]
   }
 }
 

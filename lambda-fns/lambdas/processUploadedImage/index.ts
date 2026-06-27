@@ -1,12 +1,13 @@
-import dayjs, { type Dayjs } from 'dayjs'
- 
-import psql from "../../psql"
+import psql from '../../psql'
 import { traceLog } from '../../utilities/trace'
+import dayjs from 'dayjs'
 
+import autoGroupPhotosIntoWaves from '../../controllers/waves/autoGroupPhotosIntoWaves'
 
 import { DetectLabelsCommand, DetectModerationLabelsCommand, DetectTextCommand, RekognitionClient } from "@aws-sdk/client-rekognition"
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3"
 
+import fetch from 'node-fetch'
 
 const sharp = require("sharp")
 
@@ -58,16 +59,70 @@ export async function main(event: any = {}, context: any) {
 
   // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!   ended 3    photoId: ${photoId}`)
 
+  // Delete upload file and activate photo
   await Promise.all([
     _deleteUpload({ Bucket, Key: name }),
     _activatePhoto({ photoId }),
   ])
+
+  // Run auto-grouping using the existing controller
+  // Get photo's uuid first
+  await psql.connect()
+  const photoResult = await psql.query(
+    `SELECT "uuid" FROM "Photos" WHERE "id" = $1`,
+    [photoId]
+  )
+  let photosGrouped = 0
+  if (photoResult.rows.length > 0) {
+    const uuid = photoResult.rows[0].uuid
+    await psql.clean()
+    
+    // Loop until all photos are grouped (hasMore = false)
+    // autoGroupPhotosIntoWaves processes up to 1000 photos per invocation
+    let hasMore = true
+    while (hasMore) {
+      const result = await autoGroupPhotosIntoWaves(uuid, 'CITY')
+      photosGrouped += result.photosGrouped
+      hasMore = result.hasMore
+    }
+  } else {
+    await psql.clean()
+  }
+
+  // Fire-and-forget notification with auto-grouping result
+  // Call mutation via HTTP POST to AppSync GraphQL endpoint to trigger @aws_subscribe
+  void _notifyViaAppSync(photoId, photosGrouped)
 
   // console.log(`!!!!!!!!!!!!!!!!!!!!!!!!!!!   ended 4   photoId: ${photoId}`)
 
   // cb(null, 'success everything')
   traceLog('processUploadedImage:END', { duration: `${Date.now() - _traceStart}ms` })
   return true
+}
+
+// Fire-and-forget notification via AppSync GraphQL mutation
+// Calling the mutation triggers the @aws_subscribe directive and notifies all clients
+async function _notifyViaAppSync (photoId: string, photosGrouped: number): Promise<void> {
+  try {
+    const endpoint = process.env.APPSYNC_GRAPHQL_ENDPOINT
+    const apiKey = process.env.APPSYNC_API_KEY
+    if (!endpoint || !apiKey) return
+
+    await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey
+      },
+      body: JSON.stringify({
+        mutation: 'mutation NotifyPhotoUploadComplete($photoId: String!, $photosGrouped: Int!) { _notifyPhotoUploadComplete(photoId: $photoId, photosGrouped: $photosGrouped) { photoId waveUuid photosGrouped } }',
+        variables: { photoId, photosGrouped }
+      })
+    })
+  } catch (err) {
+    console.error('Subscription publish failed:', { err })
+    // Don't throw - notification is best effort
+  }
 }
 
 const _genWebpThumb = async ({

@@ -191,6 +191,12 @@ type AutoGroupResult {
   isNewWave: Boolean!
 }
 
+type PhotoUploadResult {
+  photoId: String!
+  waveUuid: String
+  photosGrouped: Int!
+}
+
 type Friendship {
   friendshipUuid: String!
   uuid1: String! 
@@ -511,6 +517,12 @@ type Mutation {
     uuid: String!
     reason: String
   ): Boolean!
+
+  # Mutation triggers subscription - called by Lambda to notify clients
+  _notifyPhotoUploadComplete(
+    photoId: String!
+    photosGrouped: Int!
+  ): PhotoUploadResult!
 }
 
   # helloWorld(helloMessage: String!): String!
@@ -522,8 +534,7 @@ type Mutation {
 # ... ******************************************************
 # onSendMessage(chatUuid: String!): Message!
 
-# only works with nullable return types, the return type must match corresponding mutation
 type Subscription {
-  # onHelloWorld(helloMessage: String): String
-  #   @aws_subscribe(mutations: ["helloWorld"])
+  _notifyPhotoUploadComplete(photoId: String!, photosGrouped: Int!): PhotoUploadResult
+    @aws_subscribe(mutations: ["_notifyPhotoUploadComplete"])
 }

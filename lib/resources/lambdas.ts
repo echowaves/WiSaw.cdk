@@ -10,7 +10,7 @@ import { Construct } from 'constructs'
 import * as path from 'path'
 import { deployEnv } from '../utilities/config'
 
-export function createLambdas (scope: Construct, config: any): any {
+export function createLambdas (scope: Construct, config: any, api?: any): any {
   const sharpLayerArn =
     'arn:aws:lambda:us-east-1:963958500685:layer:sharp-layer:2'
 
@@ -97,10 +97,26 @@ export function createLambdas (scope: Construct, config: any): any {
       // memorySize: 3008,
       timeout: cdk.Duration.seconds(30),
       environment: {
-        ...config
+        ...config,
+        APPSYNC_GRAPHQL_ENDPOINT: api?.graphqlUrl ?? '',
+        APPSYNC_API_KEY: api?.apiKey ?? ''
       }
     }
   )
+
+  // Grant access to the AppSync API for subscription notifications
+  if (api) {
+    processUploadedImageLambdaFunction.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['appsync:GraphQL'],
+      resources: [`${String(api.arn)}/*`]
+    }))
+  }
+
+  // Grant access to AWS Location Service for reverse geocoding (used by autoGroupPhotosIntoWaves)
+  processUploadedImageLambdaFunction.addToRolePolicy(new iam.PolicyStatement({
+    actions: ['geo-places:ReverseGeocode'],
+    resources: ['*']
+  }))
 
   const processDeletedImageLambdaFunctionLogGroup = new logs.LogGroup(scope, `${deployEnv()}_processDeletedImage-LogGroup`, {
     logGroupName: `/aws/lambda/${deployEnv()}-cdk-wisaw-fn-processDeletedImage`,
