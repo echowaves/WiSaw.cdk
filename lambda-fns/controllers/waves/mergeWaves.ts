@@ -8,44 +8,75 @@ import { _assertWaveRole } from './_assertWaveRole'
 
 export default async function main (
   targetWaveUuid: string,
-  sourceWaveUuid: string,
+  sourceWaveUuids: string[],
   uuid: string,
   name?: string,
   description?: string
 ): Promise<Wave> {
   assertValidUuid(targetWaveUuid, 'targetWaveUuid')
-  assertValidUuid(sourceWaveUuid, 'sourceWaveUuid')
   assertValidUuid(uuid, 'uuid')
-  if (targetWaveUuid === sourceWaveUuid) {
-    throw new Error('Cannot merge a wave into itself')
+  if (sourceWaveUuids.length === 0) {
+    throw new Error('At least one source wave must be provided')
+  }
+
+  // Validate all UUIDs upfront and check for self-merge / duplicates
+  const sourceUuidSet = new Set<string>()
+  for (const sourceWaveUuid of sourceWaveUuids) {
+    assertValidUuid(sourceWaveUuid, 'sourceWaveUuid')
+    if (sourceWaveUuid === targetWaveUuid) {
+      throw new Error('Cannot merge a wave into itself')
+    }
+    if (sourceUuidSet.has(sourceWaveUuid)) {
+      throw new Error(`Duplicate source wave UUID: ${sourceWaveUuid}`)
+    }
+    sourceUuidSet.add(sourceWaveUuid)
   }
 
   await psql.connect()
 
-  // Verify user is owner of both waves
+  // Verify user is owner of target wave
   await _assertWaveRole(targetWaveUuid, uuid, 'owner')
-  await _assertWaveRole(sourceWaveUuid, uuid, 'owner')
 
-  // Owner of both waves can merge regardless of freeze status
+  // Owner of all waves can merge regardless of freeze status
+  // Check ownership of every source wave
+  for (const sourceWaveUuid of sourceWaveUuids) {
+    await _assertWaveRole(sourceWaveUuid, uuid, 'owner')
+  }
 
-  // Move all photos from source to target (preserves original createdBy)
-  await psql.query(`
-    UPDATE "WavePhotos"
-    SET "waveUuid" = $1
-    WHERE "waveUuid" = $2
-  `, [targetWaveUuid, sourceWaveUuid])
+  // Move photos from each source into target, merge users, delete source
+  for (const sourceWaveUuid of sourceWaveUuids) {
+    // Move all photos from source to target (preserves original createdBy)
+    await psql.query(`
+      UPDATE "WavePhotos"
+      SET "waveUuid" = $1
+      WHERE "waveUuid" = $2
+    `, [targetWaveUuid, sourceWaveUuid])
 
-  // Merge WaveUsers from source into target (skip duplicates)
-  const now = dayjs().toISOString()
-  await psql.query(`
-    INSERT INTO "WaveUsers" ("waveUuid", "uuid", "role", "createdAt", "updatedAt")
-    SELECT $1, "uuid", "role", $3, $4
-    FROM "WaveUsers"
-    WHERE "waveUuid" = $2
-    ON CONFLICT ("waveUuid", "uuid") DO NOTHING
-  `, [targetWaveUuid, sourceWaveUuid, now, now])
+    // Merge WaveUsers from source into target (skip duplicates)
+    const now = dayjs().toISOString()
+    await psql.query(`
+      INSERT INTO "WaveUsers" ("waveUuid", "uuid", "role", "createdAt", "updatedAt")
+      SELECT $1, "uuid", "role", $3, $4
+      FROM "WaveUsers"
+      WHERE "waveUuid" = $2
+      ON CONFLICT ("waveUuid", "uuid") DO NOTHING
+    `, [targetWaveUuid, sourceWaveUuid, now, now])
+
+    // Delete source wave's users (WavePhotos already moved above)
+    await psql.query(`
+      DELETE FROM "WaveUsers"
+      WHERE "waveUuid" = $1
+    `, [sourceWaveUuid])
+
+    // Delete source wave
+    await psql.query(`
+      DELETE FROM "Waves"
+      WHERE "waveUuid" = $1
+    `, [sourceWaveUuid])
+  }
 
   // Optionally update target name and description
+  const now = dayjs().toISOString()
   if (name != null && name.trim().length > 0) {
     await psql.query(`
       UPDATE "Waves" SET "name" = $1, "updatedAt" = $3
@@ -58,17 +89,6 @@ export default async function main (
       WHERE "waveUuid" = $2
     `, [description, targetWaveUuid, now])
   }
-
-  // Delete source wave (WavePhotos already moved, WaveUsers will cascade)
-  await psql.query(`
-    DELETE FROM "WaveUsers"
-    WHERE "waveUuid" = $1
-  `, [sourceWaveUuid])
-
-  await psql.query(`
-    DELETE FROM "Waves"
-    WHERE "waveUuid" = $1
-  `, [sourceWaveUuid])
 
   // Recalculate photosCount on target
   await _updatePhotosCount(targetWaveUuid)

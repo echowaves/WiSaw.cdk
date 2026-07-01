@@ -110,7 +110,7 @@ interface AppSyncEvent {
     radius: number
     groupingLevel: string
     targetWaveUuid: string
-    sourceWaveUuid: string
+    sourceWaveUuids: string[]
     sortBy: string
     sortDirection: string
     friendUuid: string
@@ -314,7 +314,7 @@ const mutationHandlers: Record<string, HandlerDefinition> = {
     },
   mergeWaves: {
     resolver: mergeWaves,
-    getArgs: (args) => [args.targetWaveUuid, args.sourceWaveUuid, args.uuid, args.name, args.description]
+    getArgs: (args) => [args.targetWaveUuid, args.sourceWaveUuids, args.uuid, args.name, args.description]
   },
   createWaveInvite: {
     resolver: createWaveInvite,
