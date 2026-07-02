@@ -1,5 +1,5 @@
 ### Requirement: Wave photo feed
-The system SHALL provide a dedicated paginated feed query `feedForWave` that returns active photos belonging to a specific wave, with configurable sorting order.
+The system SHALL provide a dedicated paginated feed query `feedForWave` that returns active photos belonging to a specific wave, ordered by `updatedAt` descending.
 
 #### Scenario: Retrieve first page of wave photos
 - **WHEN** `feedForWave(waveUuid, pageNumber: 0, batch)` is called with a valid `waveUuid`
@@ -20,15 +20,3 @@ The system SHALL provide a dedicated paginated feed query `feedForWave` that ret
 #### Scenario: Batch token echoed
 - **WHEN** `feedForWave` is called with an arbitrary `batch` string
 - **THEN** the response contains the same `batch` value passed in
-
-#### Scenario: Sort by createdAt ascending
-- **WHEN** `feedForWave` is called with `sortBy: "createdAt"` and `sortDirection: "asc"`
-- **THEN** photos are returned ordered by `createdAt ASC`
-
-#### Scenario: Default sorting preserved
-- **WHEN** `feedForWave` is called without `sortBy` or `sortDirection`
-- **THEN** photos are returned ordered by `updatedAt DESC` (backward compatible)
-
-#### Scenario: Invalid sort field rejected
-- **WHEN** `feedForWave` is called with a `sortBy` value other than `createdAt` or `updatedAt`
-- **THEN** the system SHALL throw an error

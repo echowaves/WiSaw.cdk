@@ -37,21 +37,6 @@ The system SHALL support optional text search on the friend's photos, using the 
 - **WHEN** `feedForFriend` is called with a `searchTerm`
 - **THEN** only photos matching the search term (via recognitions or comments) are returned
 
-### Requirement: Configurable sorting
-The system SHALL support optional `sortBy` and `sortDirection` parameters.
-
-#### Scenario: Sort by createdAt ascending
-- **WHEN** `feedForFriend` is called with `sortBy: "createdAt"` and `sortDirection: "asc"`
-- **THEN** photos are returned ordered by `createdAt ASC`
-
-#### Scenario: Default sorting
-- **WHEN** `feedForFriend` is called without `sortBy` or `sortDirection`
-- **THEN** photos are returned ordered by `updatedAt DESC`
-
-#### Scenario: Invalid sort field rejected
-- **WHEN** `feedForFriend` is called with a `sortBy` value other than `createdAt` or `updatedAt`
-- **THEN** the system SHALL throw an error
-
 ### Requirement: Input validation
 The system SHALL validate that both `uuid` and `friendUuid` are valid UUID format.
 
