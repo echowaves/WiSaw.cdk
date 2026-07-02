@@ -124,6 +124,7 @@ interface AppSyncEvent {
     freezeMode: string
     expiresAt: string
     maxUses: number
+    photosGrouped: number
   }
 }
 
@@ -183,7 +184,7 @@ const queryHandlers: Record<string, HandlerDefinition> = {
   },
   getFriendshipsList: {
     resolver: getFriendshipsList,
-    getArgs: (args) => [args.uuid]
+    getArgs: (args) => [args.uuid, args.sortBy, args.sortDirection]
   },
   getWave: {
     resolver: getWave,

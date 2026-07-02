@@ -13,6 +13,10 @@ const ALLOWED_SORT_FIELDS: Record<string, string> = {
   name: '"name"'
 }
 
+const ALLOWED_SORT_EXPRESSIONS: Record<string, string> = {
+  recentPhoto: '(SELECT MAX(p."updatedAt") FROM "WavePhotos" wp JOIN "Photos" p ON p."id" = wp."photoId" WHERE wp."waveUuid" = "Waves"."waveUuid")'
+}
+
 const ALLOWED_DIRECTIONS: Record<string, string> = {
   asc: 'ASC',
   desc: 'DESC'
@@ -35,8 +39,10 @@ export default async function main (
   const limit = 20
   const offset = pageNumber * limit
 
-  const sortField = ALLOWED_SORT_FIELDS[sortBy ?? 'updatedAt']
-  if (sortField == null) {
+  const sortByOrDefault = sortBy && sortBy.trim() !== '' ? sortBy : 'updatedAt'
+  const sortField = ALLOWED_SORT_FIELDS[sortByOrDefault]
+  const sortExpression = ALLOWED_SORT_EXPRESSIONS[sortBy ?? '']
+  if (sortField == null && sortExpression == null) {
     throw new Error('Invalid sort field')
   }
   const direction = ALLOWED_DIRECTIONS[sortDirection ?? 'desc']
@@ -53,12 +59,16 @@ export default async function main (
     searchClause = `AND ("Waves"."name" ILIKE $2 OR "Waves"."description" ILIKE $2)`
   }
 
+  const orderByClause = sortExpression
+    ? `ORDER BY ${sortExpression} ${direction}, "Waves"."waveUuid" ASC`
+    : `ORDER BY ${sortField} ${direction}, "Waves"."waveUuid" ASC`
+
   const query = `
     SELECT "Waves".*, "WaveUsers"."role" AS "myRole" FROM "Waves"
     JOIN "WaveUsers" ON "Waves"."waveUuid" = "WaveUsers"."waveUuid"
     WHERE "WaveUsers"."uuid" = $1
     ${searchClause}
-    ORDER BY "Waves".${sortField} ${direction}, "Waves"."waveUuid" ASC
+    ${orderByClause}
     LIMIT ${limit}
     OFFSET ${offset}
   `
