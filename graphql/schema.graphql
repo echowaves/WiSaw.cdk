@@ -236,8 +236,6 @@ type Query {
     pageNumber: Int!
     batch: String!
     searchTerm: String
-    sortBy: String
-    sortDirection: String
     ): PhotoFeed
   feedRecent(    
     pageNumber: Int!
@@ -267,8 +265,6 @@ type Query {
   
   getFriendshipsList(
       uuid: String! # self
-      sortBy: String
-      sortDirection: String
   ): [Friendship]! #list of all friends by UUID, if uuid2 of a friend is null, the friendship is not confirmed
 
   getWave(
@@ -280,8 +276,6 @@ type Query {
     pageNumber: Int!
     batch: String!
     uuid: String!
-    sortBy: String
-    sortDirection: String
     searchTerm: String
   ): WaveFeed
 
@@ -339,8 +333,6 @@ type Query {
     pageNumber: Int!
     batch: String!
     searchTerm: String
-    sortBy: String
-    sortDirection: String
   ): PhotoFeed
 
 }

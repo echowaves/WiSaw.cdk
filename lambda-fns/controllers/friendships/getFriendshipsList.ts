@@ -5,65 +5,20 @@ import Friendship from '../../models/friendship'
 import Photo from '../../models/photo'
 import { assertValidUuid } from '../../utilities/assertValidUuid'
 
-const ALLOWED_SORT_FIELDS: Record<string, string> = {
-  recentPhoto: '(SELECT MAX(p."updatedAt") FROM "Photos" p WHERE p."uuid" = friend_uuid)'
-}
-
-const ALLOWED_DIRECTIONS: Record<string, string> = {
-  asc: 'ASC',
-  desc: 'DESC'
-}
-
 export default async function main (
-  uuid: string,
-  sortBy?: string,
-  sortDirection?: string
+  uuid: string
 ): Promise<Friendship[]> {
   assertValidUuid(uuid, 'uuid')
 
-  const sortField = ALLOWED_SORT_FIELDS[sortBy ?? '']
-  if ((sortBy != null && sortBy !== '') && sortField == null) {
-    throw new Error('Invalid sort field')
-  }
-  const direction = ALLOWED_DIRECTIONS[sortDirection ?? 'desc']
-  if (direction == null) {
-    throw new Error('Invalid sort direction')
-  }
-
   await psql.connect()
 
-  let friendships: any[] = []
-  if (sortBy === 'recentPhoto') {
-    // Use a subquery to get friend UUIDs and their last photo date
-    const recentPhotoQuery = `
-      WITH friend_data AS (
-        SELECT 
-          DISTINCT ON (LEAST(f.uuid1, f.uuid2), GREATEST(f.uuid1, f.uuid2))
-          f.*,
-          CASE 
-            WHEN f.uuid1 = $1 THEN f.uuid2
-            ELSE f.uuid1
-          END AS friend_uuid
-        FROM "Friendships" f
-        WHERE f.uuid1 = $1 OR f.uuid2 = $1
-      )
-      SELECT fd.*, 
-             (SELECT MAX(p."updatedAt") FROM "Photos" p WHERE p."uuid" = fd.friend_uuid) AS last_photo_at
-      FROM friend_data fd
-      WHERE fd.uuid2 IS NOT NULL AND fd.uuid1 != fd.uuid2
-      ORDER BY last_photo_at ${direction}, fd."createdAt" DESC
-    `
-    friendships = (await psql.query(recentPhotoQuery, [uuid])).rows
-  } else {
-    // Default ordering
-    const defaultQuery = `
-      SELECT DISTINCT ON (LEAST(uuid1, uuid2), GREATEST(uuid1, uuid2)) *
-      FROM "Friendships"
-      WHERE "uuid1" = $1 OR "uuid2" = $1
-      ORDER BY LEAST(uuid1, uuid2), GREATEST(uuid1, uuid2), "createdAt" DESC
-    `
-    friendships = (await psql.query(defaultQuery, [uuid])).rows
-  }
+  const defaultQuery = `
+    SELECT DISTINCT ON (LEAST(uuid1, uuid2), GREATEST(uuid1, uuid2)) *
+    FROM "Friendships"
+    WHERE "uuid1" = $1 OR "uuid2" = $1
+    ORDER BY LEAST(uuid1, uuid2), GREATEST(uuid1, uuid2), "createdAt" DESC
+  `
+  const friendships = (await psql.query(defaultQuery, [uuid])).rows
 
   // Extract friend UUIDs from confirmed friendships
   const friendUuids: string[] = []

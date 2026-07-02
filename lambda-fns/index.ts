@@ -111,8 +111,6 @@ interface AppSyncEvent {
     groupingLevel: string
     targetWaveUuid: string
     sourceWaveUuids: string[]
-    sortBy: string
-    sortDirection: string
     friendUuid: string
     inviteToken: string
     targetUuid: string
@@ -156,7 +154,7 @@ const queryHandlers: Record<string, HandlerDefinition> = {
   },
   feedForWave: {
     resolver: feedForWave,
-    getArgs: (args) => [args.waveUuid, args.pageNumber, args.batch, args.searchTerm, args.sortBy, args.sortDirection]
+    getArgs: (args) => [args.waveUuid, args.pageNumber, args.batch, args.searchTerm]
   },
   feedRecent: {
     resolver: feedRecent,
@@ -184,7 +182,7 @@ const queryHandlers: Record<string, HandlerDefinition> = {
   },
   getFriendshipsList: {
     resolver: getFriendshipsList,
-    getArgs: (args) => [args.uuid, args.sortBy, args.sortDirection]
+    getArgs: (args) => [args.uuid]
   },
   getWave: {
     resolver: getWave,
@@ -192,7 +190,7 @@ const queryHandlers: Record<string, HandlerDefinition> = {
   },
   listWaves: {
     resolver: listWaves,
-    getArgs: (args) => [args.pageNumber, args.batch, args.uuid, args.sortBy, args.sortDirection, args.searchTerm]
+    getArgs: (args) => [args.pageNumber, args.batch, args.uuid, args.searchTerm]
   },
   listPhotoLocations: {
     resolver: listPhotoLocations,
@@ -212,7 +210,7 @@ const queryHandlers: Record<string, HandlerDefinition> = {
   },
   feedForFriend: {
     resolver: feedForFriend,
-    getArgs: (args) => [args.uuid, args.friendUuid, args.pageNumber, args.batch, args.searchTerm, args.sortBy, args.sortDirection]
+    getArgs: (args) => [args.uuid, args.friendUuid, args.pageNumber, args.batch, args.searchTerm]
   },
   listWaveMembers: {
     resolver: listWaveMembers,
