@@ -1,7 +1,8 @@
-## ADDED Requirements
-
+## Purpose
+Define the wave listing capabilities: fetching waves with optional search, sort by name, and sort by recent photo activity.
+## Requirements
 ### Requirement: listWaves accepts optional sort parameters
-The `listWaves` GraphQL query SHALL accept two optional `String` parameters: `sortBy` and `sortDirection`. When omitted, `sortBy` SHALL default to `"updatedAt"` and `sortDirection` SHALL default to `"desc"`.
+The `listWaves` GraphQL query SHALL accept two optional `String` parameters: `sortBy` and `sortDirection`. When omitted, `sortBy` SHALL default to `"updatedAt"` and `sortDirection` SHALL default to `"desc"`. The `recentPhoto` value is a valid sort field that orders waves by the most recent photo's `updatedAt` timestamp within that wave.
 
 #### Scenario: Default sort (no params provided)
 - **WHEN** `listWaves` is called without `sortBy` or `sortDirection`
@@ -37,8 +38,6 @@ The controller SHALL construct the ORDER BY clause using a whitelist lookup, nev
 - **WHEN** `listWaves` is called with `sortBy: "updatedAt\"; DROP TABLE \"Waves\"--"`
 - **THEN** the system throws an error "Invalid sort field" and no SQL injection occurs
 
----
-
 ### Requirement: List waves with optional search filter
 The `listWaves` GraphQL query SHALL accept an optional `searchTerm` parameter. When provided, the query SHALL return only waves whose `name` or `description` contains the search term (case-insensitive substring match). When omitted, all of the user's waves SHALL be returned as before.
 
@@ -72,3 +71,19 @@ The `listWaves` query SHALL accept `name` as a valid value for the `sortBy` para
 #### Scenario: Sort by name descending
 - **WHEN** `sortBy` is "name" and `sortDirection` is "desc"
 - **THEN** waves SHALL be returned in reverse alphabetical order by name
+
+### Requirement: Sort waves by recent photo
+The `listWaves` query SHALL accept `recentPhoto` as a valid value for the `sortBy` parameter, enabling sorting by the most recent photo's `updatedAt` timestamp within each wave.
+
+#### Scenario: Sort by recent photo descending
+- **WHEN** `sortBy` is "recentPhoto" and `sortDirection` is "desc"
+- **THEN** waves SHALL be returned ordered by the most recent photo's `updatedAt` timestamp (newest photo first)
+
+#### Scenario: Sort by recent photo ascending
+- **WHEN** `sortBy` is "recentPhoto" and `sortDirection` is "asc"
+- **THEN** waves SHALL be returned ordered by the most recent photo's `updatedAt` timestamp (oldest photo first)
+
+#### Scenario: Wave with no photos sorts last
+- **WHEN** `sortBy` is "recentPhoto" and some waves have no photos
+- **THEN** waves without photos SHALL appear after waves with photos (NULLs last in DESC order per PostgreSQL default behavior)
+
