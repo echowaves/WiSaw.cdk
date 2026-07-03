@@ -1,4 +1,8 @@
-## ADDED Requirements
+# Photo Feed
+
+All photo feed controllers use `fetchPaginatedPhotos()` which manages `psql.connect()`/`clean()` with try/finally, maps rows via `plainToClass(Photo)`, and computes `noMoreData`/`nextPage`.
+
+## Requirements
 
 ### Requirement: Shared pagination utility handles connection lifecycle
 All photo feed controllers use `fetchPaginatedPhotos()` which manages `psql.connect()`/`clean()` with try/finally, maps rows via `plainToClass(Photo)`, and computes `noMoreData`/`nextPage`.
