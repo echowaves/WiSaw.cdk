@@ -15,6 +15,7 @@ class Photo {
   region: string | null
   country: string | null
   countryCode: string | null
+  lastComment: string | null
   // add custom derived attributes to the object
   public toJSON() {
     return {
