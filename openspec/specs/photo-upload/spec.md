@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Generate presigned upload URL
 The system SHALL generate a presigned S3 PUT URL for a given asset key and content type, valid for 1 hour, that the client uses to upload a photo or video directly to S3.
