@@ -13,6 +13,7 @@ import feedForWave from './controllers/photos/feedForWave'
 import feedRecent from './controllers/photos/feedRecent'
 
 import getPhotoDetails from './controllers/photos/getPhotoDetails'
+import getPhotoById from './controllers/photos/getPhotoById'
 
 import getPhotoAllCurr from './controllers/photos/getPhotoAllCurr'
 import getPhotoAllNext from './controllers/photos/getPhotoAllNext'
@@ -168,6 +169,10 @@ const queryHandlers: Record<string, HandlerDefinition> = {
     resolver: getPhotoDetails,
     getArgs: (args) => [args.photoId, args.uuid]
   },
+  getPhotoById: {
+    resolver: getPhotoById,
+    getArgs: (args) => [args.photoId, args.uuid]
+  },
   getPhotoAllCurr: {
     resolver: getPhotoAllCurr,
     getArgs: (args) => [args.photoId]
@@ -245,7 +250,7 @@ const mutationHandlers: Record<string, HandlerDefinition> = {
   },
   createPhoto: {
     resolver: createPhoto,
-    getArgs: (args) => [args.uuid, args.lat, args.lon, args.video, args.width, args.height]
+    getArgs: (args) => [args.photoId, args.uuid, args.lat, args.lon, args.video, args.width, args.height]
   },
   watchPhoto: {
     resolver: watchPhoto,

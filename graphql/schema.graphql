@@ -253,6 +253,11 @@ type Query {
     uuid: String!
     ): PhotoDetails!
 
+  getPhotoById(
+    photoId: String!
+    uuid: String!
+  ): Photo!
+
   getPhotoAllCurr( photoId: String!): PhotoAll!
   getPhotoAllNext( photoId: String!): PhotoAll!
   getPhotoAllPrev( photoId: String!): PhotoAll!
@@ -352,6 +357,7 @@ type Mutation {
   ): AbuseReport!
 
   createPhoto(
+    photoId: String!
     uuid: String!
     lat: Float!
     lon: Float!

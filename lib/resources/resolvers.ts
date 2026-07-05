@@ -11,6 +11,7 @@ export function createResolvers (scope: Construct, api: appsync.GraphqlApi, lamb
     { typeName: 'Query', fieldName: 'feedRecent' },
     { typeName: 'Query', fieldName: 'feedForTextSearch' },
     { typeName: 'Query', fieldName: 'getPhotoDetails' },
+    { typeName: 'Query', fieldName: 'getPhotoById' },
     { typeName: 'Query', fieldName: 'getPhotoAllCurr' },
     { typeName: 'Query', fieldName: 'getPhotoAllNext' },
     { typeName: 'Query', fieldName: 'getPhotoAllPrev' },
