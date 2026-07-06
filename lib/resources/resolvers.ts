@@ -30,6 +30,7 @@ export function createResolvers (scope: Construct, api: appsync.GraphqlApi, lamb
     { typeName: 'Query', fieldName: 'listWaveAbuseReports' },
     { typeName: 'Query', fieldName: 'listWaveBans' },
     { typeName: 'Query', fieldName: 'isLocationInWave' },
+    { typeName: 'Query', fieldName: 'appConfig' },
 
     { typeName: 'Mutation', fieldName: 'createContactForm' },
     { typeName: 'Mutation', fieldName: 'createAbuseReport' },
