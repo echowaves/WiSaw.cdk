@@ -13,6 +13,14 @@ rules:
     - Lambda controller file names must match the corresponding GraphQL field name declared in schema.graphql (e.g., the mutation "autoGroupPhotosIntoWaves" must be implemented in a file named "autoGroupPhotosIntoWaves.ts").
     - Always include error handling and loading states for asynchronous operations (e.g., data fetching,
     - All generated code must have a maximum cyclomatic complexity of 8 or less. Refactor complex functions by extracting helper functions, using early returns, and breaking down conditional logic into smaller reusable pieces.
+  graphql:
+    - Every new GraphQL query/mutation field added to graphql/schema.graphql MUST be wired in ALL FOUR places simultaneously:
+      1. graphql/schema.graphql — add the field to type Query or type Mutation
+      2. lambda-fns/controllers/<name>.ts — create the controller function
+      3. lambda-fns/index.ts — add import + entry in queryHandlers/mutationHandlers
+      4. lib/resources/resolvers.ts — add { typeName: 'Query'|'Mutation', fieldName: '<name>' } to the fields array
+    - CRITICAL: Missing the resolver entry in lib/resources/resolvers.ts causes AppSync to silently return null for the field. The Lambda is never invoked. This is the most commonly missed step and must NEVER be omitted.
+    - When implementing ANY GraphQL operation, explicitly list all four files before making changes and verify each one is updated.
     
 
   dependencies:
