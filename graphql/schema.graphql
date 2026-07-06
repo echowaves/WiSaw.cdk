@@ -207,6 +207,25 @@ type Friendship {
 }
 
 # ... ******************************************************
+# ...                   app config (no auth required)
+# ... ******************************************************
+type AppConfig {
+  # Minimum app version allowed to connect.
+  # Format: "MAJOR.MINOR.PATCH" (e.g. "7.6.0").
+  # If the app's current version is lower, it must update from the App Store.
+  minAppVersion: String!
+
+  # Minimum app build number allowed to connect.
+  # Build numbers increment per hot redeploy via EAS Update.
+  # If the app's current build is lower, it must restart to reload the JS bundle.
+  minAppBuild: Int!
+
+  # Human-readable message explaining why the update is required.
+  # Frontend decides which threshold triggered and what to display.
+  message: String!
+}
+
+# ... ******************************************************
 # ...                   queries
 # ... ******************************************************
 type Query {
@@ -339,6 +358,11 @@ type Query {
     batch: String!
     searchTerm: String
   ): PhotoFeed
+
+  # ... ******************************************************
+  # ...                   app config (no auth required)
+  # ... ******************************************************
+  appConfig: AppConfig
 
 }
 

@@ -51,6 +51,8 @@ import listWaveAbuseReports from './controllers/waves/listWaveAbuseReports'
 import listWaveBans from './controllers/waves/listWaveBans'
 import isLocationInWave from './controllers/waves/isLocationInWave'
 
+import appConfig from './controllers/appConfig'
+
 // ******************************************************
 //                       mutations
 // ******************************************************
@@ -236,6 +238,10 @@ const queryHandlers: Record<string, HandlerDefinition> = {
   isLocationInWave: {
     resolver: isLocationInWave,
     getArgs: (args) => [args.lat, args.lon, args.waveUuid, args.uuid]
+  },
+  appConfig: {
+    resolver: appConfig,
+    getArgs: () => []
   }
 }
 
