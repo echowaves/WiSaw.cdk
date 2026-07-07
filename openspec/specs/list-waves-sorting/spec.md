@@ -1,12 +1,12 @@
 ## Purpose
 Define the wave listing capabilities: fetching waves with optional search and default sorting by createdAt.
 ## Requirements
-### Requirement: listWaves returns waves sorted by createdAt descending
-The `listWaves` GraphQL query SHALL return waves sorted by `createdAt DESC` (newest first). No `sortBy` or `sortDirection` parameters are accepted.
+### Requirement: listWaves returns waves sorted by updatedAt descending
+The `listWaves` GraphQL query SHALL return waves sorted by `updatedAt DESC` (most recently updated first). No `sortBy` or `sortDirection` parameters are accepted.
 
-#### Scenario: listWaves returns waves sorted by createdAt descending
+#### Scenario: listWaves returns waves sorted by updatedAt descending
 - **WHEN** `listWaves` is called without any sort parameters
-- **THEN** waves are returned sorted by `createdAt DESC`
+- **THEN** waves are returned sorted by `updatedAt DESC`
 
 ### Requirement: List waves with optional search filter
 The `listWaves` GraphQL query SHALL accept an optional `searchTerm` parameter. When provided, the query SHALL return only waves whose `name` or `description` contains the search term (case-insensitive substring match). When omitted, all of the user's waves SHALL be returned as before.

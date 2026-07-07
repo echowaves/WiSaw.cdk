@@ -31,7 +31,7 @@ export default async function main (
     searchClause = `AND ("Waves"."name" ILIKE $2 OR "Waves"."description" ILIKE $2)`
   }
 
-  const orderByClause = `ORDER BY "Waves"."createdAt" DESC, "Waves"."waveUuid" ASC`
+  const orderByClause = `ORDER BY "Waves"."updatedAt" DESC, "Waves"."waveUuid" ASC`
 
   const query = `
     SELECT "Waves".*, "WaveUsers"."role" AS "myRole" FROM "Waves"
