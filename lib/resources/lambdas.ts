@@ -52,9 +52,9 @@ export function createLambdas (scope: Construct, config: any, api?: any): any {
       environment: {
         ...config,
         DEEP_LINK_BASE_URL: process.env.DEEP_LINK_BASE_URL ?? '',
-        MIN_APP_VERSION: process.env.MIN_APP_VERSION ?? '1.0.0',
-        MIN_APP_BUILD: process.env.MIN_APP_BUILD ?? '0',
-        UPDATE_MESSAGE: process.env.UPDATE_MESSAGE ?? ''
+        MIN_APP_VERSION: config.MIN_APP_VERSION ?? '1.0.0',
+        MIN_APP_BUILD: config.MIN_APP_BUILD ?? '0',
+        UPDATE_MESSAGE: config.UPDATE_MESSAGE ?? ''
       }
     }
   )
