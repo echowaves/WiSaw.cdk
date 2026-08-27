@@ -1,7 +1,7 @@
 ## Requirements
 
 ### Requirement: Query photo by ID (device-authenticated)
-The system SHALL provide a GraphQL query `getPhotoById(photoId: String!, uuid: String!)` that returns a `Photo` object for a photo with the given ID, but only when the calling device (`uuid`) matches the device that originally uploaded the photo. This prevents arbitrary devices from discovering or accessing photo metadata.
+The system SHALL provide a GraphQL query `getPhotoById(photoId: String!, uuid: String!): Photo` with a **nullable** return type, returning the `Photo` object for a photo with the given ID, but only when the calling device (`uuid`) matches the device that originally uploaded the photo. A `null` return is the contract for "not found" and "not this device" — the field MUST NOT be non-nullable in the schema, otherwise AppSync converts the `null` into a `Cannot return null for non-nullable type` error. This prevents arbitrary devices from discovering or accessing photo metadata.
 
 #### Scenario: Photo found by own device
 - **WHEN** a client calls `getPhotoById(photoId: "<uuid>", uuid: "<own-device-uuid>")` for a photo that exists and was uploaded by that device

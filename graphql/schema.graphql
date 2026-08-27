@@ -275,7 +275,7 @@ type Query {
   getPhotoById(
     photoId: String!
     uuid: String!
-  ): Photo!
+  ): Photo
 
   getPhotoAllCurr( photoId: String!): PhotoAll!
   getPhotoAllNext( photoId: String!): PhotoAll!
