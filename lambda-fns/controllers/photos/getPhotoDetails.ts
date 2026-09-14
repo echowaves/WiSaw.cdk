@@ -2,6 +2,7 @@ import { _getComments } from './_getComments'
 import { _getRecognitions } from './_getRecognitions'
 import { _isPhotoWatched } from './_isPhotoWatched'
 import { _getWaveInfo } from './_getWaveInfo'
+import { _getWatchersCount } from './_getWatchersCount'
 import { assertValidUuid } from '../../utilities/assertValidUuid'
 
 export default async function main(
@@ -16,12 +17,14 @@ export default async function main(
     recognitions,
     isPhotoWatched,
     waveInfo,
+    watchersCount,
   ] =
     await Promise.all([
       _getComments(photoId),
       _getRecognitions(photoId),
       _isPhotoWatched(photoId, uuid),
       _getWaveInfo(photoId),
+      _getWatchersCount(photoId),
     ])
 
   return {
@@ -30,5 +33,6 @@ export default async function main(
     isPhotoWatched,
     waveName: waveInfo.waveName,
     waveUuid: waveInfo.waveUuid,
+    watchersCount: watchersCount ?? 0,
   }
 }
