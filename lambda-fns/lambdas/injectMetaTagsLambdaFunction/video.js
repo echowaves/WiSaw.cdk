@@ -1,7 +1,9 @@
 /* eslint-env node */
 /* global require, exports, console */
 const { S3Client, GetObjectCommand, HeadObjectCommand } = require('@aws-sdk/client-s3') // CommonJS import
-const { sanitizeImageId, injectMetaTags } = require('./utils')
+const { sanitizeImageId, injectMetaTags, buildSeoBody } = require('./utils')
+
+const VIDEO_DESCRIPTION = 'Check out What I saw Today (video)'
 
 exports.handler = async (event, context, callback) => {
   // console.log({ event })
@@ -62,8 +64,20 @@ exports.handler = async (event, context, callback) => {
   // console.log({ data })
   // console.log({ index })
 
+  const videoUrl = `https://img.wisaw.com/${imageIdRaw}.mov`
+
+  const seoBody = buildSeoBody({
+    entityLabel: 'video',
+    pathSegment: 'videos',
+    imageIdText,
+    description: VIDEO_DESCRIPTION,
+    videoUrl,
+    created,
+    duration
+  })
+
   const body = injectMetaTags(index, {
-    description: 'Check out What I saw Today (video)',
+    description: VIDEO_DESCRIPTION,
     entityLabel: 'video',
     ogType: 'video',
     pathSegment: 'videos',
@@ -71,7 +85,8 @@ exports.handler = async (event, context, callback) => {
     imageIdUrl,
     created,
     duration,
-    videoUrl: `https://img.wisaw.com/${imageIdRaw}.mov`
+    videoUrl,
+    bodyHtml: seoBody
   })
 
   const response = {

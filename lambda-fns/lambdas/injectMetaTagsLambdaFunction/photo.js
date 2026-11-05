@@ -1,7 +1,9 @@
 /* eslint-env node */
 /* global require, exports */
 const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3') // CommonJS import
-const { sanitizeImageId, injectMetaTags } = require('./utils')
+const { sanitizeImageId, injectMetaTags, buildSeoBody } = require('./utils')
+
+const PHOTO_DESCRIPTION = 'Check out What I saw Today (photo)'
 
 exports.handler = async (event, context, callback) => {
   // console.log({ event })
@@ -43,13 +45,21 @@ exports.handler = async (event, context, callback) => {
   // console.log({ data })
   // console.log({ index })
 
+  const seoBody = buildSeoBody({
+    entityLabel: 'photo',
+    pathSegment: 'photos',
+    imageIdText,
+    description: PHOTO_DESCRIPTION
+  })
+
   const body = injectMetaTags(index, {
-    description: 'Check out What I saw Today (photo)',
+    description: PHOTO_DESCRIPTION,
     entityLabel: 'photo',
     ogType: 'photo',
     pathSegment: 'photos',
     imageIdText,
-    imageIdUrl
+    imageIdUrl,
+    bodyHtml: seoBody
   })
 
   const response = {
