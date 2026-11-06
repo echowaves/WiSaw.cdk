@@ -3,10 +3,11 @@ import type { S3Client } from '@aws-sdk/client-s3'
 
 // One sidecar per photo/video, read by Lambda@Edge, which cannot join the VPC to reach
 // Postgres. The shape is a contract with the edge injector (see
-// lambda-fns/lambdas/injectMetaTagsLambdaFunction/sidecar.js and seoText.js) and is pinned by
-// tests/seo-sidecar-shape.js - changing a field here without updating the reader silently
-// degrades every photo page, which is exactly the class of bug that once cost ~22k pages their
-// index. Every writer must go through buildSeoSidecar so the three call sites cannot drift.
+// lambda-fns/lambdas/injectMetaTagsLambdaFunction/sidecar.js and seoText.js); tests/seo-crawler-contract.js
+// pins the fields that reader consumes, so change both sides in one commit - dropping a field here
+// without updating the reader silently degrades every photo page, which is exactly the class of bug
+// that once cost ~22k pages their index. Every writer must go through buildSeoSidecar so call sites
+// cannot drift.
 
 export const SEO_SIDECAR_VERSION = 1
 
