@@ -10,6 +10,9 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3"; // ES Modules i
 // 5 hours for content that almost never changes.
 const SIDECAR_LOOKBACK_HOURS = Number(process.env.SIDECAR_LOOKBACK_HOURS ?? 6)
 const SIDECAR_CONCURRENCY = 20
+// A backfill pass writes ~22k objects inside one 120s invocation; at the incremental
+// concurrency that does not fit, so the one-off path is allowed to be louder.
+const BACKFILL_CONCURRENCY = 60
 
 type SeoSidecar = {
   v: number
@@ -52,12 +55,12 @@ function locationText (row: any): string {
     .join(', ')
 }
 
-async function putSidecars (client: S3Client, bucket: string, photos: any[]) {
+async function putSidecars (client: S3Client, bucket: string, photos: any[], concurrency: number = SIDECAR_CONCURRENCY) {
   let written = 0
   let failed = 0
 
-  for (let i = 0; i < photos.length; i += SIDECAR_CONCURRENCY) {
-    const chunk = photos.slice(i, i + SIDECAR_CONCURRENCY)
+  for (let i = 0; i < photos.length; i += concurrency) {
+    const chunk = photos.slice(i, i + concurrency)
     const results = await Promise.allSettled(chunk.map(async (photo: any) => {
       const sidecar: SeoSidecar = {
         v: 1,
@@ -84,8 +87,16 @@ async function putSidecars (client: S3Client, bucket: string, photos: any[]) {
   console.log(`sidecars written=${written} failed=${failed}`)
 }
 
+function recentlyTouched (photos: any[], nowMs: number): any[] {
+  const lookbackMs = SIDECAR_LOOKBACK_HOURS * 60 * 60 * 1000
+  return photos.filter((photo: any) => {
+    const touchedAt = new Date(photo?.updatedAt ?? 0).getTime()
+    return Number.isFinite(touchedAt) && nowMs - touchedAt <= lookbackMs
+  })
+}
+
 // eslint-disable-next-line import/prefer-default-export
-export async function main(event: any = {}, context: any /*, cb: any*/) {
+export async function main (event: any = {}, context: any /*, cb: any*/) {
   const _traceStart = Date.now()
   traceLog('generateSiteMap:START')
   const smStream = new SitemapStream({ hostname: "https://wisaw.com" })
@@ -225,16 +236,17 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
   // the media. A failure here costs ranking quality, never the sitemap itself.
   try {
     const imgBucket = process.env.S3_IMAGES_BUCKET || 'wisaw-img-prod'
-    const nowMs = Date.now()
-    const lookbackMs = SIDECAR_LOOKBACK_HOURS * 60 * 60 * 1000
-    const recent = (photos ?? []).filter((photo: any) => {
-      const touchedAt = new Date(photo?.updatedAt ?? 0).getTime()
-      return Number.isFinite(touchedAt) && nowMs - touchedAt <= lookbackMs
-    })
-    console.log('sidecar candidates:', recent.length, 'lookbackHours:', SIDECAR_LOOKBACK_HOURS)
+    // {"backfill": true} publishes a sidecar for every photo in the feed rather than only
+    // recently touched ones. The feed is ordered newest-first, so an invocation that runs out
+    // of time leaves the oldest photos behind and the set converges from the valuable end;
+    // PUTs are idempotent, so re-invoking is always safe.
+    const backfill = event?.backfill === true
+    const recent = backfill ? (photos ?? []) : recentlyTouched(photos ?? [], Date.now())
+    console.log('sidecar candidates:', recent.length, 'backfill:', backfill, 'lookbackHours:', SIDECAR_LOOKBACK_HOURS)
 
     if (recent.length > 0) {
-      await putSidecars(new S3Client({ region: 'us-east-1' }), imgBucket, recent)
+      const concurrency = backfill ? BACKFILL_CONCURRENCY : SIDECAR_CONCURRENCY
+      await putSidecars(new S3Client({ region: 'us-east-1' }), imgBucket, recent, concurrency)
     }
   } catch (err) {
     console.error("Unable to publish SEO sidecars", { err })
