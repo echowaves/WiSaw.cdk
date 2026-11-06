@@ -8,6 +8,13 @@ import type { S3Client } from '@aws-sdk/client-s3'
 // without updating the reader silently degrades every photo page, which is exactly the class of bug
 // that once cost ~22k pages their index. Every writer must go through buildSeoSidecar so call sites
 // cannot drift.
+//
+// These objects are public: seo/<id>.json sits in the media bucket behind img.wisaw.com, so
+// anyone who has a photo URL can read one. A place NAME is fair page content ("Coney Island,
+// New York" is what makes a photo rankable), but a COORDINATE is not - it pinpoints where a
+// person stood, and once crawled from a guessable URL it cannot be unpublished. Everything
+// here therefore derives from the address columns, never from "Photos"."location", and
+// assertNoPreciseLocation refuses to build anything that looks like a coordinate anyway.
 
 export const SEO_SIDECAR_VERSION = 1
 
@@ -43,6 +50,8 @@ export function pickLabels (rows: any[], limit = 8): string[] {
   return out
 }
 
+// High-level place text ("Brooklyn, New York"), built from the address columns only. It is
+// never read from the "location" geography column - see assertNoPreciseLocation below.
 export function locationText (row: any): string {
   return [row?.locality, row?.district, row?.region]
     .map((part) => clean(part))
@@ -52,12 +61,44 @@ export function locationText (row: any): string {
     .join(', ')
 }
 
+// Key names that can only ever mean a coordinate. Free-text fields (caption, labels) are not
+// scanned for them: someone writing "40.68, -73.97" in a comment must not lose their SEO text.
+const PRECISE_KEYS = ['lat', 'lon', 'lng', 'latitude', 'longitude', 'coords', 'coordinates', 'gps', 'geopoint', 'point']
+
+/** True for anything that carries a position rather than a place name. */
+export function isPreciseLocation (value: any): boolean {
+  if (value == null) return false
+  // A Sequelize/geography value arrives as an object ({latitude, longitude} or a Point).
+  if (typeof value === 'object') return true
+  const text = String(value).trim()
+  if (text === '') return false
+  return /POINT\s*\(/i.test(text) ||
+    // WKB/EWKB hex as Postgres hands back for a geography column.
+    /^0[01][0-9A-Fa-f]{16,}$/.test(text) ||
+    // "40.6833, -73.9740" or "40.6833 -73.9740"
+    /^-?\d{1,3}\.\d+\s*[,\s]\s*-?\d{1,3}\.\d+$/.test(text)
+}
+
+// Throws instead of publishing. A coordinate on ~21k public objects is not recoverable after
+// the fact, so a writer that is unsure fails the photo rather than guessing - and a failed PUT
+// only costs one photo its enriched title until the next run.
+export function assertNoPreciseLocation (body: Record<string, any>): void {
+  const badKey = Object.keys(body).find((key) => PRECISE_KEYS.includes(key.toLowerCase()))
+  if (badKey != null) {
+    throw new Error(`refusing to publish a sidecar with a coordinate field: ${badKey}`)
+  }
+  if (isPreciseLocation(body.location)) {
+    throw new Error('refusing to publish a sidecar whose location is a coordinate, not a place name')
+  }
+}
+
 // Tolerates partial rows: a photo that has no labels or place yet yields empty fields rather
 // than throwing. Callers that only hold a few columns (the comment path, for instance) must
 // still load the full row first, otherwise they overwrite a complete sidecar with a thinner one.
+// A row may carry a "location" geometry column; it is ignored here and rejected by the guard.
 export function buildSeoSidecar (photo: any): SeoSidecar {
   const createdMs = photo?.createdAt == null ? NaN : new Date(photo.createdAt).getTime()
-  return {
+  const sidecar: SeoSidecar = {
     v: SEO_SIDECAR_VERSION,
     caption: clean(photo?.lastComment).slice(0, 200),
     labels: pickLabels([photo]),
@@ -67,6 +108,8 @@ export function buildSeoSidecar (photo: any): SeoSidecar {
     width: clean(photo?.width),
     height: clean(photo?.height)
   }
+  assertNoPreciseLocation(sidecar)
+  return sidecar
 }
 
 export function sidecarKey (id: any): string {

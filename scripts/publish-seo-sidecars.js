@@ -11,6 +11,13 @@
 // or call node directly:
 //   node ./scripts/publish-seo-sidecars.js prod --dry-run
 //   node ./scripts/publish-seo-sidecars.js prod --batch-size=500 --limit=5000
+//
+// The published objects are public (img.wisaw.com/seo/<id>.json). A place NAME belongs in one -
+// it is what makes a photo findable - but a COORDINATE never does, so the query selects the
+// address columns and not the "location" geography column, and buildSidecar rejects anything
+// that looks like a position anyway. It mirrors buildSeoSidecar in
+// lambda-fns/utilities/seoSidecar.ts: the two shapes must stay identical, and
+// tests/seo-crawler-contract.js pins both.
 
 const fs = require('fs')
 const path = require('path')
@@ -47,8 +54,14 @@ function loadEnvConfig (envName) {
   }
 }
 
-const configModule = loadEnvConfig(env)
-const config = typeof configModule.config === 'function' ? configModule.config() : configModule
+// Resolved lazily so the module can be required (by tests) without an environment configured.
+let resolvedConfig = null
+function getConfig () {
+  if (resolvedConfig != null) return resolvedConfig
+  const configModule = loadEnvConfig(env)
+  resolvedConfig = typeof configModule.config === 'function' ? configModule.config() : configModule
+  return resolvedConfig
+}
 
 // S3_IMAGES in the env files is the CDN hostname, not a bucket - the media bucket is
 // always wisaw-img-<env>.
@@ -75,6 +88,8 @@ function pickLabels (rawLabels, limit = 8) {
   return out
 }
 
+// Mirrors locationText()/isPreciseLocation() in lambda-fns/utilities/seoSidecar.ts; the test
+// suite pins that both writers publish the same keys and reject the same values.
 function locationText (row) {
   return [row.locality, row.district, row.region]
     .map(clean)
@@ -83,10 +98,44 @@ function locationText (row) {
     .join(', ')
 }
 
+const PRECISE_KEYS = ['lat', 'lon', 'lng', 'latitude', 'longitude', 'coords', 'coordinates', 'gps', 'geopoint', 'point']
+
+function isPreciseLocation (value) {
+  if (value == null) return false
+  if (typeof value === 'object') return true
+  const text = String(value).trim()
+  if (text === '') return false
+  if (/POINT\s*\(/i.test(text)) return true
+  if (/^0[01][0-9A-Fa-f]{16,}$/.test(text)) return true // WKB/EWKB hex from the geography column
+  return /^-?\d{1,3}\.\d+\s*[,\s]\s*-?\d{1,3}\.\d+$/.test(text)
+}
+
+function buildSidecar (row) {
+  const sidecar = {
+    // Keep in step with SEO_SIDECAR_VERSION in lambda-fns/utilities/seoSidecar.ts.
+    v: 1,
+    caption: clean(row.lastComment).slice(0, 200),
+    labels: pickLabels(row.labels),
+    created: row.createdAt ? new Date(row.createdAt).toISOString() : '',
+    location: locationText(row),
+    width: clean(row.width),
+    height: clean(row.height)
+  }
+  const leaked = Object.keys(sidecar).filter((key) => PRECISE_KEYS.includes(key.toLowerCase()))
+  if (leaked.length > 0) {
+    throw new Error(`refusing to publish a sidecar with a coordinate field: ${leaked.join(', ')}`)
+  }
+  if (isPreciseLocation(sidecar.location)) {
+    throw new Error('refusing to publish a sidecar whose location is a coordinate, not a place name')
+  }
+  return sidecar
+}
+
 function getDbConnection () {
+  const cfg = getConfig()
   return new ServerlessClient({
-    ...config,
-    user: config.username,
+    ...cfg,
+    user: cfg.username,
     delayMs: 1000,
     maxConnections: 20,
     maxRetries: 2,
@@ -96,6 +145,8 @@ function getDbConnection () {
   })
 }
 
+// The address columns are here for the place name; p."location" (the geography column, i.e.
+// the actual coordinates) deliberately is not - see buildSidecar.
 const QUERY = `
   SELECT
     p."id",
@@ -149,15 +200,7 @@ async function main () {
     for (let j = 0; j < batch.length; j += CONCURRENT_LIMIT) {
       const chunk = batch.slice(j, j + CONCURRENT_LIMIT)
       const results = await Promise.allSettled(chunk.map(async (row) => {
-        const sidecar = {
-          v: 1,
-          caption: clean(row.lastComment).slice(0, 200),
-          labels: pickLabels(row.labels),
-          created: row.createdAt ? new Date(row.createdAt).toISOString() : '',
-          location: locationText(row),
-          width: clean(row.width),
-          height: clean(row.height)
-        }
+        const sidecar = buildSidecar(row)
         if (DRY_RUN) {
           console.log(`seo/${row.id}.json`, JSON.stringify(sidecar).slice(0, 200))
           return
@@ -178,7 +221,12 @@ async function main () {
   console.log(`✅ Done. written=${written} failed=${failed}${DRY_RUN ? ' (dry run)' : ''}`)
 }
 
-main().catch((err) => {
-  console.error('❌ Failed:', err)
-  process.exitCode = 1
-})
+if (require.main === module) {
+  main().catch((err) => {
+    console.error('❌ Failed:', err)
+    process.exitCode = 1
+  })
+}
+
+// Exported for tests/seo-crawler-contract.js, which pins the published body shape.
+module.exports = { buildSidecar, pickLabels, QUERY }

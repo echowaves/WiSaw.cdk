@@ -16,6 +16,31 @@ function bucketName () {
   return process.env.WISAW_IMG_BUCKET || 'wisaw-img-prod'
 }
 
+// A sidecar may name the place - "Coney Island, New York" is what makes a photo rankable - but
+// it must never carry a position: no lat/lon pair, no POINT(), no WKB hex off the geography
+// column. The writers refuse to build such an object; the reader drops one too, because objects
+// written before that guard ran are still in S3 (and in this cache for up to SIDECAR_TTL_MS).
+const PRECISE_KEYS = ['lat', 'lon', 'lng', 'latitude', 'longitude', 'coords', 'coordinates', 'gps', 'geopoint', 'point']
+
+function isPreciseLocation (value) {
+  if (value == null) return false
+  if (typeof value === 'object') return true // { latitude, longitude } or a Point instance
+  const text = String(value).trim()
+  if (text === '') return false
+  if (/POINT\s*\(/i.test(text)) return true
+  if (/^0[01][0-9A-Fa-f]{16,}$/.test(text)) return true // WKB/EWKB hex from Postgres geography
+  return /^-?\d{1,3}\.\d+\s*[,\s]\s*-?\d{1,3}\.\d+$/.test(text)
+}
+
+function stripPreciseLocation (parsed) {
+  if (parsed == null || typeof parsed !== 'object') return parsed
+  for (const key of PRECISE_KEYS) {
+    if (Object.prototype.hasOwnProperty.call(parsed, key)) delete parsed[key]
+  }
+  if (isPreciseLocation(parsed.location)) delete parsed.location
+  return parsed
+}
+
 function remember (key, value) {
   if (cache.size >= MAX_ENTRIES) {
     // Cheap FIFO eviction; entries are small and the working set is "recently crawled".
@@ -42,7 +67,7 @@ async function fetchSidecar (imageId) {
     const { Body } = await client.send(
       new GetObjectCommand({ Bucket: bucketName(), Key: key })
     )
-    const parsed = JSON.parse(await Body.transformToString())
+    const parsed = stripPreciseLocation(JSON.parse(await Body.transformToString()))
     remember(key, parsed)
     return parsed
   } catch (err) {
@@ -56,4 +81,6 @@ async function fetchSidecar (imageId) {
   }
 }
 
-module.exports = { fetchSidecar }
+// The two guards are exported for tests/seo-crawler-contract.js: "no object ever reaches the
+// injector with a coordinate in it" has to be pinned by a test, not assumed from the writers.
+module.exports = { fetchSidecar, stripPreciseLocation, isPreciseLocation }

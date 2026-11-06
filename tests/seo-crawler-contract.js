@@ -12,6 +12,11 @@ const {
 } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/utils')
 const { parseMediaUri, needsCanonicalRedirect } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/mediaUri')
 const { buildSeoFields, monthYear } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/seoText')
+// Both writers of seo/<id>.json plus the edge reader's guard. These objects are public, so a
+// place NAME is fair content while a COORDINATE may never appear in one.
+const { buildSeoSidecar, assertNoPreciseLocation } = require('../lambda-fns/utilities/seoSidecar.ts')
+const { buildSidecar, QUERY } = require('../scripts/publish-seo-sidecars.js')
+const { stripPreciseLocation } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/sidecar')
 
 // Snapshot of what Googlebot actually receives for https://wisaw.com/ today (captured
 // 2026-11-05). Tests run the real injector over the real shell instead of a hand-written
@@ -122,6 +127,89 @@ describe('buildSeoFields - real text, never invented facts', () => {
     expect(monthYear('')).to.equal('')
     expect(monthYear('2001-01-01T00:00:00Z')).to.equal('')
     expect(monthYear('not-a-date')).to.equal('')
+  })
+})
+
+// "Photos"."location" is a Postgres geography column. However its value reaches a writer -
+// object, WKB hex, POINT() text or a bare pair - it must not survive into seo/<id>.json, while
+// the address columns (locality/district/region) are expected to.
+const GEOMETRY_FORMS = {
+  pointObject: { latitude: 40.6833, longitude: -73.974 },
+  wkbHex: '0101000020E6100000C3F5A74271D04440CD5AB69B102252C0',
+  pointText: 'POINT(-73.9740 40.6833)',
+  pairText: '40.6833, -73.9740'
+}
+
+describe('seo/<id>.json - a place name is fine, a coordinate never is', () => {
+  const row = {
+    id: UUID,
+    lastComment: 'Golden retriever puppy on the beach at sunset',
+    createdAt: '2025-09-18T14:03:00.000Z',
+    width: '3024',
+    height: '4032',
+    labels: ['Dog', 'Pet'],
+    locality: 'Coney Island',
+    district: 'Brooklyn',
+    region: 'New York'
+  }
+
+  it('publishes the place name built from the address columns', () => {
+    expect(buildSeoSidecar(row).location).to.equal('Coney Island, Brooklyn, New York')
+  })
+
+  it('ignores a geometry column on the row however it is shaped', () => {
+    for (const [shape, value] of Object.entries(GEOMETRY_FORMS)) {
+      const body = buildSeoSidecar({ ...row, location: value })
+      expect(body.location, shape).to.equal('Coney Island, Brooklyn, New York')
+      expect(JSON.stringify(body), shape).to.not.contain('73.974')
+    }
+  })
+
+  it('refuses to publish a sidecar whose location is a coordinate', () => {
+    for (const [shape, value] of Object.entries(GEOMETRY_FORMS)) {
+      const poisoned = { ...buildSeoSidecar(row), location: value }
+      expect(() => assertNoPreciseLocation(poisoned), shape).to.throw(/coordinate/)
+    }
+    expect(() => assertNoPreciseLocation({ v: 1, lat: 40.6833 })).to.throw(/coordinate/)
+    expect(() => assertNoPreciseLocation({ v: 1, latitude: 40.6833 })).to.throw(/coordinate/)
+  })
+
+  it('the backfill script publishes the same keys and ignores the geometry column too', () => {
+    const fromScript = buildSidecar(row)
+    const fromUtility = buildSeoSidecar(row)
+    expect(Object.keys(fromScript).sort()).to.deep.equal(Object.keys(fromUtility).sort())
+    expect(fromScript.v).to.equal(fromUtility.v)
+    expect(fromScript.location).to.equal('Coney Island, Brooklyn, New York')
+    expect(buildSidecar({ ...row, location: GEOMETRY_FORMS.wkbHex }).location)
+      .to.equal('Coney Island, Brooklyn, New York')
+  })
+
+  it('the backfill query selects the address columns and never the geography column', () => {
+    expect(QUERY).to.match(/"locality"/)
+    expect(QUERY).to.match(/"region"/)
+    expect(QUERY).to.not.match(/p\."location"|ST_As|ST_Distance|latitude|longitude/i)
+  })
+
+  it('the edge reader drops coordinates and keeps the place name', () => {
+    const poisoned = {
+      v: 1,
+      caption: 'Sunset over the boardwalk',
+      labels: ['Beach'],
+      location: GEOMETRY_FORMS.pointText,
+      lat: 40.6833,
+      lon: -73.974,
+      latitude: 40.6833,
+      width: '3024'
+    }
+    const read = stripPreciseLocation(JSON.parse(JSON.stringify(poisoned)))
+    for (const key of ['lat', 'lon', 'latitude']) expect(read, key).to.not.have.property(key)
+    expect(JSON.stringify(read)).to.not.contain('73.974')
+    expect(stripPreciseLocation({ v: 1, location: { latitude: 1, longitude: 2 } })).to.not.have.property('location')
+    // And a normal sidecar comes back untouched - the place name is what the titles are built from.
+    const named = stripPreciseLocation({ v: 1, caption: 'Sunset', location: 'Coney Island, Brooklyn' })
+    expect(named.location).to.equal('Coney Island, Brooklyn')
+    expect(buildSeoFields({ sidecar: named, entityLabel: 'photo', imageIdText: UUID }).pageTitle)
+      .to.contain('Coney Island')
   })
 })
 
