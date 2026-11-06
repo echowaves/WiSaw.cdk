@@ -1,6 +1,7 @@
 import psql from "../../psql"
 import { traceLog } from '../../utilities/trace'
 import { _updatePhotosCount } from "../../controllers/waves/_updatePhotosCount"
+import { deleteSeoSidecar } from '../../utilities/seoSidecar'
 
 import { DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3"
 
@@ -20,6 +21,7 @@ export async function main(event: any = {}, context: any) {
 
   await Promise.all([
     _deleteUpload({ Bucket: record.s3.bucket.name, Key: `${photoId}` }),
+    _deleteSidecar({ Bucket: record.s3.bucket.name, photoId }),
     _cleanupTables({ photoId }),
   ])
   // console.log('everything ended')
@@ -57,6 +59,26 @@ const _deleteUpload = async ({
     console.error({ err })
   }
   // console.log(`_deleteUpload ended: ${Key}`)
+}
+
+// The seo/<id>.json sidecar must die with the photo it describes, otherwise orphans
+// accumulate for every hard delete. Key building lives in seoSidecar.ts; an absent
+// sidecar is a no-op success (S3 delete is idempotent). A failure here must never
+// fail the handler — same swallow-and-log contract as _deleteUpload above.
+const _deleteSidecar = async ({
+  Bucket,
+  photoId
+}: {
+  Bucket: string
+  photoId: string
+}): Promise<void> => {
+  try {
+    const client = new S3Client({ region: 'us-east-1' })
+    await deleteSeoSidecar(client, Bucket, photoId)
+  } catch (err) {
+    console.error('Error deleting seo sidecar')
+    console.error({ err })
+  }
 }
 
 const _cleanupTables = async ({ photoId }: { photoId: string }) => {

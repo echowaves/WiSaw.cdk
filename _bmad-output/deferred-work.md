@@ -1,0 +1,3 @@
+- source_plan: `_bmad-output/plan-seo-sidecar-lifecycle.md`
+  summary: Original photo media is never deleted — `processDeletedImage` deletes S3 key `<id>` while every reader uses `<id>.webp`.
+  evidence: Discovered while planning sidecar cleanup (`lambda-fns/lambdas/processDeletedImage/index.ts:16,46` vs `lambda-fns/models/photo.ts:25`, `lambda-fns/lambdas/processUploadedImage/index.ts:55`). Left out by the human at planning: it is storage hygiene with its own blast radius (videos are `.mov`/`.mp4`, and actually deleting originals makes user media loss irreversible), so it needs its own change and product sign-off.

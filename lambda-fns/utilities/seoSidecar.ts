@@ -1,4 +1,4 @@
-import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 import type { S3Client } from '@aws-sdk/client-s3'
 
 // One sidecar per photo/video, read by Lambda@Edge, which cannot join the VPC to reach
@@ -101,6 +101,18 @@ export async function putSeoSidecars (client: S3Client, bucket: string, photos: 
 
   return { written, failed }
 }
+
+// Removes the sidecar for a photo that is being destroyed. Same key contract as every writer:
+// callers pass the raw id and sidecarKey() normalizes it, so a delete can never miss its target.
+// S3 DeleteObject succeeds on an already-absent key, so "already gone" is a no-op success rather
+// than a NoSuchKey error. Callers own error handling — see processDeletedImage's _deleteUpload.
+export async function deleteSeoSidecar (client: S3Client, bucket: string, id: any): Promise<void> {
+  await client.send(new DeleteObjectCommand({
+    Bucket: bucket,
+    Key: sidecarKey(id)
+  }))
+}
+
 // Written by the scheduled publisher so the next run knows where its window starts instead of
 // guessing a fixed lookback. Lives beside the sidecars it governs.
 export const SEO_WATERMARK_KEY = 'seo/_last-run.json'
