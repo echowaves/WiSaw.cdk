@@ -50,20 +50,11 @@ exports.handler = async (event) => {
     return buildRedirect(`/${type}/${uuid}`)
   }
 
-  // Check if URI has a malformed ID made of zeros and dashes with a trailing integer
-  const idMatch = request.uri.match(/^\/(photos|videos)\/(.+)$/)
-  if (idMatch) {
-    const [, type, id] = idMatch
-    const stripped = id.replace(/[0-]/g, '')
-    if (stripped.length > 0 && /^\d+$/.test(stripped)) {
-      const uuid = convertIntegerIdToUuid(stripped)
-      if (uuid === id.toLowerCase()) {
-        return request
-      }
-
-      return buildRedirect(`/${type}/${uuid}`)
-    }
-  }
+  // Any other /photos|videos/<id> shape is served as-is. There used to be a normaliser here
+  // that stripped every 0 and '-' from the id and re-padded what survived, which silently
+  // rewrote valid legacy ids: /photos/…-000000029801 became /photos/…-000000002981, i.e. a
+  // 301 to an unrelated photo or a 404. Legacy rows already store canonical UUIDs, so the
+  // integer case above is the only rewrite that is actually needed.
 
   if (host === 'www.wisaw.com') {
     // Build the new URL, preserving query string if present
