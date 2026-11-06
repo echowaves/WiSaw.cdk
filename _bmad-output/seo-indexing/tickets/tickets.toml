@@ -8,5 +8,5 @@ description = "A user's photo delete only hides the photo in the database; its o
 verify = "On the deployed test environment, deleting a photo stops its image, thumb, and sidecar URLs from serving, while another photo sharing its storage prefix keeps working and its indexed page keeps its SEO enrichment."
 covers = []
 after = []
-hitl = false
+hitl = true
 risk = "high"

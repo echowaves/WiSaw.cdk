@@ -7,7 +7,7 @@ covers: []
 after: []
 assignee: ""
 refined: true
-hitl: false
+hitl: true
 risk: high
 severity: P1
 ---
@@ -16,7 +16,7 @@ severity: P1
 
 ## Description
 
-When a user deletes their photo, it vanishes from every list and page in the app — but the uploaded image, its thumbnails, and the photo's SEO sidecar file stay in the media bucket. Anyone holding the direct link can still open the deleted photo, and the objects pile up forever. A cleanup path exists but fires only on a storage event no user action produces; today only an operator running a manual script clears these objects. Deleting a photo must remove all of that photo's objects.
+When a user deletes their photo, it vanishes from every list and page in the app — but the uploaded image, its thumbnails, and the photo's SEO sidecar file stay in the media bucket. Anyone holding the direct link can still open the deleted photo, and the objects pile up forever. A cleanup path exists but fires only on a storage event no user action produces; today only an operator running a manual script clears these objects. Deleting a photo must remove all of that photo's objects and stop them serving within one hour; before removal is enabled in prod, an operator dry-runs the matcher against a bucket inventory (the human step this ticket requires).
 
 ## Reproduction
 
@@ -37,8 +37,8 @@ The delete mutation flips a visibility flag in the database and touches no stora
 
 1. **A user delete removes every object belonging to that photo**
    **Given** a photo uploaded on the deployed test environment, with its image, thumb, and sidecar URLs recorded
-   **When** the user deletes the photo and the CDN and sidecar caches have expired (allow 30 minutes)
-   **Then** the original image, all of that photo's thumbnails, and the `seo/<id>.json` sidecar return 403/404, a bucket listing shows none of them, and the photo is absent from the app
+   **When** at most one hour has passed since the user deleted the photo
+   **Then** the original image, all of that photo's thumbnails, and the `seo/<id>.json` sidecar return 403/404 through the public URLs, a bucket listing shows none of them, and the photo is absent from the app
 2. **Other photos' objects are untouched**
    **Given** two photos whose stored keys share a prefix
    **When** one of them is deleted as above
@@ -69,7 +69,7 @@ The delete mutation flips a visibility flag in the database and touches no stora
 ## Notes
 
 - Decision: cleanup removes all of the photo's S3 objects — original, thumbs, sidecar — at delete time; not deferred, not sidecar-only. Risk high, severity P1. (User, 2026-11-06)
-- High-risk check beyond criteria: before enabling removal in prod, run the matcher in dry-run against a current bucket inventory and confirm it selects only keys of already-deleted photos.
+- High-risk check beyond criteria (the human step named in Description): before enabling removal in prod, an operator runs the matcher in dry-run against a current bucket inventory and confirms it selects only keys of already-deleted photos.
 - Decision: "deleted" means the user-facing photo delete; account-deletion and admin purge flows are out of scope for this ticket. (User, 2026-11-06)
-- Open question: how long can CloudFront keep serving a deleted photo from cache after its objects are removed, and is that window acceptable?
+- Decision: the media CDN caches deleted URLs for up to 10 days (max-TTL policy), so removing the objects alone leaves cached copies serving; the fix must also invalidate the removed keys, and AC1's window is one hour. (User, 2026-11-06)
 - The earlier plan `_bmad-output/plan-seo-sidecar-lifecycle.md` claimed this lifecycle was complete; the research disproved that for user deletes. Context only, not evidence.
