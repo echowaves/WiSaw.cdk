@@ -112,7 +112,13 @@ const QUERY = `
   LEFT JOIN LATERAL (
     SELECT jsonb_agg(l ->> 'Name') AS "labels"
     FROM "Recognitions" rec,
-         jsonb_array_elements(rec."metaData" -> 'Labels') l
+         -- Same scalar guard as generateSiteMap: one non-array Labels value aborts the
+         -- whole statement (22023) and would fail the run for all ~21k photos.
+         jsonb_array_elements(
+           CASE WHEN jsonb_typeof(rec."metaData" -> 'Labels') = 'array'
+                THEN rec."metaData" -> 'Labels'
+                ELSE '[]'::jsonb END
+         ) l
     WHERE rec."photoId" = p."id"
       AND coalesce(l ->> 'Name', '') <> ''
   ) r ON true

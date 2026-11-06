@@ -111,7 +111,13 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
         LEFT JOIN LATERAL (
           SELECT jsonb_agg(l ->> 'Name') AS "labels"
           FROM "Recognitions" rec,
-               jsonb_array_elements(rec."metaData" -> 'Labels') l
+               -- Older Rekognition payloads store Labels as a scalar; unwinding one of those
+               -- aborts the whole statement (22023) and took the photo feed with it.
+               jsonb_array_elements(
+                 CASE WHEN jsonb_typeof(rec."metaData" -> 'Labels') = 'array'
+                      THEN rec."metaData" -> 'Labels'
+                      ELSE '[]'::jsonb END
+               ) l
           WHERE rec."photoId" = p."id"
             AND coalesce(l ->> 'Name', '') <> ''
         ) r ON true
@@ -130,6 +136,15 @@ export async function main(event: any = {}, context: any /*, cb: any*/) {
 
   console.log('photos.length:', photos?.length)
   // console.log('videos.length:', videos.length)
+
+  // Never overwrite a good sitemap with an empty one. A failed feed used to fall through to
+  // the PUT and publish a four-URL file over ~21k indexed pages; the last good file is worth
+  // more than a fresh blank one, so bail before anything is written.
+  if (photos == null || photos.length === 0) {
+    console.error('Aborting before upload: photo feed unavailable, keeping existing sitemap.xml')
+    traceLog('generateSiteMap:ABORT', { reason: 'empty-photo-feed' })
+    return false
+  }
 
   photos?.forEach((photo: any) => {
     // const jsonObj = JSON.parse(JSON.stringify(photo))
