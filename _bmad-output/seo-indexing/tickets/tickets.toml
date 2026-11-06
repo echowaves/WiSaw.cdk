@@ -1,0 +1,12 @@
+# Initiative-level entries (no epics). Table order is build order. `id` is permanent, never reused.
+
+[[entry]]
+id = 1
+type = "bug"
+title = "Deleting a photo leaves its images and SEO files live in storage"
+description = "A user's photo delete only hides the photo in the database; its original image, thumbnails, and SEO sidecar stay in the media bucket and keep serving by direct URL. Deleting a photo must remove all of that photo's objects."
+verify = "On the deployed test environment, deleting a photo stops its image, thumb, and sidecar URLs from serving, while another photo sharing its storage prefix keeps working and its indexed page keeps its SEO enrichment."
+covers = []
+after = []
+hitl = false
+risk = "high"

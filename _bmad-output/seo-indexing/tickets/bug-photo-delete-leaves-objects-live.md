@@ -1,0 +1,75 @@
+---
+id: 1
+type: bug
+title: "Deleting a photo leaves its images and SEO files live in storage"
+parent: seo-indexing
+covers: []
+after: []
+assignee: ""
+refined: true
+hitl: false
+risk: high
+severity: P1
+---
+
+# Deleting a photo leaves its images and SEO files live in storage
+
+## Description
+
+When a user deletes their photo, it vanishes from every list and page in the app — but the uploaded image, its thumbnails, and the photo's SEO sidecar file stay in the media bucket. Anyone holding the direct link can still open the deleted photo, and the objects pile up forever. A cleanup path exists but fires only on a storage event no user action produces; today only an operator running a manual script clears these objects. Deleting a photo must remove all of that photo's objects.
+
+## Reproduction
+
+Deployed test environment, a real account.
+
+1. Upload a photo through the app. Record its page URL, its direct image URL, a thumbnail URL, and confirm its sidecar object `seo/<id>.json` exists in the `wisaw-img-<env>` bucket.
+2. Delete the photo from the app. Confirm it is gone from the app's lists and pages.
+3. Fetch the three recorded URLs and list the sidecar key.
+
+**Actual:** the image, thumbnail, and sidecar all still serve (HTTP 200); the bucket still holds every object. The database row was only marked inactive.
+**Expected:** after caches expire, every one of the photo's objects is gone (403/404), and none remain in a bucket listing.
+
+## Cause Hypothesis
+
+The delete mutation flips a visibility flag in the database and touches no storage object. The bucket-event cleanup for a deleted photo fires only when a thumbnail object is removed — an event nothing in the app produces; only the manual operator script deletes objects today. So no user-facing path ever triggers removal, of the media or of the sidecar. (Evidence: research sections 3–4.)
+
+## Acceptance Criteria
+
+1. **A user delete removes every object belonging to that photo**
+   **Given** a photo uploaded on the deployed test environment, with its image, thumb, and sidecar URLs recorded
+   **When** the user deletes the photo and the CDN and sidecar caches have expired (allow 30 minutes)
+   **Then** the original image, all of that photo's thumbnails, and the `seo/<id>.json` sidecar return 403/404, a bucket listing shows none of them, and the photo is absent from the app
+2. **Other photos' objects are untouched**
+   **Given** two photos whose stored keys share a prefix
+   **When** one of them is deleted as above
+   **Then** the other photo's image, thumbs, and sidecar still serve, and its indexed page still renders its SEO-enriched title and description
+3. **Tests cover the condition found and fixed**
+   **Given** the test suite
+   **When** it runs
+   **Then** a test that fails on the defect and passes on the fix covers the reproduction, and one covers each related case the fix touched — including that a delete never matches another photo's keys
+4. **Or: no change is needed, with proof**
+   **Given** the reproduction
+   **When** it is run on the current code
+   **Then** the expected behavior already holds, or the report was mistaken, with the evidence recorded in Notes — this supersedes 1 and 2
+
+## Boundaries
+
+- The sidecar key and body contract stays exactly as it is for all four parties that share it (scheduled publisher, backfill script, edge reader, reconciler); this ticket changes removal only, never key or body shape.
+- Removal matches that photo's exact object set — never a broad prefix sweep of the bucket.
+- SEO edge injection stays byte-exact: the existing crawler-contract tests keep passing unchanged, and pages for photos not deleted are unaffected.
+- The delete response and the GraphQL API stay as mobile clients know them.
+
+## References
+
+- parent — none
+- research — _bmad-output/seo-indexing/research-seo-edge-injection-and-sidecar-lifecycle/research-seo-edge-injection-and-sidecar-lifecycle.md, "In one breath", sections 3–4 and "Where the answers meet"
+- decision — docs/decisions/adr-seo-sidecars-in-media-bucket.md, sidecar key/body contract and its four parties
+- tests — tests/seo-sidecar-lifecycle.js, existing lifecycle harness to extend
+
+## Notes
+
+- Decision: cleanup removes all of the photo's S3 objects — original, thumbs, sidecar — at delete time; not deferred, not sidecar-only. Risk high, severity P1. (User, 2026-11-06)
+- High-risk check beyond criteria: before enabling removal in prod, run the matcher in dry-run against a current bucket inventory and confirm it selects only keys of already-deleted photos.
+- Decision: "deleted" means the user-facing photo delete; account-deletion and admin purge flows are out of scope for this ticket. (User, 2026-11-06)
+- Open question: how long can CloudFront keep serving a deleted photo from cache after its objects are removed, and is that window acceptable?
+- The earlier plan `_bmad-output/plan-seo-sidecar-lifecycle.md` claimed this lifecycle was complete; the research disproved that for user deletes. Context only, not evidence.
