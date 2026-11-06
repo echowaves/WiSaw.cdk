@@ -1,0 +1,62 @@
+{
+  "generation_hash": "e084f6e186497b38b81b",
+  "inputs": {
+    "jinja2_version": "3.1.6",
+    "project_root": "/Users/dmitry/hacks/wisaw/WiSaw.cdk",
+    "renderer_sha256": "82b4d567c335a596d086d94b4772d0a4a9e09065f84b45c3647276593d02552c",
+    "resolved_values": {
+      "config.core.output_folder": "/Users/dmitry/hacks/wisaw/WiSaw.cdk/_bmad-output",
+      "customization.workflow.activation_steps_append": [],
+      "customization.workflow.activation_steps_prepend": [],
+      "customization.workflow.implementation_handoff": "Launch a subagent with no prior conversation context, with this prompt:\n\n> Read {plan_file} fully and implement it — the plan is the sole source of truth. Load every file listed in its frontmatter `context:` before you start.\n>\n> When done, report what you changed, how you verified it, and anything left incomplete or risky.\n",
+      "customization.workflow.on_complete": "",
+      "customization.workflow.open_plan": "",
+      "customization.workflow.persistent_facts": [],
+      "customization.workflow.quick_lenses": [
+        {
+          "id": "quick",
+          "instruction": "Launch a context-free subagent with this prompt:\n\nRead `{plan_file}` — the plan holding the acceptance criteria and intent — and the files its frontmatter `context:` lists. Read the agent instruction files (`AGENTS.md`, `CLAUDE.md`, or equivalents) at the repository root and in the directories the diff touches; those are the rules. Then read the unified diff at `{diff_file}` — it is the change under review.\n\nReport unmet acceptance criteria, broken rules, and bugs. Each finding: the location, what goes wrong, and evidence checked against the surrounding code. Output a Markdown list of findings only — no severity, priority, or ranking.\n\nReview by inspection only. Do not modify code, run builds or tests, or invoke quality gates. Do not invoke any skill, and do not spawn subagents of your own — you are the reviewer. Return your findings as text in your final message; do not route them through any findings-reporting tool the host may offer.\n\n",
+          "name": "Quick"
+        }
+      ],
+      "customization.workflow.review": "quick",
+      "customization.workflow.route": "auto",
+      "customization.workflow.route_selection": "Decide whether to use a coding subagent (full) or implement directly (oneshot).\nUsing the information already gathered, with no further reading and minimal\nextra reasoning, estimate the lines of code to add or modify.\n100 lines or fewer: oneshot. Otherwise: full.\nIf the change touches more than five files and is not simple or mechanical,\nconsider upgrading to full.\n",
+      "initiative_folder": "/Users/dmitry/hacks/wisaw/WiSaw.cdk/_bmad-output"
+    },
+    "skill_root": "/Users/dmitry/hacks/wisaw/WiSaw.cdk/.agents/skills/bmad-build",
+    "source_sha256": {
+      "plan-template.md": "d8b2b886839573c30b5cab5fc256fd8a3050ddb9ab64117b5651dce2406e2077",
+      "references/claims-check.md": "6cb20a86d819b95272876bca0dffef59ca07ba6a373d804295066751043867c0",
+      "references/deletion-check.md": "0f1f124e4e957147e89164a272b10bedc694ad0d9ad2618c8610ac74ee9cb0da",
+      "review-prompts/edge-case-hunter.md": "b909fe0ec8e4daaf2550d0ec783618c5146261d0dbc0e054698ce00d0905a3d1",
+      "review-prompts/verification-gap.md": "859930110817293bf9d25bd6df093f094cdc50fe6b8359e3720aee6dba96e17a",
+      "step-01-clarify-and-route.md": "943d8cc7328301a3d3620da7eab7fd1bd29e8130f8213ac0d31b5dd42876076e",
+      "step-02-plan.md": "44a0242450a0f316756d0f9abc6dbde6473e5f05742c9d97cf12531679693991",
+      "step-03-implement.md": "90d51381abaf357b712eb360f8149c92125734ea113888dfbc8237bfd348d806",
+      "step-04-review.md": "5e2e3b5bd166bf8fa835a21ba27b147cf4c6373fbf2b712a4c251968f3805169",
+      "step-05-present.md": "8c3a4f5e627524b05c3f1db4850b6ab68ae6930d8046c340a3e1590dccc4ed61",
+      "step-oneshot.md": "606c0e6e7021e8818e11d356bc1b4170cab53d483de037201c256bbd07fdfee8",
+      "workflow.md": "a4a1fed8a1d374b5ff8ac5613211a2e31d7e89743d1b153348ae6fe9ce36ec80"
+    }
+  },
+  "outputs": {
+    "plan-template.md": "d8b2b886839573c30b5cab5fc256fd8a3050ddb9ab64117b5651dce2406e2077",
+    "references/claims-check.md": "6cb20a86d819b95272876bca0dffef59ca07ba6a373d804295066751043867c0",
+    "references/deletion-check.md": "0f1f124e4e957147e89164a272b10bedc694ad0d9ad2618c8610ac74ee9cb0da",
+    "review-prompts/edge-case-hunter.md": "b909fe0ec8e4daaf2550d0ec783618c5146261d0dbc0e054698ce00d0905a3d1",
+    "review-prompts/verification-gap.md": "859930110817293bf9d25bd6df093f094cdc50fe6b8359e3720aee6dba96e17a",
+    "step-01-clarify-and-route.md": "ea934ee010a1003db865d5c931be06c613ba5c537a0298400a3a7dec74672e51",
+    "step-02-plan.md": "7c805f50feae75751b7e5910c9ea79b8ee2b20787820d1bc8265a106288292b8",
+    "step-03-implement.md": "18e1d870b3daf084b914b75423a37607c06f29e3258ecf6ad58445cf8516dfa9",
+    "step-04-review.md": "1091876a0e8d569d6aca76c2e02554ea352b66fe730c2f080db667b2bd50bc3f",
+    "step-05-present.md": "edda56d0325a599734fef653501c2e56cd45ace615343113768b6a3f4f1b3540",
+    "step-oneshot.md": "99e08471e3642adc8c5490a082d61414bf9a2cad128e4576ba1966afc3f9496c",
+    "workflow.md": "d5bb6790e283442bad433f1bda4c94ec2e58deda4249e9bf2bd73a6676ea10b6"
+  },
+  "project_root": "/Users/dmitry/hacks/wisaw/WiSaw.cdk",
+  "project_slug": "wisaw-cdk",
+  "root_hash": "785d547ae921",
+  "schema_version": 1,
+  "skill": "bmad-build"
+}
