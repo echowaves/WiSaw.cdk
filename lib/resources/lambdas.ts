@@ -217,6 +217,7 @@ export function createLambdas (scope: Construct, config: any, api?: any): any {
   let injectMetaTagsLambdaFunctionPhoto: cloudfront.experimental.EdgeFunction | undefined
   let injectMetaTagsLambdaFunctionVideo: cloudfront.experimental.EdgeFunction | undefined
   let redirectLambdaEdgeFunction: cloudfront.experimental.EdgeFunction | undefined
+  let injectStaticMetaTagsLambdaFunction: cloudfront.experimental.EdgeFunction | undefined
 
   if (deployEnv() === 'prod') {
     const generateSiteMapLambdaFunctionLogGroup = new logs.LogGroup(scope, `${deployEnv()}_generateSiteMap-LogGroup`, {
@@ -242,7 +243,9 @@ export function createLambdas (scope: Construct, config: any, api?: any): any {
         },
         logGroup: generateSiteMapLambdaFunctionLogGroup,
         memorySize: 1024,
-        timeout: cdk.Duration.seconds(30),
+        // The run also publishes SEO sidecars for recently changed photos on top of building
+        // the sitemap, which the original 30s budget did not account for.
+        timeout: cdk.Duration.seconds(120),
         environment: {
           ...config
         }
@@ -378,6 +381,34 @@ export function createLambdas (scope: Construct, config: any, api?: any): any {
           // },
         }
       )
+
+    // Head tags for the non-media routes (/, /about, /contact, /terms, /search). They used
+    // to be served raw from S3 with no canonical and the homepage <title> on every route,
+    // so four URLs looked like copies of wisaw.com/. Same code bundle as the photo/video
+    // injector; only the handler entry point differs.
+    const injectStaticMetaTagsLambdaFunctionLogGroup = new logs.LogGroup(scope, `${deployEnv()}_injectStaticMetaTagsLambdaFunction-LogGroup`, {
+      retention: logs.RetentionDays.ONE_DAY,
+      removalPolicy: cdk.RemovalPolicy.DESTROY
+    })
+
+    injectStaticMetaTagsLambdaFunction =
+      new cloudfront.experimental.EdgeFunction(
+        scope,
+        `${deployEnv()}_injectStaticMetaTagsLambdaFunction`,
+        {
+          runtime: lambda.Runtime.NODEJS_22_X,
+          code: lambda.Code.fromAsset(
+            path.join(
+              __dirname,
+              '../../lambda-fns/lambdas/injectMetaTagsLambdaFunction'
+            )
+          ),
+          handler: 'static.handler',
+          memorySize: 128,
+          timeout: cdk.Duration.seconds(5),
+          logGroup: injectStaticMetaTagsLambdaFunctionLogGroup
+        }
+      )
   }
 
   processUploadedImageLambdaFunction.addToRolePolicy(
@@ -401,6 +432,7 @@ export function createLambdas (scope: Construct, config: any, api?: any): any {
     generateSiteMapLambdaFunction,
     injectMetaTagsLambdaFunctionPhoto,
     injectMetaTagsLambdaFunctionVideo,
-    redirectLambdaEdgeFunction
+    redirectLambdaEdgeFunction,
+    injectStaticMetaTagsLambdaFunction
   }
 }

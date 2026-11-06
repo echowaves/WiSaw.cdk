@@ -11,7 +11,8 @@ export function createBuckets (scope: Construct, lambdas: any): any {
     generateSiteMapLambdaFunction,
     injectMetaTagsLambdaFunctionPhoto,
     injectMetaTagsLambdaFunctionVideo,
-    redirectLambdaEdgeFunction
+    redirectLambdaEdgeFunction,
+    injectStaticMetaTagsLambdaFunction
   } = lambdas
 
   // ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -67,6 +68,9 @@ export function createBuckets (scope: Construct, lambdas: any): any {
     // Grant the Lambda function permissions to read and write to the S3 bucket
     if (generateSiteMapLambdaFunction !== undefined) {
       webAppBucket.grantReadWrite(generateSiteMapLambdaFunction)
+      // It also publishes the seo/<id>.json sidecars the edge injector reads from the media
+      // bucket, which is where the media objects they describe live.
+      imgBucket.grantReadWrite(generateSiteMapLambdaFunction)
     }
 
     if (injectMetaTagsLambdaFunctionPhoto !== undefined) {
@@ -81,6 +85,11 @@ export function createBuckets (scope: Construct, lambdas: any): any {
 
     if (redirectLambdaEdgeFunction !== undefined) {
       webAppBucket.grantRead(redirectLambdaEdgeFunction)
+    }
+
+    // The static-route injector only reads the app shell out of the web bucket.
+    if (injectStaticMetaTagsLambdaFunction !== undefined) {
+      webAppBucket.grantRead(injectStaticMetaTagsLambdaFunction)
     }
   }
 

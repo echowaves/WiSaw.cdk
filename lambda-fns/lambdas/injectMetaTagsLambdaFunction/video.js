@@ -1,125 +1,86 @@
 /* eslint-env node */
-/* global require, exports, console */
-const { S3Client, GetObjectCommand, HeadObjectCommand } = require('@aws-sdk/client-s3') // CommonJS import
-const { sanitizeImageId, injectMetaTags, buildSeoBody } = require('./utils')
+/* global require, exports, process */
+const { sanitizeImageId, injectMetaTags, buildSeoBody, htmlResponse, renderNotFoundDocument } = require('./utils')
+const { parseMediaUri } = require('./mediaUri')
+const { fetchShell } = require('./template')
+const { fetchSidecar } = require('./sidecar')
+const { buildSeoFields } = require('./seoText')
+const { probeMedia, readDuration } = require('./media')
 
-const VIDEO_DESCRIPTION = 'Check out What I saw Today (video)'
+const IMG_BUCKET = process.env.WISAW_IMG_BUCKET || 'wisaw-img-prod'
+const FALLBACK_DESCRIPTION = 'Free unaltered video on WiSaw - authentic photos and videos taken with phone cameras.'
 
 exports.handler = async (event, context, callback) => {
-  // console.log({ event })
-  // console.log({ context })
-  // console.log({event: JSON.stringify(event)})
   const { request } = event.Records[0].cf
-  const { text: imageIdText, url: imageIdUrl, raw: imageIdRaw } = sanitizeImageId(request.uri)
+  const parsed = parseMediaUri(request.uri)
 
-  // console.log("Received event:", JSON.stringify(event, null, 4))
-  // console.log(
-  //   ".......................................at the start..............................",
-  // )
-
-  // console.log({ imageId })
-
-  // console.log({ event: event.Records[0].cf })
-  // callback(null, request)
-
-  const client = new S3Client({ region: 'us-east-1' })
-
-  let created = new Date().toISOString()
-  let duration
-  try {
-    const headCommand = new HeadObjectCommand({
-      Bucket: 'wisaw-img-prod',
-      Key: `${imageIdRaw}.mov`
-    })
-    const headData = await client.send(headCommand)
-    if (headData.LastModified) {
-      created = headData.LastModified.toISOString()
-    }
-    if (headData.Metadata && headData.Metadata.duration) {
-      duration = headData.Metadata.duration
-    }
-  } catch (e) {
-    // eslint-disable-next-line no-console, no-undef
-    console.error('Error fetching video metadata:', e)
+  if (!parsed.valid) {
+    return callback(null, htmlResponse(404, renderNotFoundDocument('video'), { noindex: true, cacheControl: 'max-age=86400' }))
   }
 
-  const command = new GetObjectCommand({
-    Bucket: 'wisaw.com',
-    Key: 'index.html'
+  const { text: imageIdText, url: imageIdUrl, raw: imageIdRaw } = sanitizeImageId(`/${parsed.kind}/${parsed.id}`)
+
+  const [sidecar, media] = await Promise.all([
+    fetchSidecar(imageIdRaw),
+    probeMedia(IMG_BUCKET, imageIdRaw)
+  ])
+
+  // See the note in photo.js: a definitive miss only. Videos are matched by id prefix so an
+  // object stored as .mp4 instead of .mov is never mistaken for a deleted page.
+  if (!media.exists) {
+    return callback(null, htmlResponse(404, renderNotFoundDocument('video'), { noindex: true, cacheControl: 'max-age=86400' }))
+  }
+
+  const s3Duration = await readDuration(IMG_BUCKET, media.key)
+
+  const seo = buildSeoFields({
+    sidecar,
+    entityLabel: 'video',
+    imageIdText,
+    lastModified: media.lastModified
   })
-  // console.log("-----------------------------------------------------1")
-  const { Body } = await client.send(command)
 
-  // console.log({ data })
-  const index = await Body.transformToString()
-
-  // const index = data.toString("utf-8")
-  // const index = data.toString()
-
-  // const command = new GetObjectCommand(input)
-  // const { Body } = await client.send(command)
-
-  // const image = await Body.transformToByteArray()
-
-  // console.log({ data })
-  // console.log({ index })
-
-  const videoUrl = `https://img.wisaw.com/${imageIdRaw}.mov`
+  const description = seo.metaDescription || FALLBACK_DESCRIPTION
+  // Point players and crawlers at the object that actually exists rather than assuming a
+  // .mov key: og:video and VideoObject.contentUrl used to 403 for every video not stored
+  // under <id>.mov, which makes the rich result invalid.
+  const mediaKey = /\.(mov|mp4|webm|m4v)$/i.test(media.key) ? media.key : `${imageIdRaw}.mov`
+  const videoUrl = `https://img.wisaw.com/${mediaKey}`
+  const created = seo.created || media.lastModified
+  const duration = seo.duration || s3Duration
+  const index = await fetchShell()
 
   const seoBody = buildSeoBody({
     entityLabel: 'video',
     pathSegment: 'videos',
     imageIdText,
-    description: VIDEO_DESCRIPTION,
+    pageTitle: seo.pageTitle,
+    description,
+    caption: seo.caption,
+    labels: seo.labels,
     videoUrl,
     created,
-    duration
+    duration,
+    width: seo.width,
+    height: seo.height
   })
 
   const body = injectMetaTags(index, {
-    description: VIDEO_DESCRIPTION,
+    description,
+    metaDescription: description,
     entityLabel: 'video',
     ogType: 'video',
     pathSegment: 'videos',
     imageIdText,
     imageIdUrl,
+    pageTitle: seo.pageTitle,
     created,
     duration,
     videoUrl,
+    width: seo.width,
+    height: seo.height,
     bodyHtml: seoBody
   })
 
-  const response = {
-    status: '200',
-    statusDescription: 'OK',
-    headers: {
-      'cache-control': [
-        {
-          key: 'Cache-Control',
-          value: 'max-age=100'
-        }
-      ],
-      'content-type': [
-        {
-          key: 'Content-Type',
-          value: 'text/html'
-        }
-      ],
-      'access-control-allow-origin': [
-        { key: 'Access-Control-Allow-Origin', value: '*' }
-      ],
-      'access-control-allow-methods': [
-        { key: 'Access-Control-Allow-Methods', value: 'GET, HEAD' }
-      ],
-      'access-control-max-age': [
-        { key: 'Access-Control-Max-Age', value: '86400' }
-      ]
-    },
-    body
-  }
-  // console.log(
-  //   ".......................................at the end..............................",
-  // )
-  // console.log({ response })
-  callback(null, response)
+  return callback(null, htmlResponse(200, body))
 }

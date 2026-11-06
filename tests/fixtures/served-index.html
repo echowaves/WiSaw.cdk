@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+
+<html lang="en" prefix="og: http://ogp.me/ns#">
+
+<head>
+  <meta charset="utf-8" />
+  <title>Free Stock Photos & Videos -- What I Saw</title>
+  <meta name="description" property="og:description"
+    content="Free Stock Photos and Videos, Royalty Free Stock Images & Copyright Free Pictures, Unaltered, Taken With Phone Cameras, free pictures no copyright"
+    data-rh="true" />
+  <meta property="og:type" content="website" data-rh="true" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="google-site-verification" content="RQGZzEN0xtT0w38pKeQ1L8u8P6dn7zxfu03jt0LGgF4" />
+
+  <!--
+    No static canonical link here on purpose. A hardcoded homepage canonical told Google
+    that all ~22k photo/video URLs were duplicates of wisaw.com/, and they were dropped.
+    Each page sets its own canonical at runtime via Helmet, and the Lambda@Edge meta
+    injector (WiSaw.cdk injectMetaTagsLambdaFunction) writes a self-referencing canonical
+    into the prerendered head. src/seo.template.test.js guards this invariant.
+  -->
+
+  <link rel="preconnect" href="https://wisaw.com" />
+  <link rel="preconnect" href="https://img.wisaw.com" />
+
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.webp" />
+  <link rel="icon" type="image/webp" href="/favicon-32x32.webp" sizes="32x32" />
+  <link rel="icon" type="image/webp" href="/favicon-16x16.webp" sizes="16x16" />
+  <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5" />
+
+  <meta name="theme-color" content="#ffffff" />
+  <meta property="og:site_name" content="WiSaw" />
+  <meta property="og:title" content="WiSaw - Free Authentic Stock Photos &amp; Videos" data-rh="true" />
+  <meta property="og:image" content="https://wisaw.com/android-chrome-512x512.png" data-rh="true" />
+  <meta property="og:url" content="https://wisaw.com" data-rh="true" />
+  <meta property="og:locale" content="en_US" />
+  <meta name="twitter:card" content="summary_large_image" data-rh="true" />
+  <meta name="twitter:title" content="WiSaw - Free Authentic Stock Photos &amp; Videos" data-rh="true" />
+  <meta name="twitter:description"
+    content="Free Stock Photos and Videos, Royalty Free Stock Images &amp; Copyright Free Pictures, Unaltered, Taken With Phone Cameras"
+    data-rh="true" />
+  <meta name="twitter:image" content="https://wisaw.com/android-chrome-512x512.png" data-rh="true" />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+
+  <!--
+    Stale-deploy guard. Every build ships new hashed bundles under /assets/, so a browser
+    holding an old index.html asks for files that no longer exist; the CDN answers with HTML,
+    the module script is rejected, and React never mounts - leaving only the markup in #root.
+    This runs inline because a failed bundle leaves no JavaScript on the page at all. A reload
+    re-requests index.html bypassing the HTTP cache. Rate limited so it can never loop.
+  -->
+  <script>
+    (function () {
+      if (window.location.port) { return }
+
+      var guardKey = 'wisaw-reload-at'
+      var cooldownMs = 60000
+      var lastReloadAt = 0
+
+      try { lastReloadAt = Number(sessionStorage.getItem(guardKey)) || 0 } catch (err) { /* storage blocked */ }
+
+      var reloadOnce = function () {
+        if (Date.now() - lastReloadAt < cooldownMs) { return }
+        try { sessionStorage.setItem(guardKey, String(Date.now())) } catch (err) { /* storage blocked */ }
+        window.location.reload()
+      }
+
+      // Fires when a module script 404s or is served back a non-JavaScript MIME type.
+      window.addEventListener('error', function (event) {
+        var tagName = event.target && event.target.tagName
+        if (tagName === 'SCRIPT' || tagName === 'LINK') { reloadOnce() }
+      }, true)
+
+      // Safety net for the case where no error event is surfaced at all.
+      window.addEventListener('load', function () {
+        window.setTimeout(function () {
+          if (!window.__wisawBooted) { reloadOnce() }
+        }, 15000)
+      })
+    })()
+  </script>
+
+  <script type="module" crossorigin src="/assets/index-gvkStkWF.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-CXkA7Bri.css">
+</head>
+
+<body>
+  <noscript>
+    <h1>WiSaw - Free Stock Photos &amp; Videos</h1>
+    <p>Discover authentic, royalty-free stock photos and videos captured by everyday creators worldwide. Unaltered
+      photos and videos taken with phone cameras - free to use for personal and commercial purposes.</p>
+    <p>Visit <a href="https://wisaw.com">wisaw.com</a> with JavaScript enabled to browse our collection.</p>
+  </noscript>
+  <div id="root">
+    <h1>Unaltered Photos and Videos, Taken with Phone Cameras.</h1>
+    <h2>It's almost expected that the lighting won't be perfect and the composition might be off at times, because the
+      goal is to capture shots spontaneously, with minimal preparation—just point and shoot. As photographers, we often
+      worry too much about getting everything perfect, and in doing so, we miss great opportunities.</h2>
+  </div>
+</body>
+
+</html>
