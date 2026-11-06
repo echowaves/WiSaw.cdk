@@ -5,94 +5,46 @@ import { traceLog } from '../../utilities/trace'
 
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3"; // ES Modules import
 
-// Only photos touched since the last run get a fresh SEO sidecar; the initial population is
-// scripts/publish-seo-sidecars.js. Without this window the job would issue ~21k PUTs every
-// 5 hours for content that almost never changes.
-const SIDECAR_LOOKBACK_HOURS = Number(process.env.SIDECAR_LOOKBACK_HOURS ?? 6)
+import { clean, locationText, pickLabels, putSeoSidecars, readSeoWatermark, seoWindowStart, writeSeoWatermark } from '../../utilities/seoSidecar'
+
+// Only photos touched since the last successful run get a fresh sidecar; without a window the
+// job would issue ~22k PUTs every five hours for content that almost never changes.
 const SIDECAR_CONCURRENCY = 20
 // A backfill pass writes ~22k objects inside one 120s invocation; at the incremental
 // concurrency that does not fit, so the one-off path is allowed to be louder.
 const BACKFILL_CONCURRENCY = 60
 
-type SeoSidecar = {
-  v: number
-  caption: string
-  labels: string[]
-  created: string
-  location: string
-  width: string
-  height: string
-}
-
-function clean (value: any): string {
-  return String(value == null ? '' : value).replace(/\s+/g, ' ').trim()
-}
-
-// Newest-first label list from the Rekognition JSONB blob, de-duplicated case-insensitively.
-function pickLabels (rows: any[], limit = 8): string[] {
-  const seen = new Set<string>()
-  const out: string[] = []
-  for (const row of rows) {
-    for (const label of Array.isArray(row?.labels) ? row.labels : []) {
-      const name = clean(label)
-      if (!name) continue
-      const key = name.toLowerCase()
-      if (seen.has(key)) continue
-      seen.add(key)
-      out.push(name)
-      if (out.length >= limit) return out
-    }
-  }
-  return out
-}
-
-function locationText (row: any): string {
-  return [row?.locality, row?.district, row?.region]
-    .map((part) => clean(part))
-    .filter(Boolean)
-    // "Brooklyn, New York" reads well; a repeated place name does not.
-    .filter((part: string, i: number, all: string[]) => all.indexOf(part) === i)
-    .join(', ')
-}
-
-async function putSidecars (client: S3Client, bucket: string, photos: any[], concurrency: number = SIDECAR_CONCURRENCY) {
-  let written = 0
-  let failed = 0
-
-  for (let i = 0; i < photos.length; i += concurrency) {
-    const chunk = photos.slice(i, i + concurrency)
-    const results = await Promise.allSettled(chunk.map(async (photo: any) => {
-      const sidecar: SeoSidecar = {
-        v: 1,
-        caption: clean(photo.lastComment).slice(0, 200),
-        labels: pickLabels([photo]),
-        created: photo.createdAt ? new Date(photo.createdAt).toISOString() : '',
-        location: locationText(photo),
-        width: clean(photo.width),
-        height: clean(photo.height)
-      }
-      await client.send(new PutObjectCommand({
-        Bucket: bucket,
-        Key: `seo/${photo.id}.json`,
-        Body: JSON.stringify(sidecar),
-        ContentType: 'application/json',
-        // The edge injector caches this in memory; the object needs no caching of its own and
-        // is overwritten on the next run if anything changes.
-        CacheControl: 'max-age=60'
-      }))
-    }))
-    results.forEach((r) => (r.status === 'fulfilled' ? written++ : failed++))
-  }
-
-  console.log(`sidecars written=${written} failed=${failed}`)
-}
-
-function recentlyTouched (photos: any[], nowMs: number): any[] {
-  const lookbackMs = SIDECAR_LOOKBACK_HOURS * 60 * 60 * 1000
+function recentlyTouched (photos: any[], windowStartMs: number): any[] {
   return photos.filter((photo: any) => {
     const touchedAt = new Date(photo?.updatedAt ?? 0).getTime()
-    return Number.isFinite(touchedAt) && nowMs - touchedAt <= lookbackMs
+    return Number.isFinite(touchedAt) && touchedAt >= windowStartMs
   })
+}
+
+// Which photos to refresh is decided by the last successful run's start rather than a fixed
+// guess: the old six-hour window only had an hour of slack against the five-hour cadence, so
+// two skipped runs silently lost coverage for everything touched in between. Extracted so
+// main() keeps one line for the whole sidecar path.
+async function publishSidecars (client: S3Client, bucket: string, photos: any[], backfill: boolean): Promise<void> {
+  const nowMs = Date.now()
+  const watermark = backfill ? null : await readSeoWatermark(client, bucket)
+  const windowStart = seoWindowStart(watermark, nowMs)
+  const candidates = backfill ? photos : recentlyTouched(photos, windowStart)
+  console.log('sidecar candidates:', candidates.length, 'backfill:', backfill, 'windowStart:', new Date(windowStart).toISOString())
+
+  if (candidates.length === 0) return
+
+  const concurrency = backfill ? BACKFILL_CONCURRENCY : SIDECAR_CONCURRENCY
+  const { written, failed } = await putSeoSidecars(client, bucket, candidates, concurrency)
+  console.log(`sidecars written=${written} failed=${failed}`)
+
+  // A run that dropped writes must leave the old watermark alone so its window is retried;
+  // advancing past a photo whose PUT failed would lose it until something else touched it.
+  if (written > 0 && failed === 0) {
+    await writeSeoWatermark(client, bucket, new Date(nowMs))
+  } else {
+    console.warn('sidecar watermark not advanced', { written, failed })
+  }
 }
 
 // eslint-disable-next-line import/prefer-default-export
@@ -241,13 +193,7 @@ export async function main (event: any = {}, context: any /*, cb: any*/) {
     // of time leaves the oldest photos behind and the set converges from the valuable end;
     // PUTs are idempotent, so re-invoking is always safe.
     const backfill = event?.backfill === true
-    const recent = backfill ? (photos ?? []) : recentlyTouched(photos ?? [], Date.now())
-    console.log('sidecar candidates:', recent.length, 'backfill:', backfill, 'lookbackHours:', SIDECAR_LOOKBACK_HOURS)
-
-    if (recent.length > 0) {
-      const concurrency = backfill ? BACKFILL_CONCURRENCY : SIDECAR_CONCURRENCY
-      await putSidecars(new S3Client({ region: 'us-east-1' }), imgBucket, recent, concurrency)
-    }
+    await publishSidecars(new S3Client({ region: 'us-east-1' }), imgBucket, photos ?? [], backfill)
   } catch (err) {
     console.error("Unable to publish SEO sidecars", { err })
   }
