@@ -1,0 +1,46 @@
+# Verifier batch q3 digest — commit 3813371 (validation: high)
+
+ref=[134] | graphql/schema.graphql:401-404 (Mutation.deletePhoto) @ 3813371 | verified
+ref=[135] | lib/resources/resolvers.ts:40 (createResolvers) @ 3813371 | verified
+ref=[136] | lib/resources/resolvers.ts:72-77 (createResolvers) @ 3813371 | verified
+ref=[137] | lambda-fns/index.ts:375-383 (exports.main) @ 3813371 | verified
+ref=[138] | lambda-fns/index.ts:269-271 (deletePhoto) @ 3813371 | verified
+ref=[139] | lambda-fns/controllers/photos/delete.ts:7 (main) @ 3813371 | verified
+ref=[140] | lambda-fns/controllers/photos/delete.ts:35-51 (main) @ 3813371 | verified
+ref=[141] | lambda-fns/controllers/photos/delete.ts:42-47 (main) @ 3813371 | verified
+ref=[142] | lambda-fns/controllers/waves/_updatePhotosCount.ts:4-21 (_updatePhotosCount) @ 3813371 | verified
+ref=[143] | graphql/schema.graphql:27 (Photo.active) @ 3813371 | verified
+ref=[144] | lib/resources/buckets.ts:29-34 (createBuckets) @ 3813371 | verified
+ref=[145] | lib/resources/lambdas.ts:130-162 (processDeletedImageLambdaFunction) @ 3813371 | verified
+ref=[146] | lambda-fns/lambdas/processDeletedImage/index.ts:9-26 (main) @ 3813371 | verified
+ref=[147] | lambda-fns/lambdas/processDeletedImage/index.ts:17 (main) @ 3813371 | verified
+ref=[148] | lambda-fns/lambdas/processDeletedImage/index.ts:23 (_deleteUpload call site) @ 3813371 | verified
+ref=[149] | lambda-fns/lambdas/processDeletedImage/index.ts:48-50 (_deleteUpload) @ 3813371 | disputed | DeleteObject with bare `${photoId}` key confirmed, but "no code path deletes `<id>.webp`" is false: scripts/cleanup-s3.js:43 (classifyKey) marks any leading-lowercase-UUID media key without an active row 'delete' and the driver deletes it (scripts/cleanup-s3.js:187-194 (main) @ 3813371)
+ref=[150] | lambda-fns/lambdas/processDeletedImage/index.ts:84-148 (_cleanupTables) @ 3813371 | verified
+ref=[151] | lambda-fns/lambdas/processDeletedImage/index.ts:141-144 (_cleanupTables) @ 3813371 | verified — grep confirms this is the only hard DELETE of a Photos row in the repo (only other hits are comments)
+ref=[152] | lambda-fns/lambdas/processDeletedImage/index.ts:104-107 (_cleanupTables) @ 3813371 | verified
+ref=[153] | scripts/cleanup-s3.js:80 (getPhotoIds) @ 3813371 | verified
+ref=[154] | scripts/cleanup-s3.js:40-43 (classifyKey) @ 3813371 | verified
+ref=[155] | scripts/cleanup-s3.js:153-162 (main) @ 3813371 | verified — classification loop; buckets.ts:51-57 subscribes only `-thumb.webp`, so a thumb delete fires processDeletedImage
+ref=[156] | scripts/cleanup-s3.js:187-194 (main) @ 3813371 | verified — one DeleteObjectCommand per classified key
+ref=[157] | package.json:19-20 (scripts) @ 3813371 | verified — cleanup-s3 referenced only in package.json and tests/; lib has exactly two Rules, both cited ones
+ref=[158] | lambda-fns/lambdas/processUploadedImage/index.ts:64 (_deleteUpload/_activatePhoto call site) @ 3813371 | verified — line 64 is the `_deleteUpload({ Bucket, Key: name })` of the `.upload` key; buckets.ts:56 subscribes OBJECT_REMOVED only for `-thumb.webp`
+ref=[159] | lambda-fns/lambdas/processUploadedImage/index.ts:196-213 (_deleteUpload) @ 3813371 | verified
+ref=[160] | lambda-fns/lambdas/processUploadedImage/index.ts:357-369 (_activatePhoto) @ 3813371 | verified — sets active = true, inverse of delete.ts:35-39
+ref=[161] | graphql/schema.graphql:472-476 (Mutation.removePhotoFromWave) @ 3813371 | verified
+ref=[162] | lambda-fns/controllers/waves/removePhoto.ts:55-61 (main) @ 3813371 | verified — DELETE FROM "WavePhotos"
+ref=[163] | lambda-fns/controllers/waves/removePhoto.ts:63 (main) @ 3813371 | verified — recount; whole file touches no Photos.active and no S3
+ref=[164] | lambda-fns/controllers/waves/addPhoto.ts:65 (main) @ 3813371 | verified — now opened: addPhoto.ts:64-66, banUserFromWave.ts:49, removeUserFromWave.ts:41 all DELETE FROM "WavePhotos" without deleting the Photos row
+ref=[165] | lambda-fns/controllers/photos/delete.ts:9 (main) @ 3813371 | verified
+ref=[166] | lambda-fns/utilities/assertValidUuid.ts:14-17 (assertValidUuid) @ 3813371 | verified — format check at :2-11 (36 chars, `-` at 8/13/18/23, hex elsewhere; hex accepts upper and lowercase)
+ref=[167] | lambda-fns/controllers/photos/delete.ts:15-33 (main) @ 3813371 | verified — LEFT JOIN WaveUsers gives NULL role for non-members, rejected at :30
+ref=[168] | lambda-fns/controllers/waves/removePhoto.ts:20-23 (main) @ 3813371 | verified
+ref=[169] | lambda-fns/controllers/waves/removePhoto.ts:49-52 (main) @ 3813371 | verified — frozen-wave throws at :37/:43 also confirmed
+ref=[170] | lambda-fns/controllers/waves/_updatePhotosCount.ts:20 (_updatePhotosCount) @ 3813371 | verified — rows[0] undefined → TypeError on wave.photosCount; callers delete.ts:46 and processDeletedImage/index.ts:102 confirmed
+ref=[171] | lambda-fns/lambdas/processDeletedImage/index.ts:12-13 (main) @ 3813371 | verified — reads sit before the try at :16
+ref=[172] | lambda-fns/lambdas/processDeletedImage/index.ts:29-34 (main) @ 3813371 | verified — catch swallows, main returns true unconditionally
+ref=[173] | scripts/cleanup-s3.js:133-146 (main) @ 3813371 | verified — DB-failure path yields empty set (getPhotoIds :90), exit(0) before the delete loop
+ref=[174] | scripts/cleanup-s3.js:180-184 (main) @ 3813371 | verified — DRY_RUN exits before the delete loop at :187
+ref=[175] | lambda-fns/lambdas/processDeletedImage/index.ts:17 (main) @ 3813371 | verified
+ref=[176] | scripts/cleanup-s3.js:21-25 (extractPhotoId) @ 3813371 | verified — regex is lowercase-hex only ([a-f0-9])
+ref=[177] | lib/resources/buckets.ts:36-39 (createBuckets) @ 3813371 | verified — comment text matches; grep confirms no other lifecycle rule, no abuse-report path deletes photos (cleanupAbuseReports only DELETEs AbuseReports rows), and cleanup-s3 has no EventBridge rule

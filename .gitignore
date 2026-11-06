@@ -30,3 +30,7 @@ cdk-exports.json
 
 # macOS
 .DS_Store
+
+# BMad skill render snapshots and python caches
+_bmad/render/
+__pycache__/

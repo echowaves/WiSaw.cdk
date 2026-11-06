@@ -1,0 +1,8 @@
+Verifier batch — pinned commit 38133710df3e915f2c4286f9643b77a22cdbfccc (short 3813371); validation level high; excluded paths: _bmad-output/, _bmad/, .agents/, .claude/, AGENTS.md, CLAUDE.md.
+Repository: /Users/dmitry/hacks/wisaw/WiSaw.cdk
+
+Ledger lines:
+- (claim) ref=[232] status=unverified kind=code — …sidecar.js:57 (fetchSidecar) @ 3813371), question 2's two writers, and question 5's contract tests all pass through the coordinate guard duplicated at lambda-fns/utilities/seoSidecar.ts:69 (isPreciseLocation) @ 3813371 and lambda-fns/lambdas/injectMetaTagsLambdaFunction/sidecar.js:23 (stripPreciseLocation) @ 3813371. [lambda-fns/lambdas/injectMetaTagsLambdaFunction/sidecar.js:23 (stripPreciseLocation) @ 3813371]
+- (claim) ref=[233] status=unverified kind=code — …s the data (lambda-fns/utilities/seoSidecar.ts:4 (header comment) @ 3813371); and the result of a real trade-off — bounded staleness (`CacheControl max-age=60` plus a 10-minute edge cache, lambda-fns/utilities/seoSidecar.ts:124 (putSeoSidecar) @ 3813371) accepted in exchange for any per-photo text at the edge at all. [lambda-fns/utilities/seoSidecar.ts:4 (header comment) @ 3813371]
+- (claim) ref=[234] status=unverified kind=code — …s the data (lambda-fns/utilities/seoSidecar.ts:4 (header comment) @ 3813371); and the result of a real trade-off — bounded staleness (`CacheControl max-age=60` plus a 10-minute edge cache, lambda-fns/utilities/seoSidecar.ts:124 (putSeoSidecar) @ 3813371) accepted in exchange for any per-photo text at the edge at all. [lambda-fns/utilities/seoSidecar.ts:124 (putSeoSidecar) @ 3813371]
+- (claim) ref=[247] status=unverified kind=code — No ADR exists in the repository: no path matching adr or docs/decisions appears in the tree at the pinned commit () @ 3813371
