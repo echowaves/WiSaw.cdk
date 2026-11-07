@@ -10,3 +10,16 @@ covers = []
 after = []
 hitl = true
 risk = "high"
+
+[[entry]]
+id = 2
+type = "bug"
+title = "A new photo has no SEO sidecar until up to five hours after upload"
+description = "Uploading a photo produces its image and thumb but no seo/<id>.json sidecar; enrichment waits for the scheduled publisher's next run, up to ~5 hours. The sidecar must be written by the upload processing as soon as the thumb is produced, while the scheduled publisher keeps refreshing it after later edits."
+verify = "On the deployed test environment, uploading a photo leaves seo/<id>.json in the media bucket within a minute of its thumb appearing, with the publisher's fields and version (caption/labels empty); a forced sidecar-write failure still leaves the upload fully working."
+covers = []
+after = [1]
+hitl = false
+risk = "medium"
+refine = true
+refined = true
