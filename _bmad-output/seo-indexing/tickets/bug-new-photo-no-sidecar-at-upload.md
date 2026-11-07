@@ -38,7 +38,7 @@ Only two things ever write sidecars: the scheduled sitemap publisher (five-hour 
 1. **A newly uploaded photo has its sidecar as soon as processing completes**
    **Given** a photo uploaded on the deployed test environment
    **When** its thumbnail object appears in the media bucket
-   **Then** `seo/<id>.json` exists within one minute and parses as JSON of the same fields and version the scheduled publisher writes, with caption and labels empty until a later publisher run enriches them
+   **Then** `seo/<id>.json` exists within one minute and parses as JSON of the same fields and version the scheduled publisher writes, with caption empty until a later publisher run enriches it (labels and dimensions are written at upload — see Notes)
 2. **A sidecar failure never breaks an upload**
    **Given** the sidecar write fails for any reason
    **When** the photo is uploaded
@@ -80,4 +80,5 @@ Only two things ever write sidecars: the scheduled sitemap publisher (five-hour 
 - Decision: at thumb time the photo's row already exists with its location fields, so the upload-time sidecar can carry them; a missing row falls back to the publisher path and never fails the upload. (User confirmed, 2026-11-06)
 - Decision: this ticket is ordered after entry 1 — both edit the sidecar module and its delete path. (User, 2026-11-06)
 - Decision: the upload path becomes a named writer of the sidecar contract; the ADR gains a dated line saying so as part of this work. (User, 2026-11-06)
+- Superseded at build: "captions and labels arrive with the scheduled publisher's later refresh" — the writer must read the full row (`seoSidecar.ts` forbids thin writers), and labels/dimensions are already in the DB at write time, so they ship at upload; only the caption stays empty until the next publisher run. (Build, 2026-11-07; plan's frozen I/O matrix row 1.)
 - Forcing criterion 2's failure on the test stack: make the sidecar write throw there — e.g. temporarily deny the processing role's PutObject on `seo/*` — then upload and confirm image, thumb, and app behavior are unaffected.

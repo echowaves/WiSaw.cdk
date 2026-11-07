@@ -3,6 +3,7 @@ import { traceLog } from '../../utilities/trace'
 import dayjs from 'dayjs'
 
 import autoGroupPhotosIntoWaves from '../../controllers/waves/autoGroupPhotosIntoWaves'
+import { putSeoSidecar, sidecarKey } from '../../utilities/seoSidecar'
 
 import { DetectLabelsCommand, DetectModerationLabelsCommand, DetectTextCommand, RekognitionClient } from "@aws-sdk/client-rekognition"
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3"
@@ -64,6 +65,12 @@ export async function main(event: any = {}, context: any) {
     _deleteUpload({ Bucket, Key: name }),
     _activatePhoto({ photoId }),
   ])
+
+  // Write the SEO sidecar so a brand-new page is enriched right away instead of waiting for the
+  // 5-hour scheduled publisher. Awaited (the window is one minute), and it never throws — the
+  // upload outcome must be identical to today when the write fails. Must run after _activatePhoto
+  // or its active=true filter would skip the row.
+  await _writeSeoSidecar({ Bucket, photoId })
 
   // Run auto-grouping using the existing controller
   // Get photo's uuid first
@@ -374,6 +381,85 @@ const _activatePhoto = async ({ photoId }: { photoId: string }) => {
   }
   await psql.clean()
   // console.log(`_activatePhoto ended  ${photoId}`)
+}
+
+// Writes the photo's seo/<id>.json sidecar at upload time so a brand-new page is enriched within
+// seconds instead of waiting for the 5-hour scheduled publisher (which keeps running as the
+// refresh path for later edits). The row must be read fresh and in full — including labels and
+// dimensions, which the first Promise.all has just written, and active=true, which _activatePhoto
+// has just set — because a partial row would thin a richer sidecar the publisher wrote earlier.
+// Every failure is logged and swallowed here: this step must never change the upload outcome.
+export const _writeSeoSidecar = async ({
+  Bucket,
+  photoId
+}: {
+  Bucket: string
+  photoId: string
+}): Promise<void> => {
+  try {
+    let result
+    await psql.connect()
+    try {
+      // Same row shape as generateSiteMap's publisher query so buildSeoSidecar sees identical
+      // inputs; the active filter means a delete racing this upload is skipped by construction.
+      result = await psql.query(
+      `
+        SELECT
+          p.*,
+          COALESCE(r."labels", '[]'::jsonb) AS "labels"
+        FROM "Photos" p
+        LEFT JOIN LATERAL (
+          SELECT jsonb_agg(l ->> 'Name') AS "labels"
+          FROM "Recognitions" rec,
+               jsonb_array_elements(
+                 CASE WHEN jsonb_typeof(rec."metaData" -> 'Labels') = 'array'
+                      THEN rec."metaData" -> 'Labels'
+                      ELSE '[]'::jsonb END
+               ) l
+          WHERE rec."photoId" = p."id"
+            AND coalesce(l ->> 'Name', '') <> ''
+        ) r ON true
+        WHERE p."id" = $1
+          AND p.active = true
+        LIMIT 1
+      `,
+      [photoId]
+      )
+    } finally {
+      // Same convention as the sibling helpers: release the connection even when the read throws.
+      await psql.clean()
+    }
+
+    if (result.rows.length === 0) {
+      // Deleted or never activated — no sidecar, and the publisher path stays responsible.
+      console.log('Skipping SEO sidecar: no active photo row', { photoId })
+      return
+    }
+
+    const client = new S3Client({ region: 'us-east-1' })
+    await putSeoSidecar(client, Bucket, result.rows[0])
+
+    // The SELECT above and the PUT are not atomic: a delete can commit in between and its
+    // sidecar cleanup would then precede this write, resurrecting seo/<id>.json. Re-check the
+    // row after writing — deletePhoto commits active=false before it deletes any object, so a
+    // row that is gone now was gone before the cleanup ran, and removing our fresh object here
+    // is what ticket 2's "never resurrect" boundary demands. If the recheck itself fails, the
+    // cleanup-s3 reconciler stays the backstop.
+    await psql.connect()
+    let live
+    try {
+      live = await psql.query('SELECT "active" FROM "Photos" WHERE "id" = $1 AND "active" = true LIMIT 1', [photoId])
+    } finally {
+      await psql.clean()
+    }
+    if (live.rows.length === 0) {
+      await client.send(new DeleteObjectCommand({ Bucket, Key: sidecarKey(photoId) }))
+      console.log('Removed SEO sidecar resurrected by a racing delete', { photoId })
+    }
+  } catch (err) {
+    // A failed write only costs this photo its enrichment until the next publisher run.
+    console.error('Error writing SEO sidecar at upload', { photoId, err })
+  }
 }
 
 const _extractImageDimensions = async ({
