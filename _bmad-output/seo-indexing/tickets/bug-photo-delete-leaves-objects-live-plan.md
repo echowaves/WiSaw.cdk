@@ -3,7 +3,7 @@ title: 'Photo delete removes all S3 objects and invalidates the CDN'
 type: 'bugfix'
 ticket: '1'
 created: '2026-11-06'
-status: 'in-review'
+status: built
 baseline_revision: 'bd36104d23d998a4a4f4be417ceb5d196bd710f9'
 route: 'full'
 route_source: 'auto'
