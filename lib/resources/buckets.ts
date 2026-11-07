@@ -1,7 +1,9 @@
+import * as cdk from 'aws-cdk-lib'
+import * as iam from 'aws-cdk-lib/aws-iam'
 import * as s3 from 'aws-cdk-lib/aws-s3'
 import * as s3n from 'aws-cdk-lib/aws-s3-notifications'
 import { Construct } from 'constructs'
-import { deployEnv } from '../utilities/config'
+import { config, deployEnv } from '../utilities/config'
 
 export function createBuckets (scope: Construct, lambdas: any): any {
   const {
@@ -32,6 +34,18 @@ export function createBuckets (scope: Construct, lambdas: any): any {
   imgBucket.grantDelete(processUploadedImageLambdaFunction)
 
   imgBucket.grantDelete(processDeletedImageLambdaFunction)
+
+  // deletePhoto can also purge the photo's objects and invalidate their public CDN paths
+  // (lambda-fns/utilities/photoCleanup.ts, gated by PHOTO_DELETE_CLEANUP). The invalidation is
+  // scoped to the single distribution named in config; environments with no id configured get no
+  // CloudFront permission at all, and photoCleanup skips the invalidation call for them.
+  const cdnDistributionId = String(config.CLOUD_FRONT_DISTRIBUTION ?? '').trim()
+  if (cdnDistributionId !== '') {
+    wisawFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['cloudfront:CreateInvalidation'],
+      resources: [`arn:aws:cloudfront::${cdk.Stack.of(scope).account}:distribution/${cdnDistributionId}`]
+    }))
+  }
 
   // expiration can't be configured on the exiting bucket programmatically -- has to be done in the admin UI
   // imgBucket.addLifecycleRule({

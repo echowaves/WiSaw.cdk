@@ -1,8 +1,31 @@
 import psql from '../../psql'
 import { assertValidUuid } from '../../utilities/assertValidUuid'
+import { removePhotoObjects } from '../../utilities/photoCleanup'
 import { _updatePhotosCount } from '../waves/_updatePhotosCount'
 
 // import Photo from '../../models/photo'
+
+// Env vars are always strings, so a plain truthy test would make PHOTO_DELETE_CLEANUP='false'
+// count as ON and silently defeat the kill switch. Only these values enable cleanup; anything
+// else (including '', '0', 'no' and an unset flag) keeps it off.
+const CLEANUP_ON_VALUES = ['true', '1', 'yes', 'on']
+
+export function isCleanupEnabled (value: unknown): boolean {
+  return CLEANUP_ON_VALUES.includes(String(value ?? '').trim().toLowerCase())
+}
+
+// Best-effort media purge after the soft delete has already succeeded: a cleanup problem must
+// never turn into an AppSync error, it only leaves objects behind for reconciliation.
+async function _cleanupPhotoObjects (photoId: string): Promise<void> {
+  try {
+    await removePhotoObjects(photoId, {
+      bucket: process.env.S3_BUCKET ?? '',
+      distributionId: process.env.CLOUD_FRONT_DISTRIBUTION ?? ''
+    })
+  } catch (err) {
+    console.error('deletePhoto: photo object cleanup failed', { err })
+  }
+}
 
 export default async function main (photoId: string, uuid: string): Promise<string> {
   // const createdAt = dayjs().toISOString()
@@ -47,6 +70,11 @@ export default async function main (photoId: string, uuid: string): Promise<stri
   }
 
   await psql.clean()
+
+  // The DB row is already soft-deleted, so this runs last and cannot affect the response.
+  if (isCleanupEnabled(process.env.PHOTO_DELETE_CLEANUP)) {
+    await _cleanupPhotoObjects(photoId)
+  }
 
   return 'OK'
 }
