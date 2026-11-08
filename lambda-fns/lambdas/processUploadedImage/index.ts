@@ -3,6 +3,7 @@ import { traceLog } from '../../utilities/trace'
 import dayjs from 'dayjs'
 
 import autoGroupPhotosIntoWaves from '../../controllers/waves/autoGroupPhotosIntoWaves'
+import { loadSeoPhotoRow } from '../../controllers/photos/_updateSeoSidecar'
 import { putSeoSidecar, sidecarKey } from '../../utilities/seoSidecar'
 
 import { DetectLabelsCommand, DetectModerationLabelsCommand, DetectTextCommand, RekognitionClient } from "@aws-sdk/client-rekognition"
@@ -383,12 +384,12 @@ const _activatePhoto = async ({ photoId }: { photoId: string }) => {
   // console.log(`_activatePhoto ended  ${photoId}`)
 }
 
-// Writes the photo's seo/<id>.json sidecar at upload time so a brand-new page is enriched within
+// Writes the photo's <id>.json sidecar at upload time so a brand-new page is enriched within
 // seconds instead of waiting for the 5-hour scheduled publisher (which keeps running as the
-// refresh path for later edits). The row must be read fresh and in full — including labels and
-// dimensions, which the first Promise.all has just written, and active=true, which _activatePhoto
-// has just set — because a partial row would thin a richer sidecar the publisher wrote earlier.
-// Every failure is logged and swallowed here: this step must never change the upload outcome.
+// refresh path for later edits). The row is read fresh and in full through loadSeoPhotoRow —
+// labels and dimensions were written by the first Promise.all, active=true by _activatePhoto —
+// because a partial row would thin a richer sidecar. Every failure is logged and swallowed:
+// this step must never change the upload outcome.
 export const _writeSeoSidecar = async ({
   Bucket,
   photoId
@@ -397,54 +398,19 @@ export const _writeSeoSidecar = async ({
   photoId: string
 }): Promise<void> => {
   try {
-    let result
-    await psql.connect()
-    try {
-      // Same row shape as generateSiteMap's publisher query so buildSeoSidecar sees identical
-      // inputs; the active filter means a delete racing this upload is skipped by construction.
-      result = await psql.query(
-      `
-        SELECT
-          p.*,
-          COALESCE(r."labels", '[]'::jsonb) AS "labels"
-        FROM "Photos" p
-        LEFT JOIN LATERAL (
-          SELECT jsonb_agg(l ->> 'Name') AS "labels"
-          FROM "Recognitions" rec,
-               jsonb_array_elements(
-                 CASE WHEN jsonb_typeof(rec."metaData" -> 'Labels') = 'array'
-                      THEN rec."metaData" -> 'Labels'
-                      ELSE '[]'::jsonb END
-               ) l
-          WHERE rec."photoId" = p."id"
-            AND coalesce(l ->> 'Name', '') <> ''
-        ) r ON true
-        WHERE p."id" = $1
-          AND p.active = true
-        LIMIT 1
-      `,
-      [photoId]
-      )
-    } finally {
-      // Same convention as the sibling helpers: release the connection even when the read throws.
-      await psql.clean()
-    }
-
-    if (result.rows.length === 0) {
+    const photo = await loadSeoPhotoRow(photoId)
+    if (photo == null) {
       // Deleted or never activated — no sidecar, and the publisher path stays responsible.
       console.log('Skipping SEO sidecar: no active photo row', { photoId })
       return
     }
 
     const client = new S3Client({ region: 'us-east-1' })
-    await putSeoSidecar(client, Bucket, result.rows[0])
+    await putSeoSidecar(client, Bucket, photo)
 
-    // The SELECT above and the PUT are not atomic: a delete can commit in between and its
-    // sidecar cleanup would then precede this write, resurrecting seo/<id>.json. Re-check the
-    // row after writing — deletePhoto commits active=false before it deletes any object, so a
-    // row that is gone now was gone before the cleanup ran, and removing our fresh object here
-    // is what ticket 2's "never resurrect" boundary demands. If the recheck itself fails, the
-    // cleanup-s3 reconciler stays the backstop.
+    // The read and the PUT are not atomic: a delete can commit in between, leaving <id>.json
+    // behind for a photo that no longer exists. Re-check afterwards; cleanup-s3 stays the
+    // backstop if this query itself fails.
     await psql.connect()
     let live
     try {

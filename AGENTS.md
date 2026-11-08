@@ -17,7 +17,8 @@ AWS CDK infrastructure for WiSaw: AppSync GraphQL over Postgres/Sequelize, Lambd
 - New GraphQL query/mutation: read `.github/instructions/graphql-operations.instructions.md` first — four files must change together, and a missing resolver entry fails silently.
 - Writing a Sequelize migration: read `.github/instructions/db-migrations.instructions.md` first.
 - SEO edge injector (meta tags, canonicals, crawler-visible body): `lambda-fns/lambdas/injectMetaTagsLambdaFunction/`; wired in `lib/resources/lambdas.ts` and `lib/resources/cloud-front.ts`.
-- Photo caption/label text reaches the edge only as an S3 sidecar: writer `lambda-fns/utilities/seoSidecar.ts` (`seo/<id>.json`), reader `injectMetaTagsLambdaFunction/sidecar.js` + `seoText.js` — change both sides in one commit, or photo pages silently lose text.
+- Photo caption/label text reaches the edge only as an S3 sidecar: writer `lambda-fns/utilities/seoSidecar.ts` (`<id>.json` at the bucket root), reader `injectMetaTagsLambdaFunction/sidecar.js` + `seoText.js` — change both sides in one commit, or photo pages silently lose text.
+- `deletePhoto` must stay soft-delete only (`active = false`). Storage deletion lives in `processDeletedImage` (thumb-delete trigger) so a runaway client cannot wipe the corpus and a bad delete is undone by flipping the flag back.
 
 ## Running and verifying
 

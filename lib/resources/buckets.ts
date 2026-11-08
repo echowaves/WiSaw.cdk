@@ -35,13 +35,13 @@ export function createBuckets (scope: Construct, lambdas: any): any {
 
   imgBucket.grantDelete(processDeletedImageLambdaFunction)
 
-  // deletePhoto purges the photo's objects and invalidates their public CDN paths after the
-  // soft delete (lambda-fns/controllers/photos/delete.ts). The invalidation is scoped to the
-  // single distribution named in config; environments with no id configured get no CloudFront
-  // permission at all, and deletePhoto skips the invalidation call for them.
+  // processDeletedImage drops the photo's <id>.json SEO sidecar along with its thumb and must
+  // invalidate the CDN paths, or deleted media keeps serving from edge cache for days. The
+  // grant is scoped to the single distribution named in config; environments with no id get no
+  // CloudFront permission at all and the handler skips the invalidation call for them.
   const cdnDistributionId = String(config.CLOUD_FRONT_DISTRIBUTION ?? '').trim()
   if (cdnDistributionId !== '') {
-    wisawFn.addToRolePolicy(new iam.PolicyStatement({
+    processDeletedImageLambdaFunction.addToRolePolicy(new iam.PolicyStatement({
       actions: ['cloudfront:CreateInvalidation'],
       resources: [`arn:aws:cloudfront::${cdk.Stack.of(scope).account}:distribution/${cdnDistributionId}`]
     }))

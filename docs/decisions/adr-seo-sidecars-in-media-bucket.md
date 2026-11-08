@@ -2,7 +2,12 @@
 
 Date: 2026-11-06
 Decision shown by: `49f8013` "feat(seo): publish and read per-photo SEO sidecars at the edge"
-Status: accepted (recorded after the fact; approved by the user on 2026-11-06); amended 2026-11-07
+Status: accepted (recorded after the fact; approved by the user on 2026-11-06); amended 2026-11-07 (twice)
+
+Amendment 2026-11-07, second (sidecar lifecycle simplification): three changes to how the sidecar lives and dies, none to its body contract.
+1. **Key moves to the bucket root**: `sidecarKey()` returns `<id>.json` instead of `seo/<id>.json`. One less prefix for humans to remember, and a root key sits next to the media it describes. The edge reader, the scheduled publisher, the backfill script and the upload writer all read/write the new key in the same commit; `cleanup-s3` keeps classifying legacy `seo/<id>.json` objects (report-only) so old objects are still recognised. `seo/_last-run.json` — the watermark — deliberately stays under `seo/`, since cleanup-s3 treats that prefix as report-only and continuity of the watermark matters more than tidiness.
+2. **`deletePhoto` is soft-delete only again.** It flips `Photos.active = false` and touches nothing in S3 or CloudFront. A mutation that deletes storage lets a buggy or abused client wipe the corpus; a flag flip is restored by flipping it back. Object removal is an operator action (S3 triggers are managed by hand, outside CDK), and `processDeletedImage`, fired by the `<id>-thumb.webp` delete event, owns sidecar removal plus a `/<id>*` CloudFront invalidation so a deleted photo stops being served from cache. This supersedes the storage-cleanup step added on 2026-11-06.
+3. **Comments are a fourth named writer.** `comments/create` and `comments/delete` refresh the sidecar through `_updateSeoSidecar(photoId)` (shared row query with the upload writer, best-effort, never throws), so caption text tracks comments without waiting for the scheduled run. The edge now emits `og:image:title` from AI labels and `og:image:caption` from comment-derived text, so the two surfaces no longer show the same string.
 
 Amendment 2026-11-07 (`seo-indexing` ticket 2): `processUploadedImage` is now a third named writer — it writes `seo/<id>.json` when upload processing completes, so brand-new pages are enriched within seconds instead of waiting for the scheduled publisher's next run. The key and body contract above still binds it: it builds only through `putSeoSidecar`, reads the full row (never a thin one), skips inactive rows, deletes any sidecar a racing delete would leave resurrected, and swallows every failure so uploads are unaffected.
 

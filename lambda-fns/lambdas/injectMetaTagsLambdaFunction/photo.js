@@ -67,6 +67,8 @@ exports.handler = async (event, context, callback) => {
     imageIdText,
     imageIdUrl,
     pageTitle: seo.pageTitle,
+    imageTitle: seo.imageTitle,
+    imageCaption: seo.imageCaption,
     created: seo.created,
     width: seo.width,
     height: seo.height,

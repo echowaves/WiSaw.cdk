@@ -28,6 +28,7 @@ after(() => {
 })
 
 const { S3Client } = require('@aws-sdk/client-s3')
+const { CloudFrontClient } = require('@aws-sdk/client-cloudfront')
 const { deleteSeoSidecar, sidecarKey } = require('../lambda-fns/utilities/seoSidecar.ts')
 const { main: processDeletedImage } = require('../lambda-fns/lambdas/processDeletedImage/index.ts')
 const { classifyKey, extractPhotoId } = require('../scripts/cleanup-s3.js')
@@ -60,7 +61,7 @@ function thumbEvent (id, bucket = 'wisaw-img-prod') {
 }
 
 describe('deleteSeoSidecar - key contract', () => {
-  it('issues DeleteObject for seo/<id>.json in the given bucket', async () => {
+  it('issues DeleteObject for <id>.json at the bucket root in the given bucket', async () => {
     const s3 = fakeS3()
     await deleteSeoSidecar(s3, 'wisaw-img-prod', LIVE)
 
@@ -68,14 +69,14 @@ describe('deleteSeoSidecar - key contract', () => {
     const cmd = s3.sent[0]
     expect(cmd.constructor.name).to.equal('DeleteObjectCommand')
     expect(cmd.input.Bucket).to.equal('wisaw-img-prod')
-    expect(cmd.input.Key).to.equal(`seo/${LIVE}.json`)
+    expect(cmd.input.Key).to.equal(`${LIVE}.json`)
   })
 
   it('lowercases the id, matching sidecarKey()', async () => {
     const s3 = fakeS3()
     await deleteSeoSidecar(s3, 'wisaw-img-prod', UPPER)
     expect(s3.sent[0].input.Key).to.equal(sidecarKey(UPPER))
-    expect(s3.sent[0].input.Key).to.equal(`seo/${LIVE}.json`)
+    expect(s3.sent[0].input.Key).to.equal(`${LIVE}.json`)
   })
 
   it('treats an already-absent sidecar as success (no read, NoSuchKey never surfaces)', async () => {
@@ -96,17 +97,19 @@ describe('deleteSeoSidecar - key contract', () => {
 })
 
 describe('processDeletedImage - sidecar follows the photo into the grave', () => {
+  // Symbol keys because two different SDK clients both expose .send: a `${obj}.${name}` key would
+  // collide (both stringify to "[object Object].send") and leave one prototype patched afterwards.
   const originals = new Map()
   const patch = (obj, name, value) => {
-    originals.set(`${obj}.${name}`, { obj, name, value: obj[name] })
+    originals.set(Symbol(`${name}:${originals.size}`), { obj, name, value: obj[name] })
     obj[name] = value
   }
   afterEach(() => {
-    for (const { obj, name, value } of originals.values()) obj[name] = value
+    for (const { obj, name, value } of [...originals.values()].reverse()) obj[name] = value
     originals.clear()
   })
 
-  it('issues DeleteObject for seo/<id>.json when the thumb object is removed', async () => {
+  it('issues DeleteObject for <id>.json when the thumb object is removed', async () => {
     const sent = []
     patch(S3Client.prototype, 'send', async function (command) {
       sent.push(command)
@@ -121,12 +124,12 @@ describe('processDeletedImage - sidecar follows the photo into the grave', () =>
 
     expect(result).to.equal(true)
     const deletes = sent.filter(c => c.constructor.name === 'DeleteObjectCommand').map(c => c.input)
-    expect(deletes).to.deep.include({ Bucket: 'wisaw-img-prod', Key: `seo/${LIVE}.json` })
+    expect(deletes).to.deep.include({ Bucket: 'wisaw-img-prod', Key: `${LIVE}.json` })
   })
 
   it('still returns true when the sidecar delete itself fails', async () => {
     patch(S3Client.prototype, 'send', async function (command) {
-      if (String(command.input?.Key ?? '').startsWith('seo/')) throw new Error('sidecar S3 boom')
+      if (String(command.input?.Key ?? '').endsWith('.json')) throw new Error('sidecar S3 boom')
       return {}
     })
     const psql = require('../lambda-fns/psql.ts').default
@@ -144,16 +147,89 @@ describe('processDeletedImage - sidecar follows the photo into the grave', () =>
     expect(flat.some(e => String(e).includes('Error deleting seo sidecar'))).to.equal(true)
     expect(flat.some(e => e?.err?.message === 'sidecar S3 boom')).to.equal(true)
   })
+
+  /** Stubs out everything but CloudFront so a single run reaches the invalidation call. */
+  function stubAsideFromCdn (opts = {}) {
+    const psql = require('../lambda-fns/psql.ts').default
+    patch(psql, 'connect', async () => {})
+    patch(psql, 'query', async () => ({ rows: [] }))
+    patch(psql, 'clean', async () => {})
+    patch(S3Client.prototype, 'send', async () => ({}))
+
+    const calls = []
+    patch(CloudFrontClient.prototype, 'send', async function (command) {
+      calls.push(command)
+      if (opts.fail) throw new Error('cloudfront boom')
+      return {}
+    })
+    return calls
+  }
+
+  it('invalidates /<id>* on the configured distribution so the deleted media stops serving', async () => {
+    const was = process.env.CLOUD_FRONT_DISTRIBUTION
+    process.env.CLOUD_FRONT_DISTRIBUTION = 'E3R5Y1ZTD8Z237'
+    try {
+      const calls = stubAsideFromCdn()
+      expect(await processDeletedImage(thumbEvent(LIVE), {})).to.equal(true)
+
+      expect(calls).to.have.length(1)
+      expect(calls[0].constructor.name).to.equal('CreateInvalidationCommand')
+      expect(calls[0].input.DistributionId).to.equal('E3R5Y1ZTD8Z237')
+      const items = calls[0].input.InvalidationBatch.Paths.Items
+      expect(items).to.deep.include(`/${LIVE}*`)
+      expect(calls[0].input.InvalidationBatch.Paths.Quantity).to.equal(items.length)
+    } finally {
+      if (was === undefined) delete process.env.CLOUD_FRONT_DISTRIBUTION
+      else process.env.CLOUD_FRONT_DISTRIBUTION = was
+    }
+  })
+
+  it('skips the invalidation when no distribution is configured', async () => {
+    const was = process.env.CLOUD_FRONT_DISTRIBUTION
+    delete process.env.CLOUD_FRONT_DISTRIBUTION
+    try {
+      const calls = stubAsideFromCdn()
+      expect(await processDeletedImage(thumbEvent(LIVE), {})).to.equal(true)
+      expect(calls).to.deep.equal([])
+    } finally {
+      if (was !== undefined) process.env.CLOUD_FRONT_DISTRIBUTION = was
+    }
+  })
+
+  it('still returns true when the invalidation fails', async () => {
+    const was = process.env.CLOUD_FRONT_DISTRIBUTION
+    process.env.CLOUD_FRONT_DISTRIBUTION = 'E3R5Y1ZTD8Z237'
+    try {
+      stubAsideFromCdn({ fail: true })
+      const errors = []
+      patch(console, 'error', (...args) => errors.push(args))
+
+      expect(await processDeletedImage(thumbEvent(LIVE), {})).to.equal(true)
+      expect(errors.flat().some(e => String(e).includes('Error invalidating cloudfront paths'))).to.equal(true)
+    } finally {
+      if (was === undefined) delete process.env.CLOUD_FRONT_DISTRIBUTION
+      else process.env.CLOUD_FRONT_DISTRIBUTION = was
+    }
+  })
 })
 
 describe('cleanup-s3 classifyKey - prefix-aware reconciliation', () => {
   const activeIds = new Set([LIVE])
 
-  it('keeps a sidecar whose photo row is active', () => {
+  // Sidecars now live at the root as <id>.json, so the media rule already reconciles them.
+  it('keeps a root sidecar whose photo row is active', () => {
+    expect(classifyKey(`${LIVE}.json`, activeIds)).to.equal('keep')
+  })
+
+  it('prunes a root sidecar whose photo row is gone', () => {
+    expect(classifyKey(`${GONE}.json`, activeIds)).to.equal('delete')
+  })
+
+  it('keeps a legacy seo/<id>.json sidecar whose photo row is active', () => {
     expect(classifyKey(`seo/${LIVE}.json`, activeIds)).to.equal('keep')
   })
 
-  it('prunes a sidecar whose photo row is gone', () => {
+  it('prunes a legacy seo/<id>.json sidecar whose photo row is gone', () => {
     expect(classifyKey(`seo/${GONE}.json`, activeIds)).to.equal('delete')
   })
 
@@ -188,14 +264,14 @@ describe('cleanup-s3 classifyKey - prefix-aware reconciliation', () => {
   })
 
   it('is pure: the same bucket state classifies identically across passes', () => {
-    const keys = [`seo/${LIVE}.json`, `seo/${GONE}.json`, 'seo/_last-run.json', `${GONE}.webp`]
+    const keys = [`${LIVE}.json`, `${GONE}.json`, `seo/${LIVE}.json`, `seo/${GONE}.json`, 'seo/_last-run.json', `${GONE}.webp`]
     const first = keys.map(k => classifyKey(k, activeIds))
     const second = keys.map(k => classifyKey(k, new Set([LIVE])))
     expect(second).to.deep.equal(first)
   })
 
-  it('never marks an seo/ key of an active photo for deletion (acceptance: live run is safe)', () => {
-    const bucket = [`seo/${LIVE}.json`, `seo/${LIVE}-thumb.webp`, 'seo/_last-run.json', `${LIVE}.webp`]
+  it('never marks a live photo\'s keys for deletion (acceptance: live run is safe)', () => {
+    const bucket = [`${LIVE}.json`, `seo/${LIVE}.json`, `seo/${LIVE}-thumb.webp`, 'seo/_last-run.json', `${LIVE}.webp`]
     const doomed = bucket.filter(k => classifyKey(k, activeIds) === 'delete')
     expect(doomed).to.deep.equal([])
   })
@@ -207,8 +283,10 @@ describe('cleanup-s3 classifyKey - prefix-aware reconciliation', () => {
 
   it('classifies the plan-design matrix exactly', () => {
     const active = new Set([LIVE])
-    expect(classifyKey(`seo/${LIVE}.json`, active)).to.equal('keep') // live photo, keep
-    expect(classifyKey(`seo/${GONE}.json`, active)).to.equal('delete') // gone photo, prune
+    expect(classifyKey(`${LIVE}.json`, active)).to.equal('keep') // live photo, keep
+    expect(classifyKey(`${GONE}.json`, active)).to.equal('delete') // gone photo, prune
+    expect(classifyKey(`seo/${LIVE}.json`, active)).to.equal('keep') // legacy live photo, keep
+    expect(classifyKey(`seo/${GONE}.json`, active)).to.equal('delete') // legacy gone photo, prune
     expect(classifyKey('seo/_last-run.json', active)).to.equal('report') // was: delete
     expect(classifyKey(`${GONE}.webp`, active)).to.equal('delete') // existing rule unchanged
   })

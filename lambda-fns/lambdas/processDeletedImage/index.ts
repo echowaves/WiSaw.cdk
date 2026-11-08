@@ -3,6 +3,7 @@ import { traceLog } from '../../utilities/trace'
 import { _updatePhotosCount } from "../../controllers/waves/_updatePhotosCount"
 import { deleteSeoSidecar } from '../../utilities/seoSidecar'
 
+import { CloudFrontClient, CreateInvalidationCommand } from "@aws-sdk/client-cloudfront"
 import { DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3"
 
 // eslint-disable-next-line import/prefer-default-export
@@ -24,6 +25,10 @@ export async function main(event: any = {}, context: any) {
     _deleteSidecar({ Bucket: record.s3.bucket.name, photoId }),
     _cleanupTables({ photoId }),
   ])
+
+  // After the objects are gone: without this, img.wisaw.com keeps serving the deleted media and
+  // its <id>.json sidecar from edge cache for the full TTL (10 days) even though S3 is clean.
+  await _invalidateCdn({ photoId })
   // console.log('everything ended')
   // cb(null, 'success everything')
 } catch (err) {
@@ -61,7 +66,7 @@ const _deleteUpload = async ({
   // console.log(`_deleteUpload ended: ${Key}`)
 }
 
-// The seo/<id>.json sidecar must die with the photo it describes, otherwise orphans
+// The <id>.json sidecar must die with the photo it describes, otherwise orphans
 // accumulate for every hard delete. Key building lives in seoSidecar.ts; an absent
 // sidecar is a no-op success (S3 delete is idempotent). A failure here must never
 // fail the handler — same swallow-and-log contract as _deleteUpload above.
@@ -77,6 +82,39 @@ const _deleteSidecar = async ({
     await deleteSeoSidecar(client, Bucket, photoId)
   } catch (err) {
     console.error('Error deleting seo sidecar')
+    console.error({ err })
+  }
+}
+
+// One wildcard path per photo. `/<id>*` covers <id>.webp, <id>-thumb.webp, <id>.json and any
+// ?query= variant of them (the img distribution caches with queryStringBehavior.all()), and an
+// id is a full UUID, so it can only ever match that photo's own keys. The legacy seo/ key is
+// still invalidated while pre-root sidecars exist in the bucket and its cache.
+function _invalidationPaths (photoId: string): string[] {
+  return [`/${photoId}*`, `/seo/${photoId}.json*`]
+}
+
+// Best effort like every other step here: an invalidation failure leaves objects cached, it must
+// not abort the table cascade or make the S3 event retry forever.
+const _invalidateCdn = async ({ photoId }: { photoId: string }): Promise<void> => {
+  const distributionId = String(process.env.CLOUD_FRONT_DISTRIBUTION ?? '').trim()
+  if (distributionId === '') {
+    console.log('No CLOUD_FRONT_DISTRIBUTION configured, skipping CDN invalidation')
+    return
+  }
+
+  try {
+    const paths = _invalidationPaths(photoId)
+    const client = new CloudFrontClient({ region: 'us-east-1' })
+    await client.send(new CreateInvalidationCommand({
+      DistributionId: distributionId,
+      InvalidationBatch: {
+        CallerReference: `photo-delete-${photoId}-${Date.now()}`,
+        Paths: { Quantity: paths.length, Items: paths }
+      }
+    }))
+  } catch (err) {
+    console.error('Error invalidating cloudfront paths')
     console.error({ err })
   }
 }

@@ -257,9 +257,88 @@ describe('buildSeoBody + renderRootBody - crawler-visible content', () => {
   })
 })
 
+// Google's image rich results read this pair. They are the only tags whose content comes from
+// two different sources (Rekognition tags vs. user comments), so pinning them here keeps a later
+// "simplify" pass from collapsing them back into one string or dropping them with og:image.
+describe('injectMetaTags - og:image:title / og:image:caption', () => {
+  const WITH_IMAGE_TEXT = {
+    ...PHOTO_OPTIONS,
+    imageTitle: 'Dog, Pet, Beach',
+    imageCaption: 'Golden retriever puppy on the beach'
+  }
+
+  function tagsOf (html, property) {
+    return html.match(new RegExp('<meta[^>]*property="' + property + '"[^>]*>', 'g')) || []
+  }
+
+  it('emits exactly one of each, directly after og:image', () => {
+    const result = injectMetaTags(BASE_HTML, WITH_IMAGE_TEXT)
+    expect(tagsOf(result, 'og:image:title')).to.have.lengthOf(1)
+    expect(tagsOf(result, 'og:image:caption')).to.have.lengthOf(1)
+    expect(tagsOf(result, 'og:image')[0]).to.contain('abc-123.webp')
+
+    const lines = result.split('\n')
+    const imageIdx = lines.findIndex((l) => l.includes('property="og:image"'))
+    expect(lines[imageIdx + 1]).to.contain('og:image:title')
+    expect(lines[imageIdx + 2]).to.contain('og:image:caption')
+  })
+
+  it('keeps the tags and the caption as separate strings', () => {
+    const result = injectMetaTags(BASE_HTML, WITH_IMAGE_TEXT)
+    expect(result).to.include('<meta property="og:image:title" content="Dog, Pet, Beach"')
+    expect(result).to.include(
+      '<meta property="og:image:caption" content="Golden retriever puppy on the beach"'
+    )
+  })
+
+  it('omits both tags when the sidecar carries neither', () => {
+    const result = injectMetaTags(BASE_HTML, PHOTO_OPTIONS)
+    expect(result).to.not.include('og:image:title')
+    expect(result).to.not.include('og:image:caption')
+  })
+
+  it('emits only the title when nobody has commented', () => {
+    const result = injectMetaTags(BASE_HTML, { ...PHOTO_OPTIONS, imageTitle: 'Cat, Sofa' })
+    expect(tagsOf(result, 'og:image:title')).to.have.lengthOf(1)
+    expect(result).to.not.include('og:image:caption')
+  })
+
+  it('escapes quotes and ampersands so the tag cannot be broken out of', () => {
+    const result = injectMetaTags(BASE_HTML, {
+      ...PHOTO_OPTIONS,
+      imageTitle: 'Tom & Jerry\'s "beach" day',
+      imageCaption: '<script>alert(1)</script>'
+    })
+    const title = tagsOf(result, 'og:image:title')[0]
+    expect(title).to.include('Tom &amp; Jerry')
+    expect(title).to.include('&quot;beach&quot;')
+    expect(title).to.include('Jerry&#039;s')
+    const caption = tagsOf(result, 'og:image:caption')[0]
+    expect(caption).to.not.include('<script>')
+    expect(caption).to.include('&lt;script&gt;')
+  })
+
+  it('replaces tags already present in the served shell instead of duplicating them', () => {
+    const once = injectMetaTags(BASE_HTML, WITH_IMAGE_TEXT)
+    const twice = injectMetaTags(once, { ...WITH_IMAGE_TEXT, imageTitle: 'Puppy, Beach' })
+    expect(tagsOf(twice, 'og:image:title')).to.have.lengthOf(1)
+    expect(tagsOf(twice, 'og:image:caption')).to.have.lengthOf(1)
+    expect(twice).to.include('content="Puppy, Beach"')
+    expect(twice).to.not.include('Dog, Pet, Beach')
+  })
+})
+
 describe('stripExistingMetaTags', () => {
   it('strips og:image tag', () => {
     const html = '<meta property="og:image" content="https://example.com/logo.png" data-rh="true" />'
+    expect(stripExistingMetaTags(html)).to.equal('')
+  })
+
+  // The strip pattern for og:image needs the closing quote right after the property name, so
+  // without these two the crawler would get a stale pair next to the fresh one.
+  it('strips og:image:title and og:image:caption', () => {
+    const html = '<meta property="og:image:title" content="old" data-rh="true" />' +
+      '<meta property="og:image:caption" content="old" data-rh="true" />'
     expect(stripExistingMetaTags(html)).to.equal('')
   })
 

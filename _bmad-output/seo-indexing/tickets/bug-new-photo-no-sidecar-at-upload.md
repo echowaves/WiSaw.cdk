@@ -82,3 +82,7 @@ Only two things ever write sidecars: the scheduled sitemap publisher (five-hour 
 - Decision: the upload path becomes a named writer of the sidecar contract; the ADR gains a dated line saying so as part of this work. (User, 2026-11-06)
 - Superseded at build: "captions and labels arrive with the scheduled publisher's later refresh" — the writer must read the full row (`seoSidecar.ts` forbids thin writers), and labels/dimensions are already in the DB at write time, so they ship at upload; only the caption stays empty until the next publisher run. (Build, 2026-11-07; plan's frozen I/O matrix row 1.)
 - Forcing criterion 2's failure on the test stack: make the sidecar write throw there — e.g. temporarily deny the processing role's PutObject on `seo/*` — then upload and confirm image, thumb, and app behavior are unaffected.
+
+## Notes (addendum)
+
+- 2026-11-07: sidecar key moved from `seo/<id>.json` to bucket-root `<id>.json` (`sidecarKey()`), and the upload writer now shares `loadSeoPhotoRow()` with the comment-refresh path, so upload and comment edits publish identical bodies. Behaviour and failure semantics of this ticket are unchanged.

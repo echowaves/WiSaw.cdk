@@ -100,10 +100,19 @@ function buildSeoFields (input = {}) {
   if (caption) lead = truncate(caption, leadBudget)
   else if (labels.length) lead = truncate(`${labels.slice(0, 4).join(', ')} unaltered ${kindLabel}`, leadBudget)
 
+  // og:image:title and og:image:caption must not say the same thing. The title answers "what is
+  // in this image" from the AI tags; the caption answers "what do people say about it" from the
+  // newest comment. With no comment there is nothing to caption, so the tag is simply omitted
+  // rather than repeating the tags under a second name.
+  const imageTitle = truncate(labels.length ? labels.slice(0, 3).join(', ') : pageTitle, 100)
+  const imageCaption = truncate(caption, 200)
+
   return {
     pageTitle,
     metaDescription: truncate([lead, tail].filter(Boolean).join('. '), DESC_MAX),
     caption,
+    imageTitle,
+    imageCaption,
     labels,
     location,
     created: clean(sidecar && sidecar.created),

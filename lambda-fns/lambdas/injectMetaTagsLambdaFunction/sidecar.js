@@ -51,14 +51,15 @@ function remember (key, value) {
 }
 
 /**
- * Read seo/<id>.json for a media id.
+ * Read the <id>.json sidecar for a media id. The sidecar sits at the bucket root next to
+ * <id>.webp; string concatenation only, per the edge-runtime constraint in this folder.
  * @returns {Promise<object|null>} parsed sidecar, or null when it does not exist yet.
  */
 async function fetchSidecar (imageId) {
   const id = String(imageId || '')
   if (!id) return null
 
-  const key = `seo/${id}.json`
+  const key = id + '.json'
   const hit = cache.get(key)
   if (hit && Date.now() - hit.at < SIDECAR_TTL_MS) return hit.value
 

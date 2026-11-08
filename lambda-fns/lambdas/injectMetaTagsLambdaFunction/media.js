@@ -32,9 +32,11 @@ async function probeMedia (bucket, imageIdRaw) {
     )
     if (Contents.length === 0) return { exists: false, lastModified: '', key: '', inconclusive: false }
 
-    // Prefer the media itself over a thumbnail so LastModified reflects the upload.
+    // Prefer the media itself over a thumbnail or the <id>.json SEO sidecar, whose mtime moves
+    // every time a comment is written and must not become the page's capture date.
     const preferred = Contents.find((o) => VIDEO_EXT_RE.test(o.Key)) ||
-      Contents.find((o) => !/\.webp$/.test(o.Key) || !o.Key.endsWith('-thumb.webp')) ||
+      Contents.find((o) => /\.webp$/.test(o.Key) && !o.Key.endsWith('-thumb.webp')) ||
+      Contents.find((o) => !/\.json$/.test(o.Key) && !o.Key.endsWith('-thumb.webp')) ||
       Contents[0]
 
     return {

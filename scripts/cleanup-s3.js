@@ -12,28 +12,28 @@ const ServerlessClient = require('serverless-postgres')
 
 const rdsCa = fs.readFileSync(path.join(__dirname, '../lambda-fns/certs/global-bundle.pem'), 'utf8')
 
-// A sidecar key is exactly seo/<lowercase-uuid>.json — the contract of sidecarKey() in
-// lambda-fns/utilities/seoSidecar.ts, with the same strict UUID shape as extractPhotoId().
-// Anything else under seo/ (e.g. _last-run.json or a malformed id) is not a photo sidecar
-// and must never be deleted here.
-const SIDECAR_KEY_RE = /^seo\/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.json)$/
+// Legacy sidecar key: seo/<lowercase-uuid>.json. Sidecars now live at the bucket root as
+// <id>.json (see sidecarKey() in lambda-fns/utilities/seoSidecar.ts), where the media rule below
+// already classifies them by their photo. This pattern only stays so objects written before the
+// move get pruned once their photo is gone instead of being reported forever. Anything else under
+// seo/ (e.g. _last-run.json or a malformed id) is not a photo sidecar and must never be deleted.
+const LEGACY_SIDECAR_KEY_RE = /^seo\/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.json)$/
 
 function extractPhotoId (key) {
-  // Extract UUID from keys like: uuid.webp, uuid-thumb.webp, uuid.mov
+  // Extract UUID from keys like: uuid.webp, uuid-thumb.webp, uuid.mov, uuid.json
   const match = key.match(/^([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/)
   return match ? match[1] : null
 }
 
 // Pure classifier for the reconciliation pass: (key, activeIds) => 'keep' | 'delete' | 'report'.
-//   uuid.* / uuid-thumb.webp media whose row is gone          → delete (existing photo rule)
-//   seo/<uuid>.json sidecar whose row is gone                 → delete (prune orphans)
-//   seo/<uuid>.json sidecar of an active photo                → keep
+//   uuid.* media and its uuid.json sidecar whose row is gone  → delete (photo rule)
+//   legacy seo/<uuid>.json sidecar whose row is gone          → delete (prune orphans)
 //   anything else, incl. seo/_last-run.json and junk keys     → report only, NEVER delete.
 // The old code deleted every non-UUID key, which took out all ~22k sidecars and the watermark.
 function classifyKey (key, activeIds) {
-  const sidecarId = key.match(SIDECAR_KEY_RE)?.[1]?.replace(/\.json$/, '') ?? null
-  if (sidecarId !== null) {
-    return activeIds.has(sidecarId) ? 'keep' : 'delete'
+  const legacySidecarId = key.match(LEGACY_SIDECAR_KEY_RE)?.[1]?.replace(/\.json$/, '') ?? null
+  if (legacySidecarId !== null) {
+    return activeIds.has(legacySidecarId) ? 'keep' : 'delete'
   }
 
   const photoId = extractPhotoId(key)
@@ -41,6 +41,44 @@ function classifyKey (key, activeIds) {
     return 'report'
   }
   return activeIds.has(photoId) ? 'keep' : 'delete'
+}
+
+// Nothing is deleted before a human has seen the list and agreed to it. Default answer is yes
+// (Enter proceeds); "n" aborts with nothing touched. --yes skips the prompt for automation, and a
+// run without a terminal reports that and proceeds, since that is how it behaved before.
+function confirmDeletions (keys) {
+  if (process.argv.includes('--yes') || process.argv.includes('-y')) {
+    console.log('✅ --yes given, skipping confirmation')
+    return Promise.resolve(true)
+  }
+  if (!process.stdin.isTTY) {
+    console.log('⚠️  Not an interactive terminal — proceeding without confirmation')
+    return Promise.resolve(true)
+  }
+
+  const readline = require('readline')
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+  return new Promise((resolve) => {
+    rl.question(`🙋 Delete these ${keys.length} objects? [Y/n] `, (answer) => {
+      rl.close()
+      const reply = String(answer).trim().toLowerCase()
+      resolve(reply === '' || reply === 'y' || reply === 'yes')
+    })
+  })
+}
+
+// Shows what is about to go: how many photos it affects, then a sample of the objects. Listing
+// all ~22k keys would bury the decision; the count plus a sample answers "what is this going to
+// remove" and --dry-run exists for the full inventory.
+function printDeletionPlan (keys) {
+  const photoIds = new Set()
+  for (const key of keys) {
+    const id = extractPhotoId(key)
+    if (id !== null) photoIds.add(id)
+  }
+  console.log(`🧾 ${keys.length} objects belonging to ${photoIds.size || 'unknown'} photo(s) would be deleted:`)
+  keys.slice(0, 20).forEach((key) => console.log(`  ${key}`))
+  if (keys.length > 20) console.log(`  ... and ${keys.length - 20} more`)
 }
 
 // Parse command line arguments
@@ -177,9 +215,15 @@ async function main () {
     process.exit(0) // Force exit since db is already cleaned in getPhotoIds
   }
 
+  printDeletionPlan(toDelete)
+
   if (DRY_RUN) {
-    console.log('Objects that would be deleted:')
-    // toDelete.forEach(key => console.log(`  ${key}`))
+    console.log('✅ Dry run — nothing was deleted.')
+    process.exit(0) // Force exit since db is already cleaned in getPhotoIds
+  }
+
+  if (!(await confirmDeletions(toDelete))) {
+    console.log('🛑 Cancelled — nothing was deleted.')
     process.exit(0) // Force exit since db is already cleaned in getPhotoIds
   }
 
@@ -206,4 +250,4 @@ if (require.main === module) {
   })
 }
 
-module.exports = { classifyKey, extractPhotoId }
+module.exports = { classifyKey, extractPhotoId, printDeletionPlan, confirmDeletions }

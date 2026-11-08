@@ -12,8 +12,8 @@ const {
 } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/utils')
 const { parseMediaUri, needsCanonicalRedirect } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/mediaUri')
 const { buildSeoFields, monthYear } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/seoText')
-// Both writers of seo/<id>.json plus the edge reader's guard. These objects are public, so a
-// place NAME is fair content while a COORDINATE may never appear in one.
+// Both writers of the <id>.json sidecar plus the edge reader's guard. These objects are public, so
+// a place NAME is fair content while a COORDINATE may never appear in one.
 const { buildSeoSidecar, assertNoPreciseLocation } = require('../lambda-fns/utilities/seoSidecar.ts')
 const { buildSidecar, QUERY } = require('../scripts/publish-seo-sidecars.js')
 const { stripPreciseLocation } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/sidecar')
@@ -108,6 +108,35 @@ describe('buildSeoFields - real text, never invented facts', () => {
     expect(seo.labels).to.deep.equal(['Dog', 'Pet', 'Beach', 'Sunset'])
   })
 
+  // og:image:title and og:image:caption must not be two copies of one string: the tags answer
+  // "what is in the image" (Rekognition), the comment answers "what do people say about it".
+  it('splits the image tags: title from the AI tags, caption from the comments', () => {
+    const seo = buildSeoFields({ sidecar, entityLabel: 'photo', imageIdText: UUID })
+    expect(seo.imageTitle).to.equal('Dog, Pet, Beach')
+    expect(seo.imageCaption).to.equal('Golden retriever puppy on the beach at sunset')
+    expect(seo.imageTitle).to.not.equal(seo.imageCaption)
+  })
+
+  it('omits the caption when nobody has commented instead of repeating the tags', () => {
+    const seo = buildSeoFields({
+      sidecar: { labels: ['Cat', 'Sofa'] },
+      entityLabel: 'photo',
+      imageIdText: UUID
+    })
+    expect(seo.imageTitle).to.equal('Cat, Sofa')
+    expect(seo.imageCaption).to.equal('')
+  })
+
+  it('falls back to the page title for og:image:title when the photo has no tags', () => {
+    const seo = buildSeoFields({
+      sidecar: { caption: 'just a comment' },
+      entityLabel: 'photo',
+      imageIdText: UUID
+    })
+    expect(seo.imageTitle).to.equal(seo.pageTitle)
+    expect(seo.imageCaption).to.equal('just a comment')
+  })
+
   it('emits a meta description even when the caption is empty', () => {
     const seo = buildSeoFields({
       sidecar: { labels: ['Cat'], created: '2025-01-02T00:00:00Z' },
@@ -131,8 +160,8 @@ describe('buildSeoFields - real text, never invented facts', () => {
 })
 
 // "Photos"."location" is a Postgres geography column. However its value reaches a writer -
-// object, WKB hex, POINT() text or a bare pair - it must not survive into seo/<id>.json, while
-// the address columns (locality/district/region) are expected to.
+// object, WKB hex, POINT() text or a bare pair - it must not survive into the <id>.json sidecar,
+// while the address columns (locality/district/region) are expected to.
 const GEOMETRY_FORMS = {
   pointObject: { latitude: 40.6833, longitude: -73.974 },
   wkbHex: '0101000020E6100000C3F5A74271D04440CD5AB69B102252C0',
@@ -140,7 +169,7 @@ const GEOMETRY_FORMS = {
   pairText: '40.6833, -73.9740'
 }
 
-describe('seo/<id>.json - a place name is fine, a coordinate never is', () => {
+describe('<id>.json sidecar - a place name is fine, a coordinate never is', () => {
   const row = {
     id: UUID,
     lastComment: 'Golden retriever puppy on the beach at sunset',

@@ -7,6 +7,7 @@ import { _updateCommentsCount } from "./_updateCommentsCount"
 import { _updateLastComment } from "./_updateLastComment"
 
 import { _notifyAllWatchers } from "../photos/_notifyAllWatchers"
+import { _updateSeoSidecar } from "../photos/_updateSeoSidecar"
 import watch from "../photos/watch"
 import { _isPhotoInFrozenWaveForUser } from "../waves/_isPhotoInFrozenWaveForUser"
 
@@ -67,6 +68,11 @@ export default async function main(
     watch(photoId, uuid),
     _notifyAllWatchers(photoId)
   ])
+
+  // The sidecar's caption is the photo's newest comment, so the page text changes with this
+  // comment. Sequential and best-effort: it must not race the shared pool above, and a failed
+  // write only costs the enrichment until the scheduled publisher runs again.
+  await _updateSeoSidecar(photoId)
 
   return comment
 }

@@ -41,7 +41,8 @@ const BUCKET = 'wisaw-img-test'
 // deliberate second check: the key contract lowercases, and sidecar readers only ever look for
 // the lowercase form.
 const ID_UPPER = '78250028-D951-4095-93B5-CD033A29514E'
-const KEY = 'seo/78250028-d951-4095-93b5-cd033a29514e.json'
+// Sidecars sit at the bucket root next to the media they describe: <lower-id>.json.
+const KEY = '78250028-d951-4095-93b5-cd033a29514e.json'
 
 /** A full publisher-shaped row as the sidecar SELECT returns it (labels already aggregated). */
 function photoRow (overrides = {}) {
@@ -133,7 +134,7 @@ describe('_writeSeoSidecar - upload-time sidecar writer', () => {
     }
   }
 
-  it('happy upload: PUTs seo/<lower-id>.json with the v1 body — labels and dimensions present, caption empty', async () => {
+  it('happy upload: PUTs <lower-id>.json at the bucket root with the v1 body — labels and dimensions present, caption empty', async () => {
     stubPsql(() => [photoRow()])
     const s3 = stubS3()
 

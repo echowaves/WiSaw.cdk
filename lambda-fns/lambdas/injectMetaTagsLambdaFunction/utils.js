@@ -28,6 +28,9 @@ function sanitizeImageId (uri = '') {
 function stripExistingMetaTags (html = '') {
   return html
     .replace(/<meta\s[^>]*property=["']og:(image|title|url|type|description)["'][^>]*\/?>\s*/gi, '')
+    // The og:image:title / og:image:caption pair is ours to own; the pattern above deliberately
+    // does not match them (it requires the closing quote after "og:image"), so strip them here.
+    .replace(/<meta\s[^>]*property=["']og:image:(title|caption)["'][^>]*\/?>\s*/gi, '')
     .replace(/<meta\s[^>]*name=["']twitter:(card|title|image|description)["'][^>]*\/?>\s*/gi, '')
     // The shipped template carries one tag with both name="description" and
     // property="og:description". Attribute order must not matter: the old pattern
@@ -168,6 +171,8 @@ function injectMetaTags (html = '', options = {}) {
     imageIdUrl = '',
     pageTitle = '',
     videoUrl = '',
+    imageTitle = '',
+    imageCaption = '',
     bodyHtml = ''
   } = options
 
@@ -180,6 +185,15 @@ function injectMetaTags (html = '', options = {}) {
   const safePageTitle = pageTitle
     ? escapeHtmlAttribute(pageTitle)
     : `wisaw ${safeEntityLabel} ${safeImageIdText}`
+
+  // Google's image rich results read og:image:title and og:image:caption. They must carry
+  // different information — the AI tags in the title, the newest comment in the caption — so an
+  // absent caption drops its tag instead of echoing the tags back under another name.
+  const safeImageTitle = imageTitle ? escapeHtmlAttribute(imageTitle) : ''
+  const safeImageCaption = imageCaption ? escapeHtmlAttribute(imageCaption) : ''
+  const imageMetaTags =
+    (safeImageTitle ? '      <meta property="og:image:title" content="' + safeImageTitle + '" data-rh="true">\n' : '') +
+    (safeImageCaption ? '      <meta property="og:image:caption" content="' + safeImageCaption + '" data-rh="true">\n' : '')
 
   // Canonicalisation defence: ids are stored lower-cased, so an uppercase request URL
   // must not become its own canonical target. Without this, /photos/35E9... and
@@ -198,6 +212,7 @@ function injectMetaTags (html = '', options = {}) {
   let metaTags = '</title>\n' +
       renderDescriptionTags(metaDescription || description) +
       '      <meta property="og:image" content="https://img.wisaw.com/' + safeImageIdUrl + '.webp" data-rh="true">\n' +
+      imageMetaTags +
       '      <meta property="og:description" content="' + safeDescription + '" data-rh="true">\n' +
       '      <meta property="og:title" content="' + safePageTitle + '" data-rh="true">\n' +
       '      <meta property="og:url" content="https://wisaw.com/' + safePathSegment + '/' + safeCanonicalId + '" data-rh="true">\n' +

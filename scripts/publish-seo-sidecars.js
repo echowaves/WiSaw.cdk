@@ -12,7 +12,8 @@
 //   node ./scripts/publish-seo-sidecars.js prod --dry-run
 //   node ./scripts/publish-seo-sidecars.js prod --batch-size=500 --limit=5000
 //
-// The published objects are public (img.wisaw.com/seo/<id>.json). A place NAME belongs in one -
+// The published objects are public (img.wisaw.com/<id>.json, at the bucket root beside the
+// media itself). A place NAME belongs in one -
 // it is what makes a photo findable - but a COORDINATE never does, so the query selects the
 // address columns and not the "location" geography column, and buildSidecar rejects anything
 // that looks like a position anyway. It mirrors buildSeoSidecar in
@@ -202,12 +203,12 @@ async function main () {
       const results = await Promise.allSettled(chunk.map(async (row) => {
         const sidecar = buildSidecar(row)
         if (DRY_RUN) {
-          console.log(`seo/${row.id}.json`, JSON.stringify(sidecar).slice(0, 200))
+          console.log(`${row.id}.json`, JSON.stringify(sidecar).slice(0, 200))
           return
         }
         await s3.send(new PutObjectCommand({
           Bucket: BUCKET_NAME,
-          Key: `seo/${row.id}.json`,
+          Key: `${String(row.id).toLowerCase()}.json`,
           Body: JSON.stringify(sidecar),
           ContentType: 'application/json',
           CacheControl: 'max-age=60'

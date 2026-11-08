@@ -9,7 +9,7 @@ import type { S3Client } from '@aws-sdk/client-s3'
 // that once cost ~22k pages their index. Every writer must go through buildSeoSidecar so call sites
 // cannot drift.
 //
-// These objects are public: seo/<id>.json sits in the media bucket behind img.wisaw.com, so
+// These objects are public: <id>.json sits in the media bucket behind img.wisaw.com, so
 // anyone who has a photo URL can read one. A place NAME is fair page content ("Coney Island,
 // New York" is what makes a photo rankable), but a COORDINATE is not - it pinpoints where a
 // person stood, and once crawled from a guessable URL it cannot be unpublished. Everything
@@ -112,8 +112,11 @@ export function buildSeoSidecar (photo: any): SeoSidecar {
   return sidecar
 }
 
+// The sidecar lives next to the media it describes: <id>.json at the bucket root, with no
+// separate prefix. One key shape means one rule for writers, readers, CDN invalidations and
+// the cleanup-s3 reconciler (which already classifies any <uuid>.* key by its photo).
 export function sidecarKey (id: any): string {
-  return `seo/${String(id).toLowerCase()}.json`
+  return `${String(id).toLowerCase()}.json`
 }
 
 export async function putSeoSidecar (client: S3Client, bucket: string, photo: any): Promise<void> {
@@ -157,7 +160,8 @@ export async function deleteSeoSidecar (client: S3Client, bucket: string, id: an
 }
 
 // Written by the scheduled publisher so the next run knows where its window starts instead of
-// guessing a fixed lookback. Lives beside the sidecars it governs.
+// guessing a fixed lookback. It keeps its seo/ prefix (photo sidecars moved to the bucket root):
+// cleanup-s3 classifies it as "report only", so no reconciler can delete the job's own state.
 export const SEO_WATERMARK_KEY = 'seo/_last-run.json'
 export const SEO_WATERMARK_FLOOR_HOURS = 48
 

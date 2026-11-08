@@ -6,6 +6,7 @@ import { assertValidUuid } from '../../utilities/assertValidUuid'
 import { _updateCommentsCount } from "./_updateCommentsCount"
 import { _updateLastComment } from "./_updateLastComment"
 import { _isPhotoInFrozenWave } from "../waves/_isPhotoInFrozenWave"
+import { _updateSeoSidecar } from "../photos/_updateSeoSidecar"
 
 export default async function main(commentId: bigint, uuid: string) {
   assertValidUuid(uuid, 'uuid')
@@ -44,6 +45,10 @@ export default async function main(commentId: bigint, uuid: string) {
     _updateCommentsCount(photoId),
     _updateLastComment(photoId),
   ])
+
+  // Same contract as the create path: the sidecar's caption follows the newest comment, so a
+  // delete has to republish it. Best effort — the scheduled publisher remains the backstop.
+  await _updateSeoSidecar(photoId)
 
   return lastComment
 }
