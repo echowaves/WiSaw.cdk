@@ -23,3 +23,16 @@ hitl = false
 risk = "medium"
 refine = true
 refined = true
+
+[[entry]]
+id = 3
+type = "story"
+title = "Titles carry the AI tags, captions and descriptions carry the comments"
+description = "Sitemap image and video entries, and the page title against the meta description, stop repeating one text: titles come from the AI tags, captions and descriptions from the newest comment."
+verify = "Run `npm test`: the sitemap entry text and the edge injector's page-text cases show two different texts whenever a photo has both tags and a comment, and today's text when only one source exists; no new failures beyond the five known getSeasonBoundaries ones."
+covers = []
+after = [2]
+hitl = false
+risk = "medium"
+refine = true
+refined = true
