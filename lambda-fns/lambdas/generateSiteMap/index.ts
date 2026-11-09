@@ -5,7 +5,7 @@ import { traceLog } from '../../utilities/trace'
 
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3"; // ES Modules import
 
-import { clean, locationText, pickLabels, putSeoSidecars, readSeoWatermark, seoWindowStart, writeSeoWatermark } from '../../utilities/seoSidecar'
+import { locationText, putSeoSidecars, readSeoWatermark, seoWindowStart, splitImageText, writeSeoWatermark } from '../../utilities/seoSidecar'
 
 // Only photos touched since the last successful run get a fresh sidecar; without a window the
 // job would issue ~22k PUTs every five hours for content that almost never changes.
@@ -115,10 +115,9 @@ export async function main (event: any = {}, context: any /*, cb: any*/) {
     // dates gets polled rarely, which kept deep pages out of the index long after the
     // canonical fix landed.
     const lastmod = photo?.updatedAt ? new Date(photo.updatedAt).toISOString() : undefined
-    const labels = pickLabels([photo])
-    const caption = clean(photo.lastComment)
-    const summary = caption || labels.join(', ')
-    const title = (summary || `WiSaw ${photo.video ? 'video' : 'photo'} ${photo.id}`).slice(0, 100)
+    // Two texts rather than one: the tags label the image, the newest comment captions it. They
+    // only coincide when a photo has no comment - see splitImageText for the reasoning.
+    const { title, caption } = splitImageText(photo, photo.video ? 'video' : 'photo')
     const createdAt = photo.createdAt ? new Date(photo.createdAt).toISOString() : undefined
 
     if(photo?.video === true) {
@@ -128,7 +127,9 @@ export async function main (event: any = {}, context: any /*, cb: any*/) {
         {
           thumbnail_loc: `https://img.wisaw.com/${photo.id}-thumb.webp`,
           title,
-          description: (summary || title).slice(0, 2048),
+          // A video has a description rather than a caption slot, but it follows the same rule and
+          // the same limit: the comment captions it, the tags never do.
+          description: caption,
           content_loc: `https://img.wisaw.com/${photo.id}.mov`,
           publication_date: createdAt,
           family_friendly: true
@@ -145,7 +146,7 @@ export async function main (event: any = {}, context: any /*, cb: any*/) {
           {
             url: `https://img.wisaw.com/${photo.id}.webp`,
             title,
-            caption: (summary || title).slice(0, 512),
+            caption,
             geoLocation: locationText(photo) || undefined,
             license: 'https://wisaw.com/terms'
           }

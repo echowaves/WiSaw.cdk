@@ -50,13 +50,14 @@ This continues the decision made on 2026-11-07 for `og:image:title` and `og:imag
 5. **Page title and meta description differ when both sources exist**
    **Given** a photo whose SEO sidecar carries both AI tags and a comment
    **When** the edge injector builds the page's head
-   **Then** the page title leads with the tags and the meta description leads with the comment
+   **Then** the page title keeps its current head — the comment, with place and capture month behind it — while the meta description leads with the tag list instead of repeating that sentence
    **And** the title and the description are not equal, and each keeps its own length budget
 
 6. **Single-source pages keep today's text**
    **Given** a photo with only a comment, only tags, or neither
    **When** the edge injector builds the page's head
-   **Then** the title falls back to the comment, then to the tags, then to an identity-bearing title that keeps the page unique among 21k pages
+   **Then** the title falls back from the comment to the tags, then to an identity-bearing title that keeps the page unique among 21k pages
+   **And** the description falls back to the comment when there are no tags, and to place, month and brand when there is neither
 
 ## Boundaries
 
@@ -75,7 +76,7 @@ This continues the decision made on 2026-11-07 for `og:image:title` and `og:imag
 
 ## Notes
 
-- Assumption: titles take the AI tags and captions/descriptions take the newest comment, on every surface. Chosen over the reverse because a title has ~60 usable characters and a comma list of tags truncates cleanly while a truncated comment loses its meaning; because an unmoderated comment ("nice!") would otherwise become the strongest ranking signal on the page; and because it matches the rule already decided for `og:image:*`, so one sentence explains every surface. Confirm with user.
+- Decision: 2026-11-09, settled by the builder at the user's request ("make a suggestion what makes more sense for which"), to confirm on review. The tag list goes in `image:title` / `og:image:title` (already shipped) and the newest comment in `image:caption` / `og:image:caption` (already shipped); for the document pair the page title keeps its prose head — the comment — and the meta description takes the tag list when both exist. Reasoning: an image title labels the picture, where tags read well and a truncated comment does not; a document title is a headline people click, and comments are the only per-photo unique text WiSaw has, while repeated tag lists are what once made 21k pages look near-identical. Rejected alternative: tags in the page title too — one uniform rule, but it turns ~60-character headlines into comma lists and hands the strongest ranking signal to unmoderated comments on the reverse mapping.
 - Risk medium: this text is what Google shows for ~21k indexed pages; a wrong rule costs ranking on the site's only growth channel, but the change is content-only, covered by tests, and reversible by redeploy.
 - Waits on seo-indexing/2 because: its criteria and Boundaries describe the sidecar shape, root keys and `og:image:*` split that ticket 1 and 2 left behind; building on an earlier tree would collide with files still in review.
 - Operator step after build (not part of criteria): deploy the sitemap generator and publish the edge function in prod, then fetch `https://wisaw.com/sitemap.xml` and one commented photo page to confirm two distinct texts appear live.

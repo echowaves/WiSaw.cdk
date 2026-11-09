@@ -117,6 +117,27 @@ describe('buildSeoFields - real text, never invented facts', () => {
     expect(seo.imageTitle).to.not.equal(seo.imageCaption)
   })
 
+  // The same rule one level up: the page title is headed by the comment, so the snippet under it
+  // carries the tag list instead of printing the sentence already in the headline a second time.
+  it('splits the page text: title headed by the comment, description led by the tags', () => {
+    const seo = buildSeoFields({ sidecar, entityLabel: 'photo', imageIdText: UUID })
+    expect(seo.pageTitle).to.contain('Golden retriever puppy on the beach at sunset')
+    expect(seo.metaDescription.startsWith('In this photo: Dog, Pet, Beach'), seo.metaDescription).to.equal(true)
+    // The brand sentence already says "unaltered"; the snippet must not say it twice.
+    expect(seo.metaDescription.match(/unaltered/g)).to.have.lengthOf(1)
+    expect(seo.metaDescription).to.not.equal(seo.pageTitle)
+    expect(seo.metaDescription.length).to.be.at.most(158)
+  })
+
+  it('leads the description with the comment when there are no tags to hand over', () => {
+    const seo = buildSeoFields({
+      sidecar: { caption: 'Golden retriever puppy on the beach at sunset', created: '2025-09-18T14:03:00.000Z' },
+      entityLabel: 'photo',
+      imageIdText: UUID
+    })
+    expect(seo.metaDescription).to.contain('Golden retriever puppy on the beach at sunset')
+  })
+
   it('omits the caption when nobody has commented instead of repeating the tags', () => {
     const seo = buildSeoFields({
       sidecar: { labels: ['Cat', 'Sofa'] },

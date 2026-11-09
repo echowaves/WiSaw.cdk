@@ -11,6 +11,9 @@
 // un-enriched page is still unique rather than one of thousands sharing one title.
 
 const KIND_LABEL = { photo: 'photo', video: 'video' }
+// Every slot that lists AI tags (page title head, og:image:title, meta description lead) uses the
+// same first three, so one photo never shows Google two different lists.
+const TAG_TITLE_LIMIT = 3
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 function clean (value) {
@@ -23,6 +26,20 @@ function truncate (value, max) {
   const cut = text.slice(0, max - 1)
   const lastSpace = cut.lastIndexOf(' ')
   return `${cut.slice(0, lastSpace > max * 0.6 ? lastSpace : max - 1).trim()}…`
+}
+
+/**
+ * The description carries whichever of the two texts the title did not use as its head. The title is
+ * headed by the comment whenever there is one, so a photo with both a comment and tags shows the tag
+ * list here - worded without "unaltered", which the brand sentence at the end of every description
+ * already says. With only one of the two texts available there is nothing else to say, so title and
+ * description may share it. Every slot that lists tags uses the same first three.
+ */
+function descriptionLead (caption, labels, kindLabel, leadBudget) {
+  if (caption && labels.length) return truncate(`In this ${kindLabel}: ${labels.slice(0, TAG_TITLE_LIMIT).join(', ')}`, leadBudget)
+  if (caption) return truncate(caption, leadBudget)
+  if (labels.length) return truncate(`${labels.slice(0, TAG_TITLE_LIMIT).join(', ')} unaltered ${kindLabel}`, leadBudget)
+  return ''
 }
 
 /** 'Sep 2025' for a title; '' when the date is unknown or obviously a placeholder. */
@@ -60,6 +77,9 @@ function buildSeoFields (input = {}) {
   const { sidecar = null, entityLabel = 'photo', imageIdText = '', lastModified = '' } = input
   const kindLabel = KIND_LABEL[entityLabel] || entityLabel
   const caption = clean(sidecar && sidecar.caption)
+  // The title keeps the comment as its head whenever there is one: it is the only per-photo unique
+  // sentence WiSaw has, and a comma list of tags truncates badly inside ~60 characters. See
+  // descriptionLead() for where the other text goes instead.
   const subject = truncate(caption, 60)
   const labels = normaliseLabels(sidecar && sidecar.labels)
   const location = clean(sidecar && sidecar.location)
@@ -71,7 +91,7 @@ function buildSeoFields (input = {}) {
   // 21k pages differ from the next.
   const TITLE_MAX = 68
   const HEAD_MIN = 24
-  const head = subject || (labels.length ? labels.slice(0, 3).join(', ') : '')
+  const head = subject || (labels.length ? labels.slice(0, TAG_TITLE_LIMIT).join(', ') : '')
   const contextBits = []
   if (location) contextBits.push(location)
   if (when) contextBits.push(when)
@@ -96,15 +116,13 @@ function buildSeoFields (input = {}) {
   const tail = [facts.join('. '), brand].filter(Boolean).join('. ')
   const leadBudget = Math.max(40, DESC_MAX - tail.length - 2)
 
-  let lead = ''
-  if (caption) lead = truncate(caption, leadBudget)
-  else if (labels.length) lead = truncate(`${labels.slice(0, 4).join(', ')} unaltered ${kindLabel}`, leadBudget)
+  const lead = descriptionLead(caption, labels, kindLabel, leadBudget)
 
   // og:image:title and og:image:caption must not say the same thing. The title answers "what is
   // in this image" from the AI tags; the caption answers "what do people say about it" from the
   // newest comment. With no comment there is nothing to caption, so the tag is simply omitted
   // rather than repeating the tags under a second name.
-  const imageTitle = truncate(labels.length ? labels.slice(0, 3).join(', ') : pageTitle, 100)
+  const imageTitle = truncate(labels.length ? labels.slice(0, TAG_TITLE_LIMIT).join(', ') : pageTitle, 100)
   const imageCaption = truncate(caption, 200)
 
   return {

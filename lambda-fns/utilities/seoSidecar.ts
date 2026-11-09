@@ -112,6 +112,65 @@ export function buildSeoSidecar (photo: any): SeoSidecar {
   return sidecar
 }
 
+export const IMAGE_TITLE_MAX = 100
+export const IMAGE_CAPTION_MAX = 512
+// The same first three tags every edge slot publishes (og:image:title, page title head, meta
+// description lead), so one photo never shows Google two different lists.
+const IMAGE_TAG_LIMIT = 3
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+// Mirrors monthYear in injectMetaTagsLambdaFunction/seoText.js so the capture month reads the same
+// ("Nov 2026") wherever it is published. The edge copy cannot be imported here: this module is
+// bundled into Lambda@Edge readers and writers separately.
+function monthYear (value: any): string {
+  const ms = new Date(value).getTime()
+  if (!Number.isFinite(ms) || new Date(ms).getUTCFullYear() < 2015) return ''
+  const date = new Date(ms)
+  return `${MONTHS[date.getUTCMonth()]} ${date.getUTCFullYear()}`
+}
+
+// Word-boundary truncation, mirroring the edge reader's rule (seoText.js truncate) so a title cut
+// short inside Google Image Search still reads as words.
+function truncateWords (value: string, max: number): string {
+  const text = clean(value)
+  if (text.length <= max) return text
+  const cut = text.slice(0, max - 1)
+  const lastSpace = cut.lastIndexOf(' ')
+  return `${cut.slice(0, lastSpace > max * 0.6 ? lastSpace : max - 1).trim()}…`
+}
+
+// What a photo with no AI tags is titled instead of its comment: place and capture month, which is
+// what makes one photo's title differ from the next. The id only carries the whole title when
+// neither is known, because a 36-character UUID truncated into the tail of a long place name says
+// nothing to a crawler either way.
+function identityTitle (media: any, kind: string): string {
+  const facts = [locationText(media), monthYear(media?.createdAt)].filter((part: string) => part.length > 0)
+  if (facts.length > 0) return `WiSaw ${kind} — ${facts.join(', ')}`
+  return `WiSaw ${kind} ${clean(media?.id)}`
+}
+
+export interface ImageTextPair { title: string, caption: string }
+
+/**
+ * Decides which text fills the two image slots a crawler reads. The AI tags answer "what is in
+ * this picture" and go in the title; the newest comment answers "what do people say about it" and
+ * captions it. One sentence never fills both slots: with no tags the title falls back to place,
+ * capture month and id rather than the comment, so equality only happens when there is no comment
+ * to caption with - a surface that repeats one text twice teaches Google nothing new, which is how
+ * 21k pages ended up looking near-identical once before.
+ *
+ * Same tolerance as buildSeoSidecar: a row missing labels or a comment yields the fallback rather
+ * than throwing. Pure, so both stacks and plain tests can call it.
+ */
+export function splitImageText (media: any, kindLabel?: string): ImageTextPair {
+  const tags = pickLabels([media], IMAGE_TAG_LIMIT).join(', ')
+  const kind = clean(kindLabel)
+  const title = truncateWords(tags.length > 0 ? tags : identityTitle(media, kind.length > 0 ? kind : 'photo'), IMAGE_TITLE_MAX)
+  const comment = clean(media?.lastComment)
+  return { title, caption: (comment.length > 0 ? comment : title).slice(0, IMAGE_CAPTION_MAX) }
+}
+
 // The sidecar lives next to the media it describes: <id>.json at the bucket root, with no
 // separate prefix. One key shape means one rule for writers, readers, CDN invalidations and
 // the cleanup-s3 reconciler (which already classifies any <uuid>.* key by its photo).
