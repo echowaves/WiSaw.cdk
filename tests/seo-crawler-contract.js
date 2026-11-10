@@ -305,6 +305,51 @@ describe('injectMetaTags against the served shell', () => {
     expect(countOf(injected, /<script/gi)).to.equal(countOf(SHELL, /<script/gi))
     expect(injected).to.contain('type="module"')
   })
+
+  // The mount point used to be found with /(<div id="root">)[\s\S]*?(<\/div>)/i, so markup-looking
+  // text in a comment or in inline JS moved the cut. This shell carries both decoys plus nesting:
+  // the head must come out byte-identical to the clean one and nothing may be swallowed.
+  const HOSTILE_SHELL = SHELL
+    .replace('<body>', '<body>\n  <!-- legacy footer </div> retired 2026-11-09 -->\n' +
+      '  <script>var shellHint = "<div id=\\"root\\">see docs</div>";</script>')
+    .replace('<div id="root">', '<div id="root"><div class="app-shell">')
+    .replace('  </div>\n</body>', '    </div>\n  </div>\n</body>')
+
+  it('injects the same head bytes into a shell that carries decoy anchors', () => {
+    // First prove the hostile mutations applied - a silent no-op here would test nothing.
+    expect(countOf(HOSTILE_SHELL, /<script/gi)).to.equal(countOf(SHELL, /<script/gi) + 1)
+    expect(HOSTILE_SHELL).to.contain('var shellHint = "<div id=\\"root\\">see docs</div>";')
+    expect(HOSTILE_SHELL).to.contain('<!-- legacy footer </div> retired 2026-11-09 -->')
+    expect(HOSTILE_SHELL).to.contain('<div id="root"><div class="app-shell">')
+
+    const hostile = injectMetaTags(HOSTILE_SHELL, {
+      description: 'Golden retriever puppy on the beach - free photo on WiSaw.',
+      metaDescription: 'Golden retriever puppy on the beach - free photo on WiSaw.',
+      entityLabel: 'photo',
+      ogType: 'photo',
+      pathSegment: 'photos',
+      imageIdText: UUID,
+      imageIdUrl: UPPER_UUID,
+      pageTitle: 'Golden retriever puppy — photo, Sep 2025 · WiSaw',
+      bodyHtml: '<h1>Golden retriever puppy</h1>'
+    })
+
+    const headOf = (html) => html.slice(0, html.indexOf('<body'))
+    expect(headOf(hostile)).to.equal(headOf(injected))
+
+    // Every script and stylesheet the hostile shell carries survives, byte for byte.
+    expect(countOf(hostile, /<script/gi)).to.equal(countOf(HOSTILE_SHELL, /<script/gi))
+    expect(hostile).to.contain('var shellHint = "<div id=\\"root\\">see docs</div>";')
+    expect(hostile).to.contain('<!-- legacy footer </div> retired 2026-11-09 -->')
+    expect(countOf(hostile, /<link\b[^>]*rel=["']stylesheet["']/gi)).to.equal(1)
+
+    // The body landed in the mount point and nothing past it was swallowed: the decoy nesting is
+    // gone with the replaced content, one mount point remains, and the document still closes.
+    expect(countOf(hostile, /<div\b[^>]*\bid=["']root["']/gi)).to.equal(1)
+    expect(hostile).to.match(/<div id="root"><h1>Golden retriever puppy<\/h1>/)
+    expect(hostile).to.not.contain('<div class="app-shell">')
+    expect(hostile.trim().endsWith('</html>')).to.equal(true)
+  })
 })
 
 describe('injectRouteTags for the non-media routes', () => {

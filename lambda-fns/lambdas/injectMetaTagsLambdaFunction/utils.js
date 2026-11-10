@@ -64,15 +64,185 @@ function renderNotFoundDocument (entityLabel = 'photo') {
     '</main></body></html>'
 }
 
+// Elements whose contents are text, not markup. A `</div>` written inside one of them - or inside
+// an HTML comment - is characters, not structure, and must never end the mount point.
+const RAW_TEXT_ELEMENTS = new Set(['script', 'style', 'textarea'])
+
+// What may follow a '<' for it to be markup at all: a tag name, a closing slash, a comment or a
+// processing instruction. Everything else is text.
+const TAG_START_CHAR = /[a-zA-Z/?!]/
+
+// Attribute test applied to an open tag's own text, so `data-id="root"` and `id="rooting"`
+// cannot be mistaken for the mount point.
+const ROOT_ID_ATTR = /(?:^|\s)id\s*=\s*['"]?root['"]?(?=[\s/>])/i
+
+// Markup whose loss means the browser cannot boot the app; compared before/after injection.
+const BOOT_CRITICAL_PATTERNS = [
+  /<script\b[^>]*\btype=["']module["']/gi,
+  /<link\b[^>]*\brel=["']stylesheet["']/gi,
+  /<script\b/gi
+]
+
+function countMatches (text, pattern) {
+  return (text.match(pattern) || []).length
+}
+
+// Index just past the '>' that closes the tag starting at `lt`, honouring quoted attribute
+// values so a '>' inside an attribute cannot truncate the tag.
+function endOfTag (html, lt) {
+  let i = lt + 1
+  let quote = ''
+  while (i < html.length) {
+    const ch = html[i]
+    if (quote) {
+      if (ch === quote) quote = ''
+    } else if (ch === '"' || ch === "'") {
+      quote = ch
+    } else if (ch === '>') {
+      return i + 1
+    }
+    i++
+  }
+  return html.length
+}
+
+function tagNameOf (tagText) {
+  const match = /^<\s*\/?\s*([a-zA-Z][^\s/>]*)/.exec(tagText)
+  return match ? match[1].toLowerCase() : ''
+}
+
+// Index of the `</name` that ends a raw-text element's content, or -1 when it is never closed.
+function indexOfCloseTag (html, from, name) {
+  let i = from
+  while ((i = html.indexOf('</', i)) !== -1) {
+    const next = html[i + 2 + name.length] || '>'
+    if (html.slice(i + 2, i + 2 + name.length).toLowerCase() === name && /[\s/>]/.test(next)) return i
+    i += 2
+  }
+  return -1
+}
+
+function blankRange (chars, from, to) {
+  const end = Math.min(to, chars.length)
+  for (let i = from; i < end; i++) chars[i] = ' '
+}
+
+function skipMaskedComment (html, chars, lt) {
+  const found = html.indexOf('-->', lt)
+  const to = found === -1 ? html.length : found + 3
+  blankRange(chars, lt, to)
+  return to
+}
+
+// Blanks the content of a raw-text element, including its closing tag, and returns where
+// structural scanning resumes.
+function maskRawTextThrough (html, chars, contentStart, name) {
+  const close = indexOfCloseTag(html, contentStart, name)
+  if (close === -1) {
+    blankRange(chars, contentStart, html.length)
+    return html.length
+  }
+  const tagEnd = endOfTag(html, close)
+  blankRange(chars, contentStart, tagEnd)
+  return tagEnd
+}
+
+// Returns a copy of `html` with comments and raw-text contents replaced by spaces. One space per
+// removed character keeps every index aligned with the original, so positions found here can be
+// used to cut the real document. The old /(<div id="root">)[\s\S]*?(<\/div>)/i regex had no such
+// protection: a `</div>` in a comment or a `<div id="root">` inside inline JS moved the cut, and
+// the page went out with its body swallowed.
+function maskNonStructural (html) {
+  const chars = html.split('')
+  let i = 0
+  while (i < html.length) {
+    const lt = html.indexOf('<', i)
+    if (lt === -1) break
+    if (html.startsWith('<!--', lt)) {
+      i = skipMaskedComment(html, chars, lt)
+      continue
+    }
+    // A bare `<` in text (`a < b`, `100 < 50%`) is not markup. Reading it as a tag start swallows
+    // the following real tag into one bogus tag and resumes the scan inside raw-text content,
+    // which would hand the depth counter a `</div>` living in a JS string again.
+    if (!TAG_START_CHAR.test(html.charAt(lt + 1))) {
+      i = lt + 1
+      continue
+    }
+    const tagEnd = endOfTag(html, lt)
+    const name = tagNameOf(html.slice(lt, tagEnd))
+    if (!RAW_TEXT_ELEMENTS.has(name) || html[lt + 1] === '/') {
+      i = tagEnd
+      continue
+    }
+    i = maskRawTextThrough(html, chars, tagEnd, name)
+  }
+  return chars.join('')
+}
+
+// Index just past the document's one real <div id="root"> open tag; null when there is none or
+// more than one. An ambiguous mount point is never guessed at.
+function findRootOpenEnd (masked) {
+  const pattern = /<div\b[^>]*>/gi
+  let found = -1
+  let count = 0
+  let match
+  while ((match = pattern.exec(masked)) !== null) {
+    if (!ROOT_ID_ATTR.test(match[0])) continue
+    count++
+    found = match.index + match[0].length
+  }
+  return count === 1 ? found : null
+}
+
+// Index of the </div> belonging to the mount point itself, by counting nested <div> depth so a
+// child div's close can never stand in for it. -1 when the mount point is never closed.
+function findRootCloseStart (masked, from) {
+  const pattern = /<\/?div\b[^>]*>/gi
+  pattern.lastIndex = from
+  let depth = 1
+  let match
+  while ((match = pattern.exec(masked)) !== null) {
+    if (match[0][1] === '/') {
+      depth--
+      if (depth === 0) return match.index
+    } else {
+      depth++
+    }
+  }
+  return -1
+}
+
+// The crawler body is allowed to add markup (it always carries its own JSON-LD script); it is not
+// allowed to lose any of the shell's. A drop in count means the cut swallowed something.
+function dropsBootCriticalMarkup (source, injected) {
+  return BOOT_CRITICAL_PATTERNS.some((pattern) => countMatches(injected, pattern) < countMatches(source, pattern))
+}
+
+// Every failure here returns the untouched document: a page that keeps yesterday's placeholder
+// body still boots and still holds its indexable head, while a mis-cut one is blank.
+function rootBodyFailSafe (html, why) {
+  console.error('renderRootBody skipped:', why, '- serving shell unchanged')
+  return html
+}
+
 // Replaces the contents of the static <div id="root"> shell with crawler-visible
 // markup. React hydration replaces this subtree with the live app; it exists so a
 // fetch without JavaScript still yields a title, an image with alt text, real links,
-// and structured data.
+// and structured data. Locating the mount point is structural (comments and script
+// contents ignored, nesting depth counted) and every doubtful case leaves the input
+// byte-for-byte unchanged.
 function renderRootBody (html = '', bodyHtml = '') {
-  if (!bodyHtml) return html
-  const marker = /(<div id="root">)[\s\S]*?(<\/div>)/i
-  if (!marker.test(html)) return html
-  return html.replace(marker, (_m, open, close) => open + bodyHtml + close)
+  if (!bodyHtml || typeof html !== 'string') return html
+  const masked = maskNonStructural(html)
+  const openEnd = findRootOpenEnd(masked)
+  if (openEnd === null) return rootBodyFailSafe(html, 'document has no single <div id="root"> mount point')
+  const closeStart = findRootCloseStart(masked, openEnd)
+  if (closeStart === -1) return rootBodyFailSafe(html, '<div id="root"> has no matching </div>')
+  const injected = html.slice(0, openEnd) + bodyHtml + html.slice(closeStart)
+  if (findRootOpenEnd(maskNonStructural(injected)) === null) return rootBodyFailSafe(html, 'result does not have exactly one mount point')
+  if (dropsBootCriticalMarkup(html, injected)) return rootBodyFailSafe(html, 'result lost boot-critical markup')
+  return injected
 }
 
 // Crawler-visible body markup for photo/video pages: heading with the real title, the

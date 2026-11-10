@@ -1,8 +1,29 @@
 /* eslint-env node */
 const { expect } = require('chai')
 const { describe, it } = require('mocha')
+const fs = require('fs')
+const path = require('path')
 
 const { injectMetaTags, stripExistingMetaTags, buildSeoBody, renderRootBody } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/utils')
+
+// What Googlebot is served today. The mount-point tests below run against the real shell because
+// every hand-written approximation of it has so far been too friendly to catch a bad cut.
+const SERVED_SHELL = fs.readFileSync(path.join(__dirname, 'fixtures', 'served-index.html'), 'utf8')
+
+function countOf (text, pattern) {
+  return (text.match(pattern) || []).length
+}
+
+/** Captures console.error so the fail-safe rows can prove they logged the give-up. */
+function captureConsoleError () {
+  const lines = []
+  const original = console.error
+  console.error = (...args) => { lines.push(args.map(String).join(' ')) }
+  return {
+    lines,
+    restore () { console.error = original }
+  }
+}
 
 // Base HTML matching the real wisaw.com index.html structure
 const BASE_HTML = `<!DOCTYPE html>
@@ -254,6 +275,157 @@ describe('buildSeoBody + renderRootBody - crawler-visible content', () => {
   it('renderRootBody is a no-op when the template has no #root', () => {
     const html = '<html><body><div id="app"></div></body></html>'
     expect(renderRootBody(html, '<h1>hi</h1>')).to.equal(html)
+  })
+
+  // One test per row of the plan's I/O matrix. The old locator was
+  // /(<div id="root">)[\s\S]*?(<\/div>)/i: first anchor anywhere won, nearest </div> won, and
+  // nothing checked the result - which is how a photo page went out with its body cut short.
+  describe('renderRootBody - mount point located structurally', () => {
+    const SEO_BODY = buildSeoBody({
+      entityLabel: 'photo',
+      pathSegment: 'photos',
+      imageIdText: 'abc-123',
+      description: 'A sunset over the pier'
+    })
+
+    // Row 1 - happy path on the shell production serves.
+    it('replaces only the mount point contents in the served shell', () => {
+      const result = renderRootBody(SERVED_SHELL, SEO_BODY)
+      expect(result).to.include('src="https://img.wisaw.com/abc-123.webp"')
+      expect(result).to.not.include('Unaltered Photos and Videos, Taken with Phone Cameras.')
+      // One script added by the crawler body (its JSON-LD block); none of the shell's lost.
+      expect(countOf(result, /<script\b/gi)).to.equal(countOf(SERVED_SHELL, /<script\b/gi) + 1)
+      const moduleScript = /<script\b[^>]*type="module"[^>]*><\/script>/i.exec(SERVED_SHELL)
+      expect(moduleScript).to.not.equal(null)
+      expect(result).to.include(moduleScript[0])
+      expect(result).to.include('type="module"')
+      expect(result).to.include('rel="stylesheet"')
+      expect(result).to.include('wisaw-reload-at')
+      expect(countOf(result, /<div\b[^>]*\bid=["']root["']/gi)).to.equal(1)
+    })
+
+    // Row 2 - nesting: a child div's close must not be taken for the mount point's own.
+    it('stops at the mount point\'s own close when the shell nests divs', () => {
+      const html = '<html><body><div id="root"><div class="a"><p>stale</p></div></div>' +
+        '<div class="after">KEEP</div></body></html>'
+      const result = renderRootBody(html, SEO_BODY)
+      expect(result).to.include('<h1>')
+      expect(result).to.not.include('stale')
+      expect(result).to.include('</div><div class="after">KEEP</div>')
+    })
+
+    // Row 3 - a </div> written inside an HTML comment is text, not the end of the mount point.
+    it('ignores a </div> that lives inside a comment', () => {
+      const html = '<html><body><!-- footer </div> retired --><div id="root"><p>stale</p></div>' +
+        '<footer>KEEP</footer></body></html>'
+      const result = renderRootBody(html, SEO_BODY)
+      expect(result).to.include('<!-- footer </div> retired -->')
+      expect(result).to.not.include('stale')
+      expect(result).to.include('</footer>')
+    })
+
+    // Row 4 - a decoy anchor inside inline JS must not become the mount point.
+    it('ignores a <div id="root"> literal inside an inline script', () => {
+      const html = '<html><head><script>var t = "<div id=\\"root\\">decoy</div>";</script></head>' +
+        '<body><div id="root"><p>stale</p></div><footer>KEEP</footer></body></html>'
+      const result = renderRootBody(html, SEO_BODY)
+      expect(result).to.include('var t = "<div id=\\"root\\">decoy</div>";')
+      expect(result.indexOf('<h1>')).to.be.above(result.indexOf('id="root"'))
+      expect(result).to.not.include('stale')
+      expect(result).to.include('</footer>')
+    })
+
+    // Row 5 - ambiguous mount point: guess nothing.
+    it('returns the document unchanged when two mount points are present', () => {
+      const html = '<html><body><div id="root"><p>a</p></div><div id="root"><p>b</p></div></body></html>'
+      const capture = captureConsoleError()
+      try {
+        expect(renderRootBody(html, SEO_BODY)).to.equal(html)
+      } finally {
+        capture.restore()
+      }
+      expect(capture.lines).to.have.lengthOf(1)
+    })
+
+    // Row 6 - missing or unclosed mount point: same fail-safe.
+    it('returns the document unchanged when the mount point is missing or never closed', () => {
+      const missing = '<html><body><div id="app"><p>a</p></div></body></html>'
+      const unclosed = '<html><body><div id="root"><p>a</p></body></html>'
+      const capture = captureConsoleError()
+      try {
+        expect(renderRootBody(missing, SEO_BODY)).to.equal(missing)
+        expect(renderRootBody(unclosed, SEO_BODY)).to.equal(unclosed)
+      } finally {
+        capture.restore()
+      }
+      expect(capture.lines).to.have.lengthOf(2)
+    })
+
+    // Row 7 - post-condition: a cut that would eat the bundle entry or the stylesheet is refused.
+    it('refuses an injection that would swallow the module script', () => {
+      const html = '<html><head><link rel="stylesheet" href="/assets/a.css"></head>' +
+        '<body><div id="root"><script type="module" crossorigin src="/assets/i.js"></script>' +
+        '<div>x</div></div></body></html>'
+      const capture = captureConsoleError()
+      try {
+        expect(renderRootBody(html, SEO_BODY)).to.equal(html)
+      } finally {
+        capture.restore()
+      }
+      expect(capture.lines).to.have.lengthOf(1)
+      expect(capture.lines[0]).to.include('boot-critical')
+    })
+
+    // Row 8 - degenerate input keeps the old contract: the document comes back as it was.
+    it('returns degenerate input unchanged without throwing', () => {
+      const capture = captureConsoleError()
+      try {
+        expect(renderRootBody(SERVED_SHELL, '')).to.equal(SERVED_SHELL)
+        expect(renderRootBody(null, SEO_BODY)).to.equal(null)
+        expect(renderRootBody(undefined, SEO_BODY)).to.equal('')
+        expect(renderRootBody(42, SEO_BODY)).to.equal(42)
+      } finally {
+        capture.restore()
+      }
+    })
+
+    it('tolerates attribute order and single quotes on the mount point', () => {
+      const html = '<html><body><div class="x" id=\'root\'><p>stale</p></div></body></html>'
+      expect(renderRootBody(html, SEO_BODY)).to.include('<h1>')
+    })
+
+    it('does not treat data-id or a longer id value as the mount point', () => {
+      const html = '<html><body><div data-id="root"><p>a</p></div><div id="rooting"><p>b</p></div></body></html>'
+      expect(renderRootBody(html, SEO_BODY)).to.equal(html)
+    })
+
+    // Review finding: a bare `<` in text (`a < b`, `100 < 50%`) is valid HTML but is not a tag
+    // start. Reading it as one swallowed the following <script> into a bogus tag, resumed the
+    // scan inside the script body and let the decoy `</div>` cut the document mid-script. The
+    // post-condition did not catch that variant - the orphaned tail still held a <script>.
+    it('treats a bare < in text as text, not as a tag start', () => {
+      const html = '<html><body><div id="root"><p>a < b</p>' +
+        "<script>var decoy = '</div>';</script><p>stale</p></div></body></html>"
+      const out = renderRootBody(html, SEO_BODY)
+      expect(out).to.not.equal(html)
+      expect(out).to.include('<h1>')
+      expect(out).to.not.include('stale')
+      expect(out).to.not.include("';</script>")
+      expect(countOf(out, /<div\b[^>]*\bid=["']root["']/gi)).to.equal(1)
+    })
+
+    // Pins the rule that a raw-text element ends only at its own close tag: `</textarea>` written
+    // inside script text must not stop the masking of that script.
+    it('masks a script whose text mentions another element close tag', () => {
+      const html = '<html><body><div id="root"><p>a</p>' +
+        "<script>var s = \"</textarea>\"; var d = '</div>';</script><p>stale</p></div></body></html>"
+      const out = renderRootBody(html, SEO_BODY)
+      expect(out).to.not.equal(html)
+      expect(out).to.include('<h1>')
+      expect(out).to.not.include('stale')
+      expect(out).to.not.include('</textarea>')
+      expect(countOf(out, /<div\b[^>]*\bid=["']root["']/gi)).to.equal(1)
+    })
   })
 })
 
