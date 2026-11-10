@@ -36,3 +36,47 @@ hitl = false
 risk = "medium"
 refine = true
 refined = true
+
+[[entry]]
+id = 4
+type = "bug"
+title = "The crawler head the edge writes is rewritten and duplicated by the browser render"
+description = "On every media and static route the head written for crawlers is replaced when the app paints, because the two sides derive different values and tags the app did not stamp are never reconciled — leaving permanently duplicated site-name and robot tags. The head served at first byte must be the head a browser ends up holding, with one tag per property."
+verify = "Run `npm test`: head-contract tests report exactly one og:site_name and one robots directive on a photo page and a video page, og:type valid and identical between served and rendered heads, and a duplicate-tag test that fails before the fix and passes after. A live curl of one photo page and of /about, compared with the hydrated DOM, shows matching values. No new failures beyond the five known getSeasonBoundaries ones."
+covers = []
+after = [3]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 5
+type = "bug"
+title = "Sitemap video entries point at a .mov URL that may not exist"
+description = "The sitemap names an assumed file extension for every video instead of the object that exists, while the edge resolves the real one. A video stored any other way publishes a working page and a sitemap media URL that 404s, damaging the Google Video entries. The file named in the sitemap must be the file that exists and matches its page."
+verify = "Run `npm test`: sitemap tests produce content_loc matching the resolved media key for .mov, .mp4 and .webm objects; on the deployed test environment a video uploaded as .mp4 appears in sitemap.xml with its real URL. No new failures beyond the five known getSeasonBoundaries ones."
+covers = []
+after = [3]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 6
+type = "story"
+title = "One SEO text source serves the sitemap, the edge head and the app"
+description = "The wording rules behind titles, descriptions and captions are written three times — twice in this repo, once in the app — and have already drifted on character budgets, so the text a crawler is served is not the text a renderer sees. One source must produce them: enrichment writes finished strings, the edge renders what it is given, the app displays what it is served."
+verify = "Run `npm test`: for one photo row, the sitemap entry text, the injected head text and the values reaching the app are byte-identical; a budget test proves truncation answers identically from both consumers; no sampled page loses title or description text it has today. No new failures beyond the five known getSeasonBoundaries ones."
+covers = []
+after = [4, 5]
+hitl = true
+risk = "high"
+
+[[entry]]
+id = 7
+type = "story"
+title = "Static-route SEO copy is written once and published to both sides"
+description = "The copy for / , /about, /contact, /terms and /search is authored twice with different wording, so crawlers and browsers see different pages; search results are excluded at the edge while the app publishes them as indexable. One copy must serve both sides, and the exclusion decision must hold in the first byte and after render."
+verify = "Run `npm test`: a contract check fails when the copy served for a static route differs from what the app renders for it; live curl of each static route matches the hydrated DOM, and search pages carry the exclusion directive in both. No new failures beyond the five known getSeasonBoundaries ones."
+covers = []
+after = [6]
+hitl = true
+risk = "medium"
