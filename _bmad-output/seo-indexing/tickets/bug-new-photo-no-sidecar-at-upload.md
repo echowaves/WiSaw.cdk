@@ -10,6 +10,7 @@ refined: true
 hitl: false
 risk: medium
 severity: P2
+status: built
 ---
 
 # A new photo has no SEO sidecar until up to five hours after upload

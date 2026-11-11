@@ -12,6 +12,7 @@ assignee: ""
 refined: true
 hitl: false
 risk: medium
+status: built
 ---
 
 # Titles carry the AI tags, captions and descriptions carry the comments

@@ -10,6 +10,7 @@ refined: true
 hitl: false
 risk: medium
 severity: P2
+status: built
 ---
 
 # The crawler head the edge writes is rewritten and duplicated by the browser render

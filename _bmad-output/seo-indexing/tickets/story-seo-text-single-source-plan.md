@@ -1,7 +1,7 @@
 ---
 type: 'feature'
 ticket: '6'
-status: 'in progress'
+status: built
 created: 2026-11-10
 updated: 2026-11-10
 spec: ../spec.md

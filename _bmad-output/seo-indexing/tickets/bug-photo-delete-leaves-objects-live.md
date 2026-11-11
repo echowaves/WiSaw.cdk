@@ -10,6 +10,7 @@ refined: true
 hitl: true
 risk: high
 severity: P1
+status: built
 ---
 
 # Deleting a photo leaves its images and SEO files live in storage
