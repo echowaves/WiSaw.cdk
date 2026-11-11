@@ -136,3 +136,27 @@ and text surfaces. Each ticket that changes app behaviour names its client-repo 
 that half must be mirrored into `WiSaw.client`'s own ticket tree before either side ships, since
 4/6/7 only pay off when both sides move. Client-side notes are recorded meanwhile in
 `WiSaw.client/_bmad-output/deferred-work.md`.
+
+## Sweep result (2026-11-11) — after tickets 4-8 shipped
+
+The consolidation this document asked for is in place, checked module by module rather than
+assumed:
+
+- **Text rules**: `seoRules.js` is the only implementation. `seoText.js` survives as a thin
+  renderer that uses stored strings verbatim, and both writers (`utilities/seoSidecar.ts`,
+  `scripts/publish-seo-sidecars.js`) call the same functions — proven by identity, not by
+  comparing output. The app's own builders are gone; no file in `WiSaw.client/src/utils` is
+  unreferenced, so nothing was left behind when they were deleted.
+- **Naming**: one `mediaNaming.js` serves the sitemap generator, the edge head and the API path.
+- **Duration**: one parser (`utilities/videoDuration.js`) plus one normaliser pair in `seoRules.js`
+  feed the edge tag, JSON-LD and the sitemap; the app mirrors the normaliser and a contract test
+  pins both copies against the real backend module.
+- **Static copy**: authored once in `static.js`, published into the app by
+  `scripts/publish-static-seo.js`. The two budget vocabularies (page slots 68/158, Google Image and
+  sitemap slots 100/512) deliberately remain two: unifying the numbers would silently rewrite
+  published sitemap text.
+- **No orphans**: every module these tickets added is required by a live path — edge injectors,
+  `generateSiteMap`, the sidecar writer, or an operator script.
+
+The open question left in ticket 7's Notes ("no separate sweep story was added") is answered here:
+the sweep happened inside tickets 6 and 7, and this section is its record.
