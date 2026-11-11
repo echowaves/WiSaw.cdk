@@ -4,7 +4,7 @@ const { describe, it } = require('mocha')
 const fs = require('fs')
 const path = require('path')
 
-const { injectMetaTags, stripExistingMetaTags, buildSeoBody, renderRootBody } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/utils')
+const { injectMetaTags, stripExistingMetaTags, buildSeoBody, renderRootBody, injectRouteTags, htmlResponse } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/utils')
 
 // What Googlebot is served today. The mount-point tests below run against the real shell because
 // every hand-written approximation of it has so far been too friendly to catch a bad cut.
@@ -72,7 +72,10 @@ describe('injectMetaTags - duplicate tag removal', () => {
     const result = injectMetaTags(BASE_HTML, PHOTO_OPTIONS)
     const matches = result.match(/<meta\s[^>]*property=["']og:image["']/gi)
     expect(matches).to.have.lengthOf(1)
-    expect(result).to.include('https://img.wisaw.com/abc-123.webp')
+    // The preview image is the thumbnail - the same file the browser app publishes and the
+    // sitemap lists as thumbnail_loc. Naming a second file as the page's picture made the
+    // three surfaces disagree about what a page depicts.
+    expect(result).to.include('https://img.wisaw.com/abc-123-thumb.webp')
     expect(result).to.not.include('android-chrome-512x512.png')
   })
 
@@ -100,7 +103,7 @@ describe('injectMetaTags - duplicate tag removal', () => {
     const result = injectMetaTags(BASE_HTML, PHOTO_OPTIONS)
     const matches = result.match(/<meta\s[^>]*name=["']twitter:image["']/gi)
     expect(matches).to.have.lengthOf(1)
-    expect(result).to.include('https://img.wisaw.com/abc-123.webp')
+    expect(result).to.include('https://img.wisaw.com/abc-123-thumb.webp')
   })
 
   it('produces exactly one twitter:card tag', () => {
@@ -128,9 +131,12 @@ describe('injectMetaTags - duplicate tag removal', () => {
 })
 
 describe('injectMetaTags - preserved tags', () => {
-  it('preserves og:site_name', () => {
+  // The template's site name and robots tag used to survive alongside the injected ones, so a
+  // crawler read two values for one property. They are replaced now, not preserved.
+  it('replaces the template og:site_name with one value', () => {
     const result = injectMetaTags(BASE_HTML, PHOTO_OPTIONS)
-    expect(result).to.include('og:site_name')
+    expect((result.match(/property=["']og:site_name["']/gi) || [])).to.have.lengthOf(1)
+    expect(result).to.not.include('content="WiSaw"\n')
   })
 
   it('preserves og:locale', () => {
@@ -139,9 +145,10 @@ describe('injectMetaTags - preserved tags', () => {
     expect(result).to.include('en_US')
   })
 
-  it('preserves robots meta tag', () => {
+  it('replaces the template robots tag with one directive', () => {
     const result = injectMetaTags(BASE_HTML, PHOTO_OPTIONS)
-    expect(result).to.include('name="robots"')
+    expect((result.match(/name=["']robots["']/gi) || [])).to.have.lengthOf(1)
+    expect(result).to.not.include('content="index, follow" />')
   })
 
   it('preserves apple-touch-icon', () => {
@@ -447,7 +454,7 @@ describe('injectMetaTags - og:image:title / og:image:caption', () => {
     const result = injectMetaTags(BASE_HTML, WITH_IMAGE_TEXT)
     expect(tagsOf(result, 'og:image:title')).to.have.lengthOf(1)
     expect(tagsOf(result, 'og:image:caption')).to.have.lengthOf(1)
-    expect(tagsOf(result, 'og:image')[0]).to.contain('abc-123.webp')
+    expect(tagsOf(result, 'og:image')[0]).to.contain('abc-123-thumb.webp')
 
     const lines = result.split('\n')
     const imageIdx = lines.findIndex((l) => l.includes('property="og:image"'))
@@ -500,6 +507,78 @@ describe('injectMetaTags - og:image:title / og:image:caption', () => {
   })
 })
 
+describe('one tag per property, both crawlers', () => {
+  const count = (html, re) => (html.match(re) || []).length
+
+  it('emits exactly one robots directive carrying data-rh', () => {
+    const result = injectMetaTags(BASE_HTML, PHOTO_OPTIONS)
+    expect(count(result, /<meta\s[^>]*name=["']robots["']/gi)).to.equal(1)
+    expect(result).to.match(/name="robots"[^>]*content="index, follow/)
+    expect(result).to.match(/name="robots"[^>]*data-rh=/)
+  })
+
+  it('emits one og:site_name, reconcilable by the browser app', () => {
+    const result = injectMetaTags(BASE_HTML, PHOTO_OPTIONS)
+    expect(count(result, /<meta\s[^>]*property=["']og:site_name["']/gi)).to.equal(1)
+    // Without data-rh the browser app cannot see this tag, so it adds its own and a crawler
+    // reads two site names for one page.
+    expect(result).to.match(/property="og:site_name"[^>]*data-rh=/)
+    expect(result).to.include('content="WiSaw"')
+  })
+
+  it('names the thumbnail as the preview image in structured data too', () => {
+    const body = buildSeoBody({ imageIdText: 'abc-123', entityLabel: 'video', videoUrl: 'https://img.wisaw.com/abc-123.mov' })
+    expect(body).to.include('"thumbnailUrl":"https://img.wisaw.com/abc-123-thumb.webp"')
+  })
+
+  it('states the same crawler decision in the head and in the header', () => {
+    // Comparing only the first directive would let a header say "noindex, follow" while the
+    // body said "noindex, nofollow", which is exactly the disagreement being prevented here.
+    for (const noindex of [true, false]) {
+      const html = injectRouteTags(BASE_HTML, { title: 'Search', canonical: 'https://wisaw.com/search', noindex })
+      const meta = html.match(/name="robots"[^>]*content="([^"]+)"/)[1]
+      const header = htmlResponse(200, html, { noindex }).headers['x-robots-tag'][0].value
+      expect(meta.split(',').map((part) => part.trim())).to.deep.include.members(header.split(',').map((part) => part.trim()))
+    }
+  })
+})
+
+describe('every injected head tag is reconcilable', () => {
+  // The browser app only updates or removes tags it marked itself (data-rh). A tag written
+  // without it is invisible: never updated, never removed, so the app adds a second copy and
+  // a crawler reads two values for one property. This is the whole reason the SPA used to
+  // rewrite the head it was given.
+  const HEAD_TAGS = /<meta\s[^>]*>/gi
+
+  // Tags the template owns and neither side reconciles (charset, viewport, og:locale). They are
+  // allowed to stay unmarked; what must not happen is the injector adding one.
+  function unmarked (html) {
+    const head = html.slice(0, html.indexOf('</head>'))
+    return (head.match(HEAD_TAGS) || []).filter((tag) => !/data-rh=/.test(tag))
+  }
+
+  const BASELINE = unmarked(BASE_HTML)
+
+  function newlyUnmarked (html) {
+    return unmarked(html).filter((tag) => !BASELINE.includes(tag))
+  }
+
+  it('marks every media tag it injects', () => {
+    const result = injectMetaTags(BASE_HTML, { ...PHOTO_OPTIONS, imageTitle: 'Dog, Pet', imageCaption: 'On the beach' })
+    expect(newlyUnmarked(result)).to.deep.equal([])
+  })
+
+  it('marks video tags too', () => {
+    const result = injectMetaTags(BASE_HTML, { ...PHOTO_OPTIONS, pathSegment: 'videos', ogType: 'video.other', videoUrl: 'https://img.wisaw.com/abc-123.mov' })
+    expect(newlyUnmarked(result)).to.deep.equal([])
+  })
+
+  it('marks every static-route tag it injects', () => {
+    const result = injectRouteTags(BASE_HTML, { title: 'About', description: 'Why we exist', canonical: 'https://wisaw.com/about' })
+    expect(newlyUnmarked(result)).to.deep.equal([])
+  })
+})
+
 describe('stripExistingMetaTags', () => {
   it('strips og:image tag', () => {
     const html = '<meta property="og:image" content="https://example.com/logo.png" data-rh="true" />'
@@ -524,9 +603,17 @@ describe('stripExistingMetaTags', () => {
     expect(stripExistingMetaTags(html)).to.equal('')
   })
 
-  it('does not strip og:site_name', () => {
-    const html = '<meta property="og:site_name" content="WiSaw" />'
-    expect(stripExistingMetaTags(html)).to.include('og:site_name')
+  it('strips og:site_name in either quote style and self-closed', () => {
+    // The injector writes its own site name, so a template copy left behind is a second value
+    // for one property - which is what the browser app then had to reconcile or duplicate.
+    expect(stripExistingMetaTags('<meta property="og:site_name" content="WiSaw" />')).to.equal('')
+    expect(stripExistingMetaTags("<meta property='og:site_name' content='wisaw.com'>")).to.equal('')
+  })
+
+  it('strips a robots tag', () => {
+    // A page must carry one crawler directive, so the template's is replaced rather than joined.
+    const html = '<meta name="robots" content="index, follow" data-rh="true" />'
+    expect(stripExistingMetaTags(html)).to.equal('')
   })
 
   it('does not strip og:locale', () => {

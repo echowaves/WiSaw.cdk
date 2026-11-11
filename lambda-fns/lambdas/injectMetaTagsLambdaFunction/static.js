@@ -63,7 +63,8 @@ exports.handler = async (event, context, callback) => {
   const body = injectRouteTags(index, {
     title: route.title,
     description: route.description,
-    canonical: route.canonical
+    canonical: route.canonical,
+    noindex: route.noindex
   })
 
   return callback(null, htmlResponse(200, body, {

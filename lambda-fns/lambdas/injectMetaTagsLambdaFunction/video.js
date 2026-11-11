@@ -69,7 +69,10 @@ exports.handler = async (event, context, callback) => {
     description,
     metaDescription: description,
     entityLabel: 'video',
-    ogType: 'video',
+    // 'video' alone is not a registered Open Graph type, and the browser app already
+    // publishes video.other - one pair for both sides.
+    ogType: 'video.other',
+
     pathSegment: 'videos',
     imageIdText,
     imageIdUrl,

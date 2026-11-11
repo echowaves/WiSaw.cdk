@@ -8,6 +8,20 @@ const escapeHtmlAttribute = (value = '') =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;')
 
+// Head values the browser app renders too. They are named here because a crawler that runs
+// JavaScript and one that doesn't must not disagree about them; the client mirrors these exact
+// strings in src/utils/seoDefaults.js, and ticket 7 replaces both copies with one source.
+const SITE_NAME = 'WiSaw'
+const ROBOTS_INDEX = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'
+// Same vocabulary as the X-Robots-Tag header: a page whose header excludes it while its
+// body invites indexing gets crawled by whichever signal a crawler trusts more.
+const ROBOTS_NOINDEX = 'noindex, follow'
+const TWITTER_CARD = 'summary_large_image'
+
+// One place decides what a media item's preview image is: the thumbnail, which is also what
+// the app publishes and what the sitemap lists as thumbnail_loc.
+const thumbUrl = (imageId = '') => 'https://img.wisaw.com/' + imageId + '-thumb.webp'
+
 const normalizeImageId = (uri = '') =>
   String(uri)
     .replace('/photos/', '')
@@ -38,6 +52,11 @@ function stripExistingMetaTags (html = '') {
     // becomes a second description once the injector adds its own.
     .replace(/<meta\s(?=[^>]*\bname=["']description["'])[^>]*\/?>\s*/gi, '')
     .replace(/<meta\s(?=[^>]*\bproperty=["']og:description["'])[^>]*\/?>\s*/gi, '')
+    // og:site_name and robots are also ours to own. Without stripping them the injected copy
+    // sits next to the template's, and a crawler sees two values for one property - which is
+    // what happened while these tags had no data-rh and the browser app never reconciled them.
+    .replace(/<meta\s(?=[^>]*\bproperty=["']og:site_name["'])[^>]*\/?>\s*/gi, '')
+    .replace(/<meta\s(?=[^>]*\bname=["']robots["'])[^>]*\/?>\s*/gi, '')
 }
 
 // Google reads <meta name="description"> for snippets; og:description is not a
@@ -277,6 +296,9 @@ function buildSeoBody (options = {}) {
   const title = pageTitle || `wisaw ${entityLabel} ${imageIdText}`
   const pageUrl = `https://wisaw.com/${pathSegment}/${encodeURIComponent(imageIdText)}`
   const imageUrl = `https://img.wisaw.com/${encodeURIComponent(imageIdText)}.webp`
+  // The preview image everywhere else is the thumbnail; structured data must not name a
+  // different file as this page's picture. contentUrl keeps the full derivative.
+  const previewUrl = thumbUrl(encodeURIComponent(imageIdText))
   const altText = caption || labels.join(', ') || description || title
 
   const labelLinks = labels
@@ -300,7 +322,7 @@ function buildSeoBody (options = {}) {
         '@type': 'VideoObject',
         name: title,
         description: description || title,
-        thumbnailUrl: imageUrl,
+        thumbnailUrl: previewUrl,
         uploadDate: created || undefined,
         contentUrl: videoUrl || undefined,
         embedUrl: pageUrl,
@@ -316,7 +338,6 @@ function buildSeoBody (options = {}) {
         license: 'https://wisaw.com/terms',
         creditText: 'WiSaw',
         creator: { '@type': 'Organization', name: 'WiSaw', url: 'https://wisaw.com' },
-        copyrightYear: new Date().getFullYear(),
         url: pageUrl
       }
 
@@ -381,16 +402,20 @@ function injectMetaTags (html = '', options = {}) {
 
   let metaTags = '</title>\n' +
       renderDescriptionTags(metaDescription || description) +
-      '      <meta property="og:image" content="https://img.wisaw.com/' + safeImageIdUrl + '.webp" data-rh="true">\n' +
+      '      <meta name="robots" content="' + ROBOTS_INDEX + '" data-rh="true">\n' +
+      // The preview image is the thumbnail, the same file the app publishes and the sitemap
+      // lists. Pointing here at the full-size derivative made three surfaces disagree about
+      // what a page's picture is.
+      '      <meta property="og:image" content="' + thumbUrl(safeImageIdUrl) + '" data-rh="true">\n' +
       imageMetaTags +
       '      <meta property="og:description" content="' + safeDescription + '" data-rh="true">\n' +
       '      <meta property="og:title" content="' + safePageTitle + '" data-rh="true">\n' +
       '      <meta property="og:url" content="https://wisaw.com/' + safePathSegment + '/' + safeCanonicalId + '" data-rh="true">\n' +
-      '      <meta property="og:site_name" content="wisaw.com">\n' +
+      '      <meta property="og:site_name" content="' + SITE_NAME + '" data-rh="true">\n' +
       '      <meta property=\'og:type\' content=\'' + safeOgType + '\' data-rh="true"/>\n' +
       '      <meta name="twitter:title" content="' + safePageTitle + '" data-rh="true">\n' +
-      '      <meta name="twitter:card" content="summary_large_image" data-rh="true">\n' +
-      '      <meta name="twitter:image" content="https://img.wisaw.com/' + safeImageIdUrl + '.webp" data-rh="true">\n'
+      '      <meta name="twitter:card" content="' + TWITTER_CARD + '" data-rh="true">\n' +
+      '      <meta name="twitter:image" content="' + thumbUrl(safeImageIdUrl) + '" data-rh="true">\n'
 
   if (videoUrl) {
     const safeVideoUrl = escapeHtmlAttribute(videoUrl)
@@ -455,7 +480,7 @@ function htmlResponse (status, body, options = {}) {
 // wisaw.com/. Same escaping rules as the media injector; no og:image because these routes
 // have no single representative image.
 function injectRouteTags (html = '', options = {}) {
-  const { title = '', description = '', canonical = '', siteName = 'WiSaw' } = options
+  const { title = '', description = '', canonical = '', noindex = false } = options
 
   let updatedHtml = stripExistingMetaTags(html)
 
@@ -480,18 +505,26 @@ function injectRouteTags (html = '', options = {}) {
   }
 
   const safeDescription = escapeHtmlAttribute(description)
+  // The robots meta must say what the X-Robots-Tag header says. A page whose header excludes
+  // it and whose body invites indexing gets crawled by whichever signal a crawler trusts more.
   const routeTags = '</title>\n' +
     renderDescriptionTags(description) +
+    '      <meta name="robots" content="' + (noindex ? ROBOTS_NOINDEX : ROBOTS_INDEX) + '" data-rh="true">\n' +
     (title ? '      <meta property="og:title" content="' + escapeHtmlAttribute(title) + '" data-rh="true">\n' : '') +
     (canonical ? '      <meta property="og:url" content="' + safeCanonical + '" data-rh="true">\n' : '') +
     (description ? '      <meta property="og:description" content="' + safeDescription + '" data-rh="true">\n' : '') +
-    '      <meta property="og:site_name" content="' + escapeHtmlAttribute(siteName) + '">\n' +
+    '      <meta property="og:site_name" content="' + SITE_NAME + '" data-rh="true">\n' +
     '      <meta property="og:type" content="website" data-rh="true">\n'
 
   return updatedHtml.replace('</title>', routeTags)
 }
 
 module.exports = {
+  SITE_NAME,
+  ROBOTS_INDEX,
+  ROBOTS_NOINDEX,
+  TWITTER_CARD,
+  thumbUrl,
   escapeHtmlAttribute,
   normalizeImageId,
   sanitizeImageId,

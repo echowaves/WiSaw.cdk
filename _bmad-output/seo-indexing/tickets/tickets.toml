@@ -80,3 +80,14 @@ covers = []
 after = [6]
 hitl = true
 risk = "medium"
+
+[[entry]]
+id = 8
+type = "story"
+title = "Real video duration never reaches a page or its structured data"
+description = "The length of a video exists only as upload-time object metadata that one edge path reads and discards into a log line; the sidecar, the API and the app have no place for it. Every surface that wants a duration omits one or invents one, so video pages cannot qualify for video rich results. The real duration must reach the structured data on the page."
+verify = "Run `npm test`: a video row whose object carries a duration produces that duration in the sidecar, in the edge-injected VideoObject and in what the app renders for the same URL; a video with no recorded duration produces no duration anywhere rather than a guess. No new failures beyond the five known getSeasonBoundaries ones."
+covers = []
+after = [4]
+hitl = false
+risk = "medium"
