@@ -32,6 +32,9 @@ type Photo {
   video: Boolean!
   width: Int
   height: Int
+  # Whole seconds read out of the stored video container; null until it has been measured (photos
+  # never have one). Consumers must omit duration markup when absent rather than show zero.
+  duration: Int
   locality: String
   district: String
   region: String

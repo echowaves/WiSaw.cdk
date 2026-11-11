@@ -15,6 +15,9 @@ class Photo {
   video: boolean
   width?: number
   height?: number
+  // Whole seconds from the stored container, null until something has read it. The column arrives
+  // through SELECT * like width/height do; declaring it keeps the response shape honest about that.
+  duration?: number | null
   locality: string | null
   district: string | null
   region: string | null

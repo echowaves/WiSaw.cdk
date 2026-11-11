@@ -55,7 +55,12 @@ async function probeMedia (bucket, imageIdRaw) {
   }
 }
 
-/** Duration metadata written by the upload pipeline; '' when unavailable. */
+/**
+ * Duration claimed by an object's own user metadata, or '' when it has none. Kept as the reader's
+ * fallback only: production uploads never wrote this key (evidence/probe-duration-metadata.js found
+ * it on 0 of 106 sampled videos), so the value that reaches a page normally comes from the record,
+ * which learned it from the container itself.
+ */
 async function readDuration (bucket, key) {
   if (!key || !isVideoObjectKey(key)) return ''
   try {

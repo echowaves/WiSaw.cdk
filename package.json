@@ -18,6 +18,8 @@
     "populate-recognitions:dry-run": "node ./scripts/populate-recognitions.js --dry-run",
     "cleanup-s3": "node ./scripts/cleanup-s3.js",
     "cleanup-s3:dry-run": "node ./scripts/cleanup-s3.js --dry-run",
+    "populate-video-durations": "node ./scripts/populate-video-durations.js",
+    "populate-video-durations:dry-run": "node ./scripts/populate-video-durations.js --dry-run",
     "seo-sidecars": "node ./scripts/publish-seo-sidecars.js",
     "seo-sidecars:dry-run": "node ./scripts/publish-seo-sidecars.js --dry-run",
     "lint": "npx ts-standard",

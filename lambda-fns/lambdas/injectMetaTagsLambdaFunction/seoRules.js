@@ -53,6 +53,58 @@ function clean (value) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim()
 }
 
+// Duration is published in whole seconds and only when it is real. The ceiling matches the one the
+// container parser uses (utilities/videoDuration.js): a value outside it came from a corrupt header
+// or a bad upload, and publishing it would put a wrong number into a rich result.
+const MAX_DURATION_SECONDS = 86400
+
+function normaliseSeconds (value) {
+  const seconds = Math.floor(Number(value))
+  if (!Number.isFinite(seconds) || seconds <= 0 || seconds > MAX_DURATION_SECONDS) return null
+  return seconds
+}
+
+// "PT1H2M3S" -> seconds. Fractional seconds are floored; a designator-free "PT" is rejected.
+function isoToSeconds (text) {
+  const match = text.match(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:([\d.]+)S)?$/i)
+  if (match == null || (match[1] == null && match[2] == null && match[3] == null)) return null
+  const seconds = Number(match[1] ?? 0) * 3600 + Number(match[2] ?? 0) * 60 + Number(match[3] ?? 0)
+  return normaliseSeconds(seconds)
+}
+
+// "9:05" and "1:02:03" - the clock shape players and some uploads use.
+function clockToSeconds (text) {
+  if (!/^\d{1,2}(:[0-5]?\d){1,2}$/.test(text)) return null
+  const seconds = text.split(':').reduce((total, part) => total * 60 + Number(part), 0)
+  return normaliseSeconds(seconds)
+}
+
+/**
+ * Whole positive seconds from whatever a caller holds: a number, "48", "0:48", "1:02:03" or
+ * "PT1M2S". Null means unknown - never 0, so no surface can render "0 seconds" for a video nobody
+ * has measured.
+ */
+function durationSeconds (value) {
+  if (typeof value === 'number') return normaliseSeconds(value)
+  if (typeof value !== 'string') return null
+  const text = value.trim()
+  if (/^\d+$/.test(text)) return normaliseSeconds(Number(text))
+  if (/^PT/i.test(text)) return isoToSeconds(text)
+  return clockToSeconds(text)
+}
+
+/** The ISO 8601 form Google's VideoObject wants, or "" when the value is not a real duration. */
+function iso8601Duration (value) {
+  const seconds = durationSeconds(value)
+  if (seconds == null) return ''
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  const rest = seconds % 60
+  if (hours > 0) return `PT${hours}H${minutes}M${rest}S`
+  if (minutes > 0) return `PT${minutes}M${rest}S`
+  return `PT${rest}S`
+}
+
 // Word-boundary truncation: a cut mid-word is what makes a crawler show "Sunse…" where a human
 // sees "Sunset…". Used by every slot on both stacks.
 function truncateWords (value, max) {
@@ -251,7 +303,9 @@ function buildSeoFields (input = {}) {
     created: clean(sidecar && sidecar.created),
     width: clean(sidecar && sidecar.width),
     height: clean(sidecar && sidecar.height),
-    duration: clean(sidecar && sidecar.duration)
+    // Seconds, or null. Kept numeric so a surface that renders it cannot accidentally publish the
+    // empty string as a duration of zero.
+    duration: durationSeconds(sidecar && sidecar.duration)
   }
 }
 
@@ -276,6 +330,12 @@ function buildSeoRecord (photo) {
     width: clean(photo?.width),
     height: clean(photo?.height)
   }
+  // Only a measured value is published, and it is absent rather than empty when nobody has read
+  // this video's container yet: that keeps a pre-duration record byte-identical to what was written
+  // before the field existed, and tells every reader "unknown" instead of "zero seconds".
+  const duration = durationSeconds(photo?.duration)
+  if (duration != null) base.duration = duration
+
   assertNoPreciseLocation(base)
 
   // The strings are computed from the record's own fields, by the same function the edge runs when a
@@ -308,7 +368,10 @@ module.exports = {
   TAG_TITLE_LIMIT,
   LABEL_LIMIT,
   PRECISE_KEYS,
+  MAX_DURATION_SECONDS,
   clean,
+  durationSeconds,
+  iso8601Duration,
   truncateWords,
   monthYear,
   normaliseLabels,

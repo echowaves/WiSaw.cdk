@@ -5,6 +5,9 @@
 # output: that Lambda@Edge folder is zipped as-is, and its TypeScript consumers cannot
 # typecheck without them.
 !lambda-fns/lambdas/injectMetaTagsLambdaFunction/*.d.ts
+# Same reason for the shared utilities folder: videoDuration.js is CommonJS so both bundles can
+# require it, and its declaration file is source for the same reason.
+!lambda-fns/utilities/*.d.ts
 *.zip
 node_modules
 coverage

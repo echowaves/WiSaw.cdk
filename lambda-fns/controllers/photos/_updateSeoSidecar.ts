@@ -2,12 +2,15 @@ import { S3Client } from '@aws-sdk/client-s3'
 
 import psql from '../../psql'
 import { putSeoSidecar } from '../../utilities/seoSidecar'
+import { learnRowDuration } from './_learnVideoDurations'
 
 // One photo row in exactly the shape buildSeoSidecar expects. Every writer of a sidecar must read
 // through here: a partial row overwrites a complete sidecar with a thinner one, which silently
 // strips enriched text from an already-indexed page. The address columns are selected for the
 // place name and "location" (the geography column) is deliberately never published.
-const PHOTO_SEO_QUERY = `
+// Exported because the operator backfill (scripts/populate-video-durations.js) loads rows through
+// the same shape: a thinner row would overwrite a complete record with a partial one.
+export const PHOTO_SEO_QUERY = `
   SELECT
     p.*,
     COALESCE(r."labels", '[]'::jsonb) AS "labels"
@@ -58,7 +61,16 @@ export async function _updateSeoSidecar (photoId: string): Promise<void> {
       return
     }
 
-    await putSeoSidecar(new S3Client({ region: 'us-east-1' }), bucket, photo)
+    // A video nobody has measured yet is measured here rather than left to the scheduled pass: this
+    // is the path a user's comment triggers, so the record published below can carry a real duration
+    // today instead of one day late. Best-effort like everything else in this function - a failed
+    // probe leaves the row unknown, which every reader renders as no duration at all.
+    const client = new S3Client({ region: 'us-east-1' })
+    if (photo.video === true && photo.duration == null) {
+      await learnRowDuration(client, bucket, photo)
+    }
+
+    await putSeoSidecar(client, bucket, photo)
   } catch (err) {
     console.error('Error refreshing seo sidecar', { photoId, err })
   }

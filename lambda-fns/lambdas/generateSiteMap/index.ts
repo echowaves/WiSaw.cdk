@@ -7,6 +7,7 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3"; // ES Modules i
 import { ListObjectsV2Command } from "@aws-sdk/client-s3"
 
 import { locationText, putSeoSidecars, readSeoWatermark, seoWindowStart, splitImageText, writeSeoWatermark } from '../../utilities/seoSidecar'
+import { learnVideoDurations } from '../../controllers/photos/_learnVideoDurations'
 
 // The naming rule lives with the edge injector because that bundle is deployed as a raw folder
 // zip (Code.fromAsset) and cannot reach outside it; this lambda is bundled by esbuild, so it can
@@ -20,6 +21,11 @@ const SIDECAR_CONCURRENCY = 20
 // A backfill pass writes ~22k objects inside one 120s invocation; at the incremental
 // concurrency that does not fit, so the one-off path is allowed to be louder.
 const BACKFILL_CONCURRENCY = 60
+// Reading a video's container costs a LIST, a HEAD and up to two ranged GETs, so the scheduled
+// pass takes a bounded slice of whatever still has no duration rather than blocking on the whole
+// corpus. Newest-first feed order means the slice is always the most-crawled end.
+const DURATION_LEARN_LIMIT = 150
+const DURATION_LEARN_CONCURRENCY = 8
 
 function recentlyTouched (photos: any[], windowStartMs: number): any[] {
   return photos.filter((photo: any) => {
@@ -32,12 +38,16 @@ function recentlyTouched (photos: any[], windowStartMs: number): any[] {
 // guess: the old six-hour window only had an hour of slack against the five-hour cadence, so
 // two skipped runs silently lost coverage for everything touched in between. Extracted so
 // main() keeps one line for the whole sidecar path.
-async function publishSidecars (client: S3Client, bucket: string, photos: any[], backfill: boolean): Promise<void> {
+// `urgent` carries rows this run changed in a way that does not move "updatedAt" - a video whose
+// duration was just learned - which the touch window would otherwise never pick up.
+async function publishSidecars (client: S3Client, bucket: string, photos: any[], backfill: boolean, urgent: any[] = []): Promise<void> {
   const nowMs = Date.now()
   const watermark = backfill ? null : await readSeoWatermark(client, bucket)
   const windowStart = seoWindowStart(watermark, nowMs)
-  const candidates = backfill ? photos : recentlyTouched(photos, windowStart)
-  console.log('sidecar candidates:', candidates.length, 'backfill:', backfill, 'windowStart:', new Date(windowStart).toISOString())
+  const windowed = backfill ? photos : recentlyTouched(photos, windowStart)
+  const seen = new Set(windowed.map((photo: any) => String(photo?.id)))
+  const candidates = windowed.concat(urgent.filter((photo: any) => photo?.id != null && !seen.has(String(photo.id))))
+  console.log('sidecar candidates:', candidates.length, 'backfill:', backfill, 'windowStart:', new Date(windowStart).toISOString(), 'urgent:', urgent.length)
 
   if (candidates.length === 0) return
 
@@ -162,6 +172,26 @@ export async function main (event: any = {}, context: any /*, cb: any*/) {
     return pickVideoObjectKey(id, keys ?? [])
   }
 
+  // How long a video is has never been told to us: the app uploads bytes without reporting a
+  // length, and production objects carry no upload-time metadata (see
+  // _bmad-output/seo-indexing/evidence/probe-duration-metadata.js), so the number is read out of the
+  // stored container here, at the one place that already lists every video key. Bounded per run -
+  // the first pass over the whole corpus must not decide whether a sitemap gets published - and the
+  // rows it learns are written back to Postgres, so each video is probed once for the life of the row.
+  let learnedVideos: any[] = []
+  try {
+    const learned = await learnVideoDurations(photos ?? [], {
+      bucket: imgBucketName,
+      client: new S3Client({ region: 'us-east-1' }),
+      limit: DURATION_LEARN_LIMIT,
+      concurrency: DURATION_LEARN_CONCURRENCY
+    })
+    learnedVideos = learned.learned
+    console.log('video durations:', { checked: learned.checked, learned: learned.learned.length, failed: learned.failed })
+  } catch (err) {
+    console.error('Unable to learn video durations', { err })
+  }
+
 
   photos?.forEach((photo: any) => {
     // const jsonObj = JSON.parse(JSON.stringify(photo))
@@ -187,6 +217,9 @@ export async function main (event: any = {}, context: any /*, cb: any*/) {
           // The object that exists; `<id>.mov` only when storage had nothing for this id.
           content_loc: imgUrl(videoFileKey(photo.id)),
           publication_date: createdAt,
+            // Seconds, and only once the container has actually been read. A duration invented from
+            // file size would be worse than none: Google uses it to qualify the rich result.
+            duration: typeof photo.duration === 'number' && photo.duration > 0 ? photo.duration : undefined,
           family_friendly: true
         }
         ] 
@@ -252,7 +285,7 @@ export async function main (event: any = {}, context: any /*, cb: any*/) {
     // of time leaves the oldest photos behind and the set converges from the valuable end;
     // PUTs are idempotent, so re-invoking is always safe.
     const backfill = event?.backfill === true
-    await publishSidecars(new S3Client({ region: 'us-east-1' }), imgBucketName, photos ?? [], backfill)
+    await publishSidecars(new S3Client({ region: 'us-east-1' }), imgBucketName, photos ?? [], backfill, learnedVideos)
   } catch (err) {
     console.error("Unable to publish SEO sidecars", { err })
   }

@@ -1,6 +1,7 @@
 /* eslint-env node */
 /* global module, require */
 const { imageObjectKey, thumbnailObjectKey, imgUrl } = require('./mediaNaming')
+const { durationSeconds, iso8601Duration } = require('./seoRules')
 const escapeHtmlAttribute = (value = '') =>
   String(value)
     .replace(/&/g, '&amp;')
@@ -285,7 +286,7 @@ function buildSeoBody (options = {}) {
     labels = [],
     videoUrl = '',
     created = '',
-    duration = '',
+    duration = null,
     width = '',
     height = ''
   } = options
@@ -332,7 +333,8 @@ function buildSeoBody (options = {}) {
         uploadDate: created || undefined,
         contentUrl: videoUrl || undefined,
         embedUrl: pageUrl,
-        duration: duration || undefined,
+        // ISO 8601 is the form VideoObject requires; an unmeasured video publishes nothing.
+        duration: iso8601Duration(duration) || undefined,
         creator: { '@type': 'Organization', name: 'WiSaw' }
       }
     : {
@@ -368,6 +370,7 @@ function injectMetaTags (html = '', options = {}) {
     imageIdUrl = '',
     pageTitle = '',
     videoUrl = '',
+    videoDuration = null,
     imageTitle = '',
     imageCaption = '',
     bodyHtml = ''
@@ -427,6 +430,12 @@ function injectMetaTags (html = '', options = {}) {
   if (videoUrl) {
     const safeVideoUrl = escapeHtmlAttribute(videoUrl)
     metaTags += '      <meta property="og:video" content="' + safeVideoUrl + '" data-rh="true">\n'
+    // Open Graph wants whole seconds here while the JSON-LD below wants ISO 8601; both come from the
+    // same stored number, and neither is written when nobody has measured this video.
+    const seconds = durationSeconds(videoDuration)
+    if (seconds != null) {
+      metaTags += '      <meta property="og:video:duration" content="' + seconds + '" data-rh="true">\n'
+    }
   }
 
   const canonicalUrl = 'https://wisaw.com/' + safePathSegment + '/' + safeCanonicalId

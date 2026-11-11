@@ -628,3 +628,60 @@ describe('stripExistingMetaTags', () => {
     expect(stripExistingMetaTags(html)).to.equal('')
   })
 })
+
+describe('video length on the first byte', () => {
+  const videoOptions = {
+    entityLabel: 'video',
+    ogType: 'video',
+    pathSegment: 'videos',
+    imageIdText: 'vid-9',
+    imageIdUrl: 'vid-9',
+    videoUrl: 'https://img.wisaw.com/vid-9.mov'
+  }
+
+  function videoHead (overrides) {
+    const opts = { ...videoOptions, ...overrides }
+    return injectMetaTags(BASE_HTML, { ...opts, bodyHtml: buildSeoBody(opts) })
+  }
+
+  it('states the length in seconds for crawlers and in ISO 8601 for the graph', () => {
+    const html = videoHead({ videoDuration: 3725, duration: 3725 })
+    expect(html).to.include('<meta property="og:video:duration" content="3725"')
+    expect(html).to.include('"duration":"PT1H2M5S"')
+  })
+
+  it('omits both when nobody ever measured the file', () => {
+    // A guessed length is a wrong fact about someone's video, and Google reads the graph
+    // duration as a claim about the actual file.
+    const html = videoHead({ videoDuration: null, duration: null })
+    expect(html).to.not.include('og:video:duration')
+    expect(html).to.not.include('"duration"')
+  })
+
+  it('ignores a length that is not a positive number of seconds', () => {
+    for (const junk of ['yesterday', '-4', 0, undefined]) {
+      const html = videoHead({ videoDuration: junk, duration: junk })
+      expect(html).to.not.include('og:video:duration')
+      expect(html).to.not.include('"duration"')
+    }
+  })
+
+  it('accepts the clock form a legacy sidecar stored', () => {
+    const html = videoHead({ videoDuration: '1:02:03', duration: '1:02:03' })
+    expect(html).to.include('<meta property="og:video:duration" content="3723"')
+    expect(html).to.include('"duration":"PT1H2M3S"')
+  })
+
+  it('says nothing about length on a photo page', () => {
+    const html = injectMetaTags(BASE_HTML, {
+      entityLabel: 'photo',
+      ogType: 'article',
+      pathSegment: 'photos',
+      imageIdText: 'p-1',
+      videoDuration: 48,
+      bodyHtml: buildSeoBody({ entityLabel: 'photo', duration: 48 })
+    })
+    expect(html).to.not.include('og:video:duration')
+    expect(html).to.not.include('"duration"')
+  })
+})

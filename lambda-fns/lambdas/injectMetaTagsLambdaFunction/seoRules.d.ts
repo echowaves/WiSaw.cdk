@@ -18,7 +18,8 @@ export interface SeoRecord {
   location?: string
   width?: string | number
   height?: string | number
-  duration?: string | number
+  /** Whole seconds, present only when the video's container has actually been read. */
+  duration?: number
   /** Finished strings written by the record's author; the edge renders them verbatim. */
   seo?: { kind?: string, title?: string, description?: string, imageTitle?: string, imageCaption?: string }
   [key: string]: unknown
@@ -35,7 +36,8 @@ export interface SeoFields {
   created: string
   width: string
   height: string
-  duration: string
+  /** Whole seconds, or null when nobody has measured this video. */
+  duration: number | null
 }
 
 export interface BuildSeoFieldsInput {
@@ -58,6 +60,12 @@ export declare const OG_IMAGE_CAPTION_MAX: number
 export declare const TAG_TITLE_LIMIT: number
 export declare const LABEL_LIMIT: number
 export declare const PRECISE_KEYS: string[]
+export declare const MAX_DURATION_SECONDS: number
+
+/** Whole positive seconds from a number, "48", "0:48", "1:02:03" or "PT1M2S"; null when unknown. */
+export declare function durationSeconds (value: unknown): number | null
+/** ISO 8601 for VideoObject.duration; "" when the value is not a real duration. */
+export declare function iso8601Duration (value: unknown): string
 
 export declare function clean (value: unknown): string
 export declare function truncateWords (value: unknown, max: number): string
