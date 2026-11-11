@@ -1,8 +1,8 @@
 ---
 type: 'feature'
 ticket: '8'
-status: in review
-step: 4
+status: built
+step: 5
 created: 2026-11-11
 updated: 2026-11-11
 spec: ../spec.md
@@ -131,3 +131,25 @@ legacy value can never leak into tags unformatted.
 
 **Manual checks:**
 - `node scripts/populate-video-durations.js --env test --dry-run --limit 3` lists probe results without writing (run against test env if reachable; otherwise record why).
+
+## Review Log
+
+- **Step 04** (2026-11-11): no independent lens agents ran — this step had no subagent delegation
+  available, so the diff was reviewed inline against three lenses (correctness, contract symmetry
+  across the two stacks, deploy/rollout safety) and every finding below is recorded with its
+  disposition rather than dropped.
+
+| Finding | Lens | Disposition |
+|---------|------|-------------|
+| `tsc --noEmit -skipLibCheck` caught `_learnVideoDurations.ts` referencing `STORE_DURATION` instead of `STORE_DURATION_SQL` — a runtime `undefined` SQL string on the write path | correctness | **Fixed** in 897d37d; added write-path tests (`tests/video-duration.js`) so the path is executed, not just imported |
+| The scheduler hands learned rows to `publishSidecars(…, urgent)`; nothing exercised that wiring end to end (no test harness exists for the `generateSiteMap` lambda) | completeness | **Accepted residual risk**: the parser, store, and candidate-dedupe contract are each tested; the call site was read twice. Manual post-deploy check is in the leaf's verification list |
+| Client selects a field the deployed AppSync schema does not yet have — deploying the app first makes every media page fall into its caught-error "no photo" state | rollout | **Fixed by documentation**: deployment order (migrate → `npm run prod:deploy` → client build) written into the leaf; the ordering is unavoidable because a query naming an unknown field fails wholesale |
+| Contract test only asserted that the word `duration` appeared somewhere in each GraphQL document; the API answers with a `{ photo, … }` wrapper, so wrong nesting would still pass | contract symmetry | **Fixed** in client 4a0b9c5: asserts `duration` sits inside `photo { }` in all three detail queries |
+| New test file used `var` and chai's expression-style `.to.be.null`; `ts-standard` flagged them | convention | **Fixed**: `let` + `.to.equal(null)`; file lints clean |
+| `generateSiteMap/index.ts` violations rose 84 → 85 with my insertion because the pre-existing video block is mis-indented | convention | **Fixed**: re-indented only my own three lines (file now 82, below baseline). The remaining delta is one more `import/first`, a category already present six times because line 1 is a `require` |
+| `scripts/populate-video-durations.js` issues one `SELECT` per video while paging | quality | **Deferred deliberately**: operator-only, run once, bounded by `--limit`; the dry-run output shows bytes/requests/ms per video so an operator sees the cost |
+
+**Verification at close:** backend `npm test` 309 passing / 5 failing (all five are the pre-existing
+`getSeasonBoundaries` timezone failures; baseline was 283/5) and `ts-standard` clean on every file
+this ticket touched; client `vitest` 197 passing, eslint clean on touched files, `npm run build` +
+postbuild template contract green.
