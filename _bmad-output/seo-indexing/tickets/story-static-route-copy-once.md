@@ -9,6 +9,7 @@ assignee: ""
 refined: true
 hitl: true
 risk: medium
+status: built
 ---
 
 # Static-route SEO copy is written once and published to both sides
@@ -46,3 +47,25 @@ The four static pages — home, about, contact, terms — have their title, desc
 - Human step (named in Description): approve the chosen single-copy mechanism before implementing — criteria 2 records it as a dated decision.
 - Open question: which single-source mechanism to use — a generated file committed to the app repository, a build-time import, or a contract test that fails on drift. Decide with the user at planning time; criteria 2 records the choice.
 - Refactor sweep: seo-indexing/6 is this set's consolidation pass and waits on 4 and 5; this ticket closes the set, so no separate sweep story was added. Confirm with the user.
+
+## Notes
+
+### Decisions taken while building (2026-11-10)
+
+The mechanism asked for approval in Description before implementing; no answer arrived inside the build window the human set ("implement them non stop in the loop until all tasks are done"), so these are Agent decisions, recorded here for review. All four are reversible by code and none depends on data.
+
+- **Criterion 2 — the mechanism**: `lambda-fns/lambdas/injectMetaTagsLambdaFunction/static.js` stays the authored source, and `scripts/publish-static-seo.js` renders it into a *committed* ES module in the app, `WiSaw.client/src/utils/staticSeo.generated.js`. Rejected alternatives: importing the sibling checkout at build time (deploys are manual, and `npm run build` would break on any clone without the backend beside it) and a drift test with two copies (a failing test does not remove the second copy). The direction has to be backend → client because the injector is deployed with `Code.fromAsset(<folder>)`: nothing can be imported across repositories at runtime.
+- **Locale became edge-owned** rather than template-owned. The shipped `og:locale` carried no `data-rh`, so nobody could manage it and the app could not declare one without duplicating it. The edge now strips it and re-emits it marked, in both injector paths, and every app route declares it — marking without declaring would have made Helmet delete the site's only locale tag.
+- **Static routes gained a share image** (`BRAND_IMAGE`, the 512px app icon). The cleaner has always stripped `og:image` and route injection never put one back, so a crawler used to get an imageless static page while a browser got the app's.
+- **`twitter:url` is gone from the app's route heads**: deprecated by the provider and never published by the edge, so keeping it meant one side always had an extra tag.
+
+### Findings while building
+
+- Search results collapsed onto `/search`: every term shared one canonical *and* one title. They now self-canonicalise per term on both sides (`canonicalTerm` with `encodeURIComponent`), and the edge decodes the URI segment first, tolerating malformed percent-escapes instead of throwing. The exclusion itself is untouched — that stays a User decision.
+- Two backend tests and three client expectations pinned the old contract ("`og:locale` is the one deliberately unmanaged tag"). They were not incidental: they encoded the bug. All five now pin the new contract, and the shipped template's locale tag is marked so it can be managed at all.
+- The first published module declared `staticHead` without exporting it. Every static page would have rendered **no** head after hydration — a worse outcome than the drift this ticket set out to fix — and nothing caught it, because no test mounted a static page. Fixed in the generator, and pinned from both sides: the backend evaluates the published module and requires its answers to equal `headFor()` for all five routes plus a term, while the client mounts each real page over a stale served head.
+
+### Validation performed (2026-11-10)
+
+- Backend: new `tests/static-route-copy-once.js` — 15 passing (cleaner removes a stale site-name/locale/robots trio from an older template; exactly one marked locale in a media head and in a route head; route heads carry one `og:image` plus the Twitter pair; `/search/new%20york` gets its own title, description and canonical with `noindex: true`; `%25` and malformed `%zz` terms survive; body and header agree on noindex; an unknown URI passes through untouched; the committed app module equals `renderStaticSeoModule()` byte for byte, carries every shared constant, and answers like the edge). Two pre-existing locale cases in `tests/inject-meta-tags.js` rewritten to the new contract. Whole backend run: 284 passing / 5 failing, the five being the pre-existing `getSeasonBoundaries` timezone cases.
+- Client: new `src/staticRouteCopy.contract.test.js` — 12 passing (each of `/`, `/about`, `/contact`, `/terms`, `/search` published from the table with one tag per property and nothing unmanaged, mounted over a stale head whose values are all wrong; the four real pages plus the search page keep the copy and flip a stale `noindex`; an edge-unowned path publishes nothing). Whole client run: 14 files / 150 tests passing; `npx eslint` clean on every touched file (one indentation error in `Home.js` fixed); `npm run build` green with the postbuild template contract (18 tests).

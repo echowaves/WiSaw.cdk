@@ -10,9 +10,13 @@ const escapeHtmlAttribute = (value = '') =>
     .replace(/'/g, '&#039;')
 
 // Head values the browser app renders too. They are named here because a crawler that runs
-// JavaScript and one that doesn't must not disagree about them; the client mirrors these exact
-// strings in src/utils/seoDefaults.js, and ticket 7 replaces both copies with one source.
+// JavaScript and one that doesn't must not disagree about them; scripts/publish-static-seo.js
+// generates src/utils/staticSeo.generated.js from this table, and seoDefaults.js re-exports it,
+// so there is no second copy left to drift.
 const SITE_NAME = 'WiSaw'
+// Owned by the edge like site name and robots: stripped from whatever the template carried and
+// re-emitted with data-rh, which only works because every route in the app declares it too.
+const LOCALE = 'en_US'
 const ROBOTS_INDEX = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'
 // Same vocabulary as the X-Robots-Tag header: a page whose header excludes it while its
 // body invites indexing gets crawled by whichever signal a crawler trusts more.
@@ -57,6 +61,7 @@ function stripExistingMetaTags (html = '') {
     // sits next to the template's, and a crawler sees two values for one property - which is
     // what happened while these tags had no data-rh and the browser app never reconciled them.
     .replace(/<meta\s(?=[^>]*\bproperty=["']og:site_name["'])[^>]*\/?>\s*/gi, '')
+    .replace(/<meta\s(?=[^>]*\bproperty=["']og:locale["'])[^>]*\/?>\s*/gi, '')
     .replace(/<meta\s(?=[^>]*\bname=["']robots["'])[^>]*\/?>\s*/gi, '')
 }
 
@@ -413,6 +418,7 @@ function injectMetaTags (html = '', options = {}) {
       '      <meta property="og:title" content="' + safePageTitle + '" data-rh="true">\n' +
       '      <meta property="og:url" content="https://wisaw.com/' + safePathSegment + '/' + safeCanonicalId + '" data-rh="true">\n' +
       '      <meta property="og:site_name" content="' + SITE_NAME + '" data-rh="true">\n' +
+      '      <meta property="og:locale" content="' + LOCALE + '" data-rh="true">\n' +
       '      <meta property=\'og:type\' content=\'' + safeOgType + '\' data-rh="true"/>\n' +
       '      <meta name="twitter:title" content="' + safePageTitle + '" data-rh="true">\n' +
       '      <meta name="twitter:card" content="' + TWITTER_CARD + '" data-rh="true">\n' +
@@ -478,10 +484,11 @@ function htmlResponse (status, body, options = {}) {
 // Head rewrite for the non-media routes (/ , /about, /contact, /terms, /search).
 // Those pages used to be served straight from S3: no canonical at all on the homepage,
 // and every static route wearing the homepage title, which made them look like copies of
-// wisaw.com/. Same escaping rules as the media injector; no og:image because these routes
-// have no single representative image.
+// wisaw.com/. Same escaping rules as the media injector. `image` is the brand picture for routes
+// that have no per-page representative: the cleaner removes the template's og:image, so without
+// this these pages reached crawlers with no image at all while browsers had the app's.
 function injectRouteTags (html = '', options = {}) {
-  const { title = '', description = '', canonical = '', noindex = false } = options
+  const { title = '', description = '', canonical = '', image = '', noindex = false } = options
 
   let updatedHtml = stripExistingMetaTags(html)
 
@@ -515,13 +522,22 @@ function injectRouteTags (html = '', options = {}) {
     (canonical ? '      <meta property="og:url" content="' + safeCanonical + '" data-rh="true">\n' : '') +
     (description ? '      <meta property="og:description" content="' + safeDescription + '" data-rh="true">\n' : '') +
     '      <meta property="og:site_name" content="' + SITE_NAME + '" data-rh="true">\n' +
-    '      <meta property="og:type" content="website" data-rh="true">\n'
+    '      <meta property="og:locale" content="' + LOCALE + '" data-rh="true">\n' +
+    '      <meta property="og:type" content="website" data-rh="true">\n' +
+    (image ? '      <meta property="og:image" content="' + escapeHtmlAttribute(image) + '" data-rh="true">\n' : '') +
+    // The app declares the Twitter pair on these pages, so the first byte must carry it too:
+    // a tag only one side publishes is a tag Helmet deletes or duplicates.
+    '      <meta name="twitter:card" content="' + TWITTER_CARD + '" data-rh="true">\n' +
+    (title ? '      <meta name="twitter:title" content="' + escapeHtmlAttribute(title) + '" data-rh="true">\n' : '') +
+    (description ? '      <meta name="twitter:description" content="' + safeDescription + '" data-rh="true">\n' : '') +
+    (image ? '      <meta name="twitter:image" content="' + escapeHtmlAttribute(image) + '" data-rh="true">\n' : '')
 
   return updatedHtml.replace('</title>', routeTags)
 }
 
 module.exports = {
   SITE_NAME,
+  LOCALE,
   ROBOTS_INDEX,
   ROBOTS_NOINDEX,
   TWITTER_CARD,

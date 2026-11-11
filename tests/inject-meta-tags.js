@@ -139,10 +139,12 @@ describe('injectMetaTags - preserved tags', () => {
     expect(result).to.not.include('content="WiSaw"\n')
   })
 
-  it('preserves og:locale', () => {
+  // Locale used to be left alone because nothing injected a second copy. It is edge-owned now —
+  // stripped, then re-emitted with data-rh so the app can keep exactly one of them.
+  it('replaces the template og:locale with one marked value', () => {
     const result = injectMetaTags(BASE_HTML, PHOTO_OPTIONS)
-    expect(result).to.include('og:locale')
-    expect(result).to.include('en_US')
+    expect((result.match(/property=["']og:locale["']/gi) || [])).to.have.lengthOf(1)
+    expect(result).to.include('og:locale" content="en_US" data-rh="true"')
   })
 
   it('replaces the template robots tag with one directive', () => {
@@ -616,9 +618,9 @@ describe('stripExistingMetaTags', () => {
     expect(stripExistingMetaTags(html)).to.equal('')
   })
 
-  it('does not strip og:locale', () => {
-    const html = '<meta property="og:locale" content="en_US" />'
-    expect(stripExistingMetaTags(html)).to.include('og:locale')
+  it('strips og:locale so the injected copy is the only one', () => {
+    const html = '<meta property="og:locale" content="fr_FR" />'
+    expect(stripExistingMetaTags(html)).to.not.include('og:locale')
   })
 
   it('handles tags with single quotes', () => {
