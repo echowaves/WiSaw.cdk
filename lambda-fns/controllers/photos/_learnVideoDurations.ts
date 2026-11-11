@@ -108,6 +108,30 @@ export async function learnRowDuration (client: S3Client, bucket: string, row: a
   return seconds
 }
 
+// The upload processor knows only the media id, and must not pay for a full SEO row read just to
+// ask whether this row is an unmeasured video.
+const ROW_STATE_SQL = 'SELECT "id", "video", "duration" FROM "Photos" WHERE "id" = $1 LIMIT 1'
+
+/**
+ * Learns one media id's length from its stored object. Used by upload processing, where the event
+ * can carry a still poster rather than the video: the number always comes from the stored video
+ * object for this id, never from the bytes that triggered processing. Returns null - and touches
+ * nothing - when the row is not a video or already states a length.
+ */
+export async function learnDurationForId (client: S3Client, bucket: string, photoId: any): Promise<number | null> {
+  await psql.connect()
+  let rows: any[]
+  try {
+    rows = (await psql.query(ROW_STATE_SQL, [photoId])).rows
+  } finally {
+    await psql.clean()
+  }
+
+  const row = rows[0]
+  if (row?.video !== true || row.duration != null) return null
+  return await learnRowDuration(client, bucket, row)
+}
+
 export interface LearnVideoDurationsOptions {
   bucket: string
   client?: S3Client

@@ -4,6 +4,7 @@ import dayjs from 'dayjs'
 
 import autoGroupPhotosIntoWaves from '../../controllers/waves/autoGroupPhotosIntoWaves'
 import { loadSeoPhotoRow } from '../../controllers/photos/_updateSeoSidecar'
+import { learnDurationForId } from '../../controllers/photos/_learnVideoDurations'
 import { putSeoSidecar, sidecarKey } from '../../utilities/seoSidecar'
 
 import { DetectLabelsCommand, DetectModerationLabelsCommand, DetectTextCommand, RekognitionClient } from "@aws-sdk/client-rekognition"
@@ -66,6 +67,11 @@ export async function main(event: any = {}, context: any) {
     _deleteUpload({ Bucket, Key: name }),
     _activatePhoto({ photoId }),
   ])
+
+  // Learn a new video's length now, so the sidecar written below already states it. Sequential
+  // rather than part of the thumbnail Promise.all above: psql is one shared client and the
+  // dimension step is already using it while the thumbs are made.
+  await _learnVideoDuration({ Bucket, photoId })
 
   // Write the SEO sidecar so a brand-new page is enriched right away instead of waiting for the
   // 5-hour scheduled publisher. Awaited (the window is one minute), and it never throws — the
@@ -382,6 +388,28 @@ const _activatePhoto = async ({ photoId }: { photoId: string }) => {
   }
   await psql.clean()
   // console.log(`_activatePhoto ended  ${photoId}`)
+}
+
+// The stored container is the only place a video's length exists — the app never reports one and
+// production objects carry no upload-time metadata — so reading it here, once per video, is what
+// keeps a brand-new page from stating nothing until a comment, the bounded scheduled pass, or an
+// operator run happens to touch it. learnDurationForId measures the stored video object for this id
+// rather than the bytes that triggered processing (a video upload can trigger on its still poster),
+// and returns without asking storage for anything when the row is an image or already measured.
+// Same discipline as the sidecar step below: a failure here must not change the upload outcome.
+export const _learnVideoDuration = async ({
+  Bucket,
+  photoId
+}: {
+  Bucket: string
+  photoId: string
+}): Promise<void> => {
+  try {
+    const client = new S3Client({ region: 'us-east-1' })
+    await learnDurationForId(client, Bucket, photoId)
+  } catch (err) {
+    console.error('Error learning video duration at upload', { photoId, err })
+  }
 }
 
 // Writes the photo's <id>.json sidecar at upload time so a brand-new page is enriched within
