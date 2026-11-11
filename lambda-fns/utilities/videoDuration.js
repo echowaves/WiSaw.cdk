@@ -1,5 +1,5 @@
 /* eslint-env node */
-/* global require, module, console, BigInt */
+/* global BigInt */
 
 // How long a stored video really is.
 //
