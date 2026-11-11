@@ -70,10 +70,11 @@ async function listStoredVideoKeys (client: S3Client, bucket: string): Promise<M
   do {
     const page = await client.send(new ListObjectsV2Command({ Bucket: bucket, ContinuationToken: token, MaxKeys: 1000 }))
     for (const obj of page.Contents ?? []) {
-      if (!isVideoObjectKey(obj.Key)) continue
-      const id = obj.Key.slice(0, obj.Key.lastIndexOf('.'))
+      const key = obj.Key
+      if (key == null || !isVideoObjectKey(key)) continue
+      const id = key.slice(0, key.lastIndexOf('.'))
       const keys = byId.get(id) ?? []
-      keys.push(obj.Key)
+      keys.push(key)
       byId.set(id, keys)
     }
     token = page.IsTruncated === true ? page.NextContinuationToken : undefined

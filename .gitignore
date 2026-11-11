@@ -1,6 +1,10 @@
 # *.js
 !jest.config.js
 *.d.ts
+# Hand-written declarations next to the raw-shipped CommonJS modules are source, not build
+# output: that Lambda@Edge folder is zipped as-is, and its TypeScript consumers cannot
+# typecheck without them.
+!lambda-fns/lambdas/injectMetaTagsLambdaFunction/*.d.ts
 *.zip
 node_modules
 coverage

@@ -224,11 +224,12 @@ describe('<id>.json sidecar - a place name is fine, a coordinate never is', () =
     expect(() => assertNoPreciseLocation({ v: 1, latitude: 40.6833 })).to.throw(/coordinate/)
   })
 
-  it('the backfill script publishes the same keys and ignores the geometry column too', () => {
+  it('the backfill script publishes the same bytes and ignores the geometry column too', () => {
     const fromScript = buildSidecar(row)
     const fromUtility = buildSeoSidecar(row)
-    expect(Object.keys(fromScript).sort()).to.deep.equal(Object.keys(fromUtility).sort())
-    expect(fromScript.v).to.equal(fromUtility.v)
+    // Deep equality, not just the key list: a record whose finished strings were composed by a
+    // second copy of the rules would pass a key check and still serve different text.
+    expect(fromScript).to.deep.equal(fromUtility)
     expect(fromScript.location).to.equal('Coney Island, Brooklyn, New York')
     expect(buildSidecar({ ...row, location: GEOMETRY_FORMS.wkbHex }).location)
       .to.equal('Coney Island, Brooklyn, New York')

@@ -16,9 +16,9 @@
 // media itself). A place NAME belongs in one -
 // it is what makes a photo findable - but a COORDINATE never does, so the query selects the
 // address columns and not the "location" geography column, and buildSidecar rejects anything
-// that looks like a position anyway. It mirrors buildSeoSidecar in
-// lambda-fns/utilities/seoSidecar.ts: the two shapes must stay identical, and
-// tests/seo-crawler-contract.js pins both.
+// that looks like a position anyway. It builds records through the shared rules module, which is
+// also what lambda-fns/utilities/seoSidecar.ts uses, so the two shapes cannot drift;
+// tests/seo-crawler-contract.js pins both writers anyway.
 
 const fs = require('fs')
 const path = require('path')
@@ -72,65 +72,18 @@ const BATCH_SIZE = parseInt((args.find((a) => a.startsWith('--batch-size=')) || 
 const LIMIT = parseInt((args.find((a) => a.startsWith('--limit=')) || '').split('=')[1] || '0', 10)
 const CONCURRENT_LIMIT = parseInt((args.find((a) => a.startsWith('--concurrency=')) || '').split('=')[1] || '16', 10)
 
-const clean = (value) => String(value == null ? '' : value).replace(/\s+/g, ' ').trim()
+// Every text rule and the record shape itself come from the one module the edge loads and the
+// scheduled job uses (lambda-fns/lambdas/injectMetaTagsLambdaFunction/seoRules.js), so a backfilled
+// record cannot differ from a scheduled one. tests/seo-crawler-contract.js pins that both writers
+// publish the same keys and reject the same values.
+const seoRules = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/seoRules')
 
-function pickLabels (rawLabels, limit = 8) {
-  const seen = new Set()
-  const out = []
-  for (const label of Array.isArray(rawLabels) ? rawLabels : []) {
-    const name = clean(label)
-    if (!name) continue
-    const key = name.toLowerCase()
-    if (seen.has(key)) continue
-    seen.add(key)
-    out.push(name)
-    if (out.length >= limit) break
-  }
-  return out
+// This script's query hands labels over as a plain array, where the shared helper takes rows.
+function pickLabels (rawLabels, limit = seoRules.LABEL_LIMIT) {
+  return seoRules.pickLabels({ labels: rawLabels }, limit)
 }
 
-// Mirrors locationText()/isPreciseLocation() in lambda-fns/utilities/seoSidecar.ts; the test
-// suite pins that both writers publish the same keys and reject the same values.
-function locationText (row) {
-  return [row.locality, row.district, row.region]
-    .map(clean)
-    .filter(Boolean)
-    .filter((part, i, all) => all.indexOf(part) === i)
-    .join(', ')
-}
-
-const PRECISE_KEYS = ['lat', 'lon', 'lng', 'latitude', 'longitude', 'coords', 'coordinates', 'gps', 'geopoint', 'point']
-
-function isPreciseLocation (value) {
-  if (value == null) return false
-  if (typeof value === 'object') return true
-  const text = String(value).trim()
-  if (text === '') return false
-  if (/POINT\s*\(/i.test(text)) return true
-  if (/^0[01][0-9A-Fa-f]{16,}$/.test(text)) return true // WKB/EWKB hex from the geography column
-  return /^-?\d{1,3}\.\d+\s*[,\s]\s*-?\d{1,3}\.\d+$/.test(text)
-}
-
-function buildSidecar (row) {
-  const sidecar = {
-    // Keep in step with SEO_SIDECAR_VERSION in lambda-fns/utilities/seoSidecar.ts.
-    v: 1,
-    caption: clean(row.lastComment).slice(0, 200),
-    labels: pickLabels(row.labels),
-    created: row.createdAt ? new Date(row.createdAt).toISOString() : '',
-    location: locationText(row),
-    width: clean(row.width),
-    height: clean(row.height)
-  }
-  const leaked = Object.keys(sidecar).filter((key) => PRECISE_KEYS.includes(key.toLowerCase()))
-  if (leaked.length > 0) {
-    throw new Error(`refusing to publish a sidecar with a coordinate field: ${leaked.join(', ')}`)
-  }
-  if (isPreciseLocation(sidecar.location)) {
-    throw new Error('refusing to publish a sidecar whose location is a coordinate, not a place name')
-  }
-  return sidecar
-}
+const buildSidecar = (row) => seoRules.buildSeoRecord(row)
 
 function getDbConnection () {
   const cfg = getConfig()

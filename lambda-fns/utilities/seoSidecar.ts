@@ -1,6 +1,27 @@
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 import type { S3Client } from '@aws-sdk/client-s3'
 
+import { SIDECAR_VERSION, buildSeoRecord } from '../lambdas/injectMetaTagsLambdaFunction/seoRules.js'
+
+// The text rules are no longer mirrored here: they live in one module (seoRules.js) that the edge
+// can load straight out of its zipped folder, and this file imports them like anything else. These
+// names stay re-exported because callers - the sitemap job, the comment path, plain tests - already
+// reach for them through this module.
+export {
+  IMAGE_CAPTION_MAX,
+  IMAGE_TITLE_MAX,
+  PRECISE_KEYS,
+  assertNoPreciseLocation,
+  clean,
+  identityTitle,
+  isPreciseLocation,
+  locationText,
+  monthYear,
+  pickLabels,
+  splitImageText,
+  truncateWords
+} from '../lambdas/injectMetaTagsLambdaFunction/seoRules.js'
+
 // One sidecar per photo/video, read by Lambda@Edge, which cannot join the VPC to reach
 // Postgres. The shape is a contract with the edge injector (see
 // lambda-fns/lambdas/injectMetaTagsLambdaFunction/sidecar.js and seoText.js); tests/seo-crawler-contract.js
@@ -16,7 +37,21 @@ import type { S3Client } from '@aws-sdk/client-s3'
 // here therefore derives from the address columns, never from "Photos"."location", and
 // assertNoPreciseLocation refuses to build anything that looks like a coordinate anyway.
 
-export const SEO_SIDECAR_VERSION = 1
+export const SEO_SIDECAR_VERSION = SIDECAR_VERSION
+
+/**
+ * Finished crawler-facing strings, computed once by the writer. The edge and the app render these
+ * instead of composing their own text, which is what makes first byte and hydrated head match.
+ * `kind` is part of the contract: a record describes one media type, so a page rendered under the
+ * other path derives its strings instead of wearing someone else's title.
+ */
+export interface SeoStrings {
+  kind: string
+  title: string
+  description: string
+  imageTitle: string
+  imageCaption: string
+}
 
 export interface SeoSidecar {
   v: number
@@ -26,70 +61,7 @@ export interface SeoSidecar {
   location: string
   width: string
   height: string
-}
-
-export function clean (value: any): string {
-  return String(value == null ? '' : value).replace(/\s+/g, ' ').trim()
-}
-
-// Newest-first label list from the Rekognition JSONB blob, de-duplicated case-insensitively.
-export function pickLabels (rows: any[], limit = 8): string[] {
-  const seen = new Set<string>()
-  const out: string[] = []
-  for (const row of rows) {
-    for (const label of Array.isArray(row?.labels) ? row.labels : []) {
-      const name = clean(label)
-      if (name === '') continue
-      const key = name.toLowerCase()
-      if (seen.has(key)) continue
-      seen.add(key)
-      out.push(name)
-      if (out.length >= limit) return out
-    }
-  }
-  return out
-}
-
-// High-level place text ("Brooklyn, New York"), built from the address columns only. It is
-// never read from the "location" geography column - see assertNoPreciseLocation below.
-export function locationText (row: any): string {
-  return [row?.locality, row?.district, row?.region]
-    .map((part) => clean(part))
-    .filter(Boolean)
-    // "Brooklyn, New York" reads well; a repeated place name does not.
-    .filter((part: string, i: number, all: string[]) => all.indexOf(part) === i)
-    .join(', ')
-}
-
-// Key names that can only ever mean a coordinate. Free-text fields (caption, labels) are not
-// scanned for them: someone writing "40.68, -73.97" in a comment must not lose their SEO text.
-const PRECISE_KEYS = ['lat', 'lon', 'lng', 'latitude', 'longitude', 'coords', 'coordinates', 'gps', 'geopoint', 'point']
-
-/** True for anything that carries a position rather than a place name. */
-export function isPreciseLocation (value: any): boolean {
-  if (value == null) return false
-  // A Sequelize/geography value arrives as an object ({latitude, longitude} or a Point).
-  if (typeof value === 'object') return true
-  const text = String(value).trim()
-  if (text === '') return false
-  return /POINT\s*\(/i.test(text) ||
-    // WKB/EWKB hex as Postgres hands back for a geography column.
-    /^0[01][0-9A-Fa-f]{16,}$/.test(text) ||
-    // "40.6833, -73.9740" or "40.6833 -73.9740"
-    /^-?\d{1,3}\.\d+\s*[,\s]\s*-?\d{1,3}\.\d+$/.test(text)
-}
-
-// Throws instead of publishing. A coordinate on ~21k public objects is not recoverable after
-// the fact, so a writer that is unsure fails the photo rather than guessing - and a failed PUT
-// only costs one photo its enriched title until the next run.
-export function assertNoPreciseLocation (body: Record<string, any>): void {
-  const badKey = Object.keys(body).find((key) => PRECISE_KEYS.includes(key.toLowerCase()))
-  if (badKey != null) {
-    throw new Error(`refusing to publish a sidecar with a coordinate field: ${badKey}`)
-  }
-  if (isPreciseLocation(body.location)) {
-    throw new Error('refusing to publish a sidecar whose location is a coordinate, not a place name')
-  }
+  seo: SeoStrings
 }
 
 // Tolerates partial rows: a photo that has no labels or place yet yields empty fields rather
@@ -97,79 +69,10 @@ export function assertNoPreciseLocation (body: Record<string, any>): void {
 // still load the full row first, otherwise they overwrite a complete sidecar with a thinner one.
 // A row may carry a "location" geometry column; it is ignored here and rejected by the guard.
 export function buildSeoSidecar (photo: any): SeoSidecar {
-  const createdMs = photo?.createdAt == null ? NaN : new Date(photo.createdAt).getTime()
-  const sidecar: SeoSidecar = {
-    v: SEO_SIDECAR_VERSION,
-    caption: clean(photo?.lastComment).slice(0, 200),
-    labels: pickLabels([photo]),
-    // An unreadable createdAt yields an empty field rather than throwing mid-batch.
-    created: Number.isFinite(createdMs) ? new Date(createdMs).toISOString() : '',
-    location: locationText(photo),
-    width: clean(photo?.width),
-    height: clean(photo?.height)
-  }
-  assertNoPreciseLocation(sidecar)
-  return sidecar
-}
-
-export const IMAGE_TITLE_MAX = 100
-export const IMAGE_CAPTION_MAX = 512
-// The same first three tags every edge slot publishes (og:image:title, page title head, meta
-// description lead), so one photo never shows Google two different lists.
-const IMAGE_TAG_LIMIT = 3
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
-// Mirrors monthYear in injectMetaTagsLambdaFunction/seoText.js so the capture month reads the same
-// ("Nov 2026") wherever it is published. The edge copy cannot be imported here: this module is
-// bundled into Lambda@Edge readers and writers separately.
-function monthYear (value: any): string {
-  const ms = new Date(value).getTime()
-  if (!Number.isFinite(ms) || new Date(ms).getUTCFullYear() < 2015) return ''
-  const date = new Date(ms)
-  return `${MONTHS[date.getUTCMonth()]} ${date.getUTCFullYear()}`
-}
-
-// Word-boundary truncation, mirroring the edge reader's rule (seoText.js truncate) so a title cut
-// short inside Google Image Search still reads as words.
-function truncateWords (value: string, max: number): string {
-  const text = clean(value)
-  if (text.length <= max) return text
-  const cut = text.slice(0, max - 1)
-  const lastSpace = cut.lastIndexOf(' ')
-  return `${cut.slice(0, lastSpace > max * 0.6 ? lastSpace : max - 1).trim()}…`
-}
-
-// What a photo with no AI tags is titled instead of its comment: place and capture month, which is
-// what makes one photo's title differ from the next. The id only carries the whole title when
-// neither is known, because a 36-character UUID truncated into the tail of a long place name says
-// nothing to a crawler either way.
-function identityTitle (media: any, kind: string): string {
-  const facts = [locationText(media), monthYear(media?.createdAt)].filter((part: string) => part.length > 0)
-  if (facts.length > 0) return `WiSaw ${kind} — ${facts.join(', ')}`
-  return `WiSaw ${kind} ${clean(media?.id)}`
+  return buildSeoRecord(photo) as SeoSidecar
 }
 
 export interface ImageTextPair { title: string, caption: string }
-
-/**
- * Decides which text fills the two image slots a crawler reads. The AI tags answer "what is in
- * this picture" and go in the title; the newest comment answers "what do people say about it" and
- * captions it. One sentence never fills both slots: with no tags the title falls back to place,
- * capture month and id rather than the comment, so equality only happens when there is no comment
- * to caption with - a surface that repeats one text twice teaches Google nothing new, which is how
- * 21k pages ended up looking near-identical once before.
- *
- * Same tolerance as buildSeoSidecar: a row missing labels or a comment yields the fallback rather
- * than throwing. Pure, so both stacks and plain tests can call it.
- */
-export function splitImageText (media: any, kindLabel?: string): ImageTextPair {
-  const tags = pickLabels([media], IMAGE_TAG_LIMIT).join(', ')
-  const kind = clean(kindLabel)
-  const title = truncateWords(tags.length > 0 ? tags : identityTitle(media, kind.length > 0 ? kind : 'photo'), IMAGE_TITLE_MAX)
-  const comment = clean(media?.lastComment)
-  return { title, caption: (comment.length > 0 ? comment : title).slice(0, IMAGE_CAPTION_MAX) }
-}
 
 // The sidecar lives next to the media it describes: <id>.json at the bucket root, with no
 // separate prefix. One key shape means one rule for writers, readers, CDN invalidations and
