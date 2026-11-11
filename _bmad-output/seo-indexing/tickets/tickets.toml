@@ -91,3 +91,14 @@ covers = []
 after = [4]
 hitl = false
 risk = "medium"
+
+[[entry]]
+id = 9
+type = "story"
+title = "A newly uploaded video states no length until a later pass touches it"
+description = "A brand-new video publishes its page with no length at all: the duration is learned only when a comment, the bounded scheduled pass, or the operator backfill reaches that row. Learning must also happen during upload processing, in the same invocation that produces the thumbnail and writes the enrichment record, so the first record published for a new video already states it."
+verify = "On the deployed test environment, after someone deploys the changed processing function and uploads a video recorded through the real app: the row states the length read from its stored object and the published enrichment record carries it, within a minute of the thumbnail appearing, with no operator script run and no scheduled learning pass in between; a photo uploaded at the same time produces exactly what it produces today, and an unmeasured video's record stays byte-identical. No new failures beyond the five known getSeasonBoundaries ones."
+covers = []
+after = [8]
+hitl = true
+risk = "medium"
