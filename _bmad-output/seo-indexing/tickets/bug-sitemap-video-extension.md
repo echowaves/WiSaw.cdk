@@ -6,6 +6,7 @@ parent: seo-indexing
 covers: []
 after: [3]
 assignee: ""
+status: built
 refined: true
 hitl: false
 risk: medium
@@ -59,3 +60,9 @@ The sitemap generator never consults storage: it builds media URLs from the medi
 - Assumption: resolving the extension at generation time by listing or probing storage is acceptable for the current corpus size — confirm before implementing if a per-object lookup turns out to be too slow.
 - Operator dependency: step 1 of the reproduction needs a current videos-bucket inventory; ask the user to produce it if storage access is unavailable in the build environment.
 - Operator step after build (not part of criteria): republish the sitemap and re-run step 3 against the live file.
+- Decision 2026-11-10 (Agent, for User review): the shared naming rule lives in
+  `lambda-fns/lambdas/injectMetaTagsLambdaFunction/mediaNaming.js` — the injector bundle is a raw
+  `Code.fromAsset` zip and cannot import from elsewhere, so the bundled TypeScript imports it from
+  there. Alternative considered and rejected as riskier than this ticket needs: esbuild-bundle the
+  three Lambda@Edge functions.
+- Built in commit 92035f3; bucket inventory evidence in `../evidence/videos-bucket-inventory-2026-11-10.txt`.
