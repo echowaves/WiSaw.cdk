@@ -9,8 +9,7 @@
 // we list the id prefix and accept any real object - .webp, .mov, .mp4, a thumbnail. Only a
 // definitively empty listing counts as "gone".
 const { S3Client, ListObjectsV2Command, HeadObjectCommand } = require('@aws-sdk/client-s3')
-
-const VIDEO_EXT_RE = /\.(mov|mp4|webm|m4v)$/i
+const { isVideoObjectKey, pickVideoObjectKey } = require('./mediaNaming')
 
 const client = new S3Client({ region: 'us-east-1' })
 
@@ -33,8 +32,10 @@ async function probeMedia (bucket, imageIdRaw) {
     if (Contents.length === 0) return { exists: false, lastModified: '', key: '', inconclusive: false }
 
     // Prefer the media itself over a thumbnail or the <id>.json SEO sidecar, whose mtime moves
-    // every time a comment is written and must not become the page's capture date.
-    const preferred = Contents.find((o) => VIDEO_EXT_RE.test(o.Key)) ||
+    // every time a comment is written and must not become the page's capture date. The video pick
+    // comes from the shared rule so the head and the sitemap entry name the same file.
+    const videoKey = pickVideoObjectKey(imageIdRaw, Contents.map((o) => o.Key))
+    const preferred = (isVideoObjectKey(videoKey) && Contents.find((o) => o.Key === videoKey)) ||
       Contents.find((o) => /\.webp$/.test(o.Key) && !o.Key.endsWith('-thumb.webp')) ||
       Contents.find((o) => !/\.json$/.test(o.Key) && !o.Key.endsWith('-thumb.webp')) ||
       Contents[0]
@@ -56,7 +57,7 @@ async function probeMedia (bucket, imageIdRaw) {
 
 /** Duration metadata written by the upload pipeline; '' when unavailable. */
 async function readDuration (bucket, key) {
-  if (!key || !VIDEO_EXT_RE.test(key)) return ''
+  if (!key || !isVideoObjectKey(key)) return ''
   try {
     const head = await client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }))
     return (head.Metadata && head.Metadata.duration) || ''

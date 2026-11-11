@@ -6,6 +6,7 @@ const { fetchShell } = require('./template')
 const { fetchSidecar } = require('./sidecar')
 const { buildSeoFields } = require('./seoText')
 const { probeMedia, readDuration } = require('./media')
+const { videoObjectKey, imgUrl } = require('./mediaNaming')
 
 const IMG_BUCKET = process.env.WISAW_IMG_BUCKET || 'wisaw-img-prod'
 const FALLBACK_DESCRIPTION = 'Free unaltered video on WiSaw - authentic photos and videos taken with phone cameras.'
@@ -44,8 +45,8 @@ exports.handler = async (event, context, callback) => {
   // Point players and crawlers at the object that actually exists rather than assuming a
   // .mov key: og:video and VideoObject.contentUrl used to 403 for every video not stored
   // under <id>.mov, which makes the rich result invalid.
-  const mediaKey = /\.(mov|mp4|webm|m4v)$/i.test(media.key) ? media.key : `${imageIdRaw}.mov`
-  const videoUrl = `https://img.wisaw.com/${mediaKey}`
+  const mediaKey = videoObjectKey(imageIdRaw, media.key)
+  const videoUrl = imgUrl(mediaKey)
   const created = seo.created || media.lastModified
   const duration = seo.duration || s3Duration
   const index = await fetchShell()

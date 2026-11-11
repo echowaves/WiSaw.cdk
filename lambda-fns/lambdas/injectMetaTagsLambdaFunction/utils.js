@@ -1,5 +1,6 @@
 /* eslint-env node */
-/* global module */
+/* global module, require */
+const { imageObjectKey, thumbnailObjectKey, imgUrl } = require('./mediaNaming')
 const escapeHtmlAttribute = (value = '') =>
   String(value)
     .replace(/&/g, '&amp;')
@@ -20,7 +21,7 @@ const TWITTER_CARD = 'summary_large_image'
 
 // One place decides what a media item's preview image is: the thumbnail, which is also what
 // the app publishes and what the sitemap lists as thumbnail_loc.
-const thumbUrl = (imageId = '') => 'https://img.wisaw.com/' + imageId + '-thumb.webp'
+const thumbUrl = (imageId = '') => imgUrl(thumbnailObjectKey(imageId))
 
 const normalizeImageId = (uri = '') =>
   String(uri)
@@ -295,7 +296,7 @@ function buildSeoBody (options = {}) {
 
   const title = pageTitle || `wisaw ${entityLabel} ${imageIdText}`
   const pageUrl = `https://wisaw.com/${pathSegment}/${encodeURIComponent(imageIdText)}`
-  const imageUrl = `https://img.wisaw.com/${encodeURIComponent(imageIdText)}.webp`
+  const imageUrl = imgUrl(imageObjectKey(encodeURIComponent(imageIdText)))
   // The preview image everywhere else is the thumbnail; structured data must not name a
   // different file as this page's picture. contentUrl keeps the full derivative.
   const previewUrl = thumbUrl(encodeURIComponent(imageIdText))

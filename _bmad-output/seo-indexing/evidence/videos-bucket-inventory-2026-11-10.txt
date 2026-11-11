@@ -1,0 +1,24 @@
+Videos-bucket inventory — evidence for seo-indexing ticket 5 (AC2 / AC4)
+
+Captured: 2026-11-10 by the ticket-4/5 build agent
+Command:  aws s3api list-objects-v2 --bucket wisaw-img-prod --max-items 100000 --query "Contents[].Key" --output text
+Objects listed: 66825 (the CLI paginates; the run completed without truncation)
+
+Extension histogram:
+      webp  43988
+      json  21995
+       mov  842
+
+Video objects: 842
+Distinct video extensions present: mov
+
+Sample video keys:
+  00000000-0000-0000-0000-000000020805.mov
+  00000000-0000-0000-0000-000000020944.mov
+  00000000-0000-0000-0000-000000020945.mov
+  00000000-0000-0000-0000-000000020951.mov
+  00000000-0000-0000-0000-000000020955.mov
+
+Finding: every stored video uses .mov. No sitemap entry 404s today, so the defect
+described by the ticket is latent — it bites the first time a video is stored under any
+other extension, which is what the edge probe in media.js already defends against.

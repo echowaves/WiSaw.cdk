@@ -4,8 +4,15 @@ import psql from "../../psql"
 import { traceLog } from '../../utilities/trace'
 
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3"; // ES Modules import
+import { ListObjectsV2Command } from "@aws-sdk/client-s3"
 
 import { locationText, putSeoSidecars, readSeoWatermark, seoWindowStart, splitImageText, writeSeoWatermark } from '../../utilities/seoSidecar'
+
+// The naming rule lives with the edge injector because that bundle is deployed as a raw folder
+// zip (Code.fromAsset) and cannot reach outside it; this lambda is bundled by esbuild, so it can
+// import across folders. One module decides what a media file is called for both surfaces — the
+// sitemap entry and the page head can no longer name different files.
+import { imageObjectKey, imgUrl, isVideoObjectKey, pickVideoObjectKey, thumbnailObjectKey } from '../../lambdas/injectMetaTagsLambdaFunction/mediaNaming'
 
 // Only photos touched since the last successful run get a fresh sidecar; without a window the
 // job would issue ~22k PUTs every five hours for content that almost never changes.
@@ -45,6 +52,34 @@ async function publishSidecars (client: S3Client, bucket: string, photos: any[],
   } else {
     console.warn('sidecar watermark not advanced', { written, failed })
   }
+}
+
+/**
+ * Stored video keys grouped by media id, from one pass over the media bucket.
+ *
+ * The sitemap used to publish `<id>.mov` without looking: correct while every upload happened to
+ * use that extension, a 404 for search engines the moment one does not — and a page whose head
+ * advertises a different file than its own sitemap entry is worse than either. A full listing is
+ * ~45 paginated calls for the whole corpus (66k objects) and only video keys are retained, so it
+ * costs seconds against the 120s budget instead of one HEAD per video.
+ */
+async function listStoredVideoKeys (client: S3Client, bucket: string): Promise<Map<string, string[]>> {
+  const byId = new Map<string, string[]>()
+  let token: string | undefined
+
+  do {
+    const page = await client.send(new ListObjectsV2Command({ Bucket: bucket, ContinuationToken: token, MaxKeys: 1000 }))
+    for (const obj of page.Contents ?? []) {
+      if (!isVideoObjectKey(obj.Key)) continue
+      const id = obj.Key.slice(0, obj.Key.lastIndexOf('.'))
+      const keys = byId.get(id) ?? []
+      keys.push(obj.Key)
+      byId.set(id, keys)
+    }
+    token = page.IsTruncated === true ? page.NextContinuationToken : undefined
+  } while (token !== undefined && token !== '')
+
+  return byId
 }
 
 // eslint-disable-next-line import/prefer-default-export
@@ -109,6 +144,24 @@ export async function main (event: any = {}, context: any /*, cb: any*/) {
     return false
   }
 
+  // One listing for the whole run: a permission error or a throttled answer must not cost the
+  // site its sitemap, so an unavailable lookup falls back to the naming rule and says so.
+  const imgBucketName = process.env.S3_IMAGES_BUCKET || 'wisaw-img-prod'
+  let storedVideoKeys = new Map<string, string[]>()
+  try {
+    storedVideoKeys = await listStoredVideoKeys(new S3Client({ region: 'us-east-1' }), imgBucketName)
+    console.log('stored video keys:', storedVideoKeys.size)
+  } catch (err) {
+    console.error('video key listing unavailable, falling back to the naming rule', { err })
+  }
+  let unresolvedVideos = 0
+  const videoFileKey = (id: string): string => {
+    const keys = storedVideoKeys.get(id)
+    if (keys === undefined || keys.length === 0) unresolvedVideos += 1
+    return pickVideoObjectKey(id, keys ?? [])
+  }
+
+
   photos?.forEach((photo: any) => {
     // const jsonObj = JSON.parse(JSON.stringify(photo))
     // lastmod is what tells Google a URL is worth re-crawling. A sitemap of 21k URLs with no
@@ -125,12 +178,13 @@ export async function main (event: any = {}, context: any /*, cb: any*/) {
       lastmod,
       video: [
         {
-          thumbnail_loc: `https://img.wisaw.com/${photo.id}-thumb.webp`,
+          thumbnail_loc: imgUrl(thumbnailObjectKey(photo.id)),
           title,
           // A video has a description rather than a caption slot, but it follows the same rule and
           // the same limit: the comment captions it, the tags never do.
           description: caption,
-          content_loc: `https://img.wisaw.com/${photo.id}.mov`,
+          // The object that exists; `<id>.mov` only when storage had nothing for this id.
+          content_loc: imgUrl(videoFileKey(photo.id)),
           publication_date: createdAt,
           family_friendly: true
         }
@@ -144,7 +198,7 @@ export async function main (event: any = {}, context: any /*, cb: any*/) {
         lastmod,
         img: [
           {
-            url: `https://img.wisaw.com/${photo.id}.webp`,
+            url: imgUrl(imageObjectKey(photo.id)),
             title,
             caption,
             geoLocation: locationText(photo) || undefined,
@@ -154,6 +208,10 @@ export async function main (event: any = {}, context: any /*, cb: any*/) {
       })
     }
   })
+
+  if (unresolvedVideos > 0) {
+    console.warn('videos with no stored object found, published under the default extension', { unresolvedVideos })
+  }
 
   smStream.end()
   const buffer = await streamToPromise(smStream)
@@ -188,13 +246,12 @@ export async function main (event: any = {}, context: any /*, cb: any*/) {
   // labels and place that make a page rankable are published as a small JSON object next to
   // the media. A failure here costs ranking quality, never the sitemap itself.
   try {
-    const imgBucket = process.env.S3_IMAGES_BUCKET || 'wisaw-img-prod'
     // {"backfill": true} publishes a sidecar for every photo in the feed rather than only
     // recently touched ones. The feed is ordered newest-first, so an invocation that runs out
     // of time leaves the oldest photos behind and the set converges from the valuable end;
     // PUTs are idempotent, so re-invoking is always safe.
     const backfill = event?.backfill === true
-    await publishSidecars(new S3Client({ region: 'us-east-1' }), imgBucket, photos ?? [], backfill)
+    await publishSidecars(new S3Client({ region: 'us-east-1' }), imgBucketName, photos ?? [], backfill)
   } catch (err) {
     console.error("Unable to publish SEO sidecars", { err })
   }

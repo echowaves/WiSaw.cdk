@@ -171,3 +171,82 @@ describe('generateSiteMap - two texts in the emitted XML', () => {
     expect(plain).to.include('<video:description>Heron</video:description>')
   })
 })
+
+describe('generateSiteMap - the video file a sitemap entry names', () => {
+  const originals = { connect: psql.connect, query: psql.query, clean: psql.clean }
+  const sendWas = S3Client.prototype.send
+
+  afterEach(() => {
+    psql.connect = originals.connect
+    psql.query = originals.query
+    psql.clean = originals.clean
+    S3Client.prototype.send = sendWas
+  })
+
+  /**
+   * Runs main() over fixed rows against a bucket that holds `storedKeys`.
+   * `failListing` simulates the listing itself being unavailable (permissions, throttling).
+   */
+  async function publishStored (rows, storedKeys, { failListing = false } = {}) {
+    const puts = []
+    psql.connect = async () => {}
+    psql.clean = async () => {}
+    psql.query = async (sql) => ({ rows: /FROM "Photos"/i.test(sql) ? rows : [] })
+    S3Client.prototype.send = async function (cmd) {
+      const name = cmd?.constructor?.name ?? ''
+      if (name === 'ListObjectsV2Command' || String(cmd?.input?.MaxKeys) === '1000') {
+        if (failListing) throw new Error('AccessDenied')
+        return { Contents: storedKeys.map((Key) => ({ Key })), IsTruncated: false }
+      }
+      puts.push(cmd)
+      return {}
+    }
+
+    const ok = await main({})
+    expect(ok, 'main() aborted before publishing').to.equal(true)
+    const sitemapPut = puts.find((cmd) => cmd.input?.Key === 'sitemap.xml')
+    expect(sitemapPut, 'no sitemap.xml PUT').to.not.equal(undefined)
+    return String(sitemapPut.input.Body)
+  }
+
+  it('names the stored object when a video is not a .mov', async () => {
+    const id = 'e'.repeat(36)
+    const xml = await publishStored(
+      [mediaRow({ id, video: true, labels: ['Heron'] })],
+      [`${id}.mp4`, `${id}-thumb.webp`]
+    )
+    expect(xml).to.include(`<video:content_loc>https://img.wisaw.com/${id}.mp4</video:content_loc>`)
+    expect(xml).to.not.include(`${id}.mov`)
+  })
+
+  it('names the .mov object that exists, and falls back to it when storage has nothing', async () => {
+    const known = 'f'.repeat(36)
+    const missing = '0'.repeat(36)
+    const xml = await publishStored(
+      [mediaRow({ id: known, video: true, labels: ['Heron'] }), mediaRow({ id: missing, video: true, labels: ['Heron'] })],
+      [`${known}.mov`]
+    )
+    expect(xml).to.include(`<video:content_loc>https://img.wisaw.com/${known}.mov</video:content_loc>`)
+    // An id storage never reported is still published — a missing lookup must not drop a page,
+    // and the naming rule's documented extension keeps the URL well-formed.
+    expect(xml).to.include(`<video:content_loc>https://img.wisaw.com/${missing}.mov</video:content_loc>`)
+  })
+
+  it('publishes photo image and video thumbnail URLs unchanged', async () => {
+    const photoId = '1'.repeat(36)
+    const videoId = '2'.repeat(36)
+    const xml = await publishStored(
+      [mediaRow({ id: photoId, labels: ['Heron'] }), mediaRow({ id: videoId, video: true, labels: ['Heron'] })],
+      [`${videoId}.mov`]
+    )
+    expect(xml).to.include(`<image:loc>https://img.wisaw.com/${photoId}.webp</image:loc>`)
+    expect(xml).to.include(`<video:thumbnail_loc>https://img.wisaw.com/${videoId}-thumb.webp</video:thumbnail_loc>`)
+  })
+
+  it('still publishes the sitemap when the listing is unavailable', async () => {
+    const id = '3'.repeat(36)
+    const xml = await publishStored([mediaRow({ id, video: true, labels: ['Heron'] })], [], { failListing: true })
+    expect(xml).to.include(`/videos/${id}`)
+    expect(xml).to.include(`<video:content_loc>https://img.wisaw.com/${id}.mov</video:content_loc>`)
+  })
+})
