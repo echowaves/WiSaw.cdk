@@ -62,6 +62,23 @@ function moov (opts, shape = {}) {
   return box('moov', payload, shape)
 }
 
+// Stands in for the shared psql client so the write path can be observed without a database.
+function stubDb () {
+  const calls = []
+  const original = { connect: psql.connect, query: psql.query, clean: psql.clean }
+  let connects = 0
+  let cleans = 0
+  psql.connect = async () => { connects += 1 }
+  psql.query = async (sql, values) => { calls.push({ sql, values }); return { rows: [] } }
+  psql.clean = async () => { cleans += 1 }
+  return {
+    learner,
+    calls,
+    stats: () => ({ connects, cleans }),
+    restore () { Object.assign(psql, original) }
+  }
+}
+
 function trackedSource (buf) {
   const state = { bytesRead: 0, reads: 0 }
   return {
@@ -175,22 +192,6 @@ describe('duration rules', () => {
 })
 
 describe('storing a learned duration', () => {
-  function stubDb () {
-    const calls = []
-    const original = { connect: psql.connect, query: psql.query, clean: psql.clean }
-    let connects = 0
-    let cleans = 0
-    psql.connect = async () => { connects += 1 }
-    psql.query = async (sql, values) => { calls.push({ sql, values }); return { rows: [] } }
-    psql.clean = async () => { cleans += 1 }
-    return {
-      learner,
-      calls,
-      stats: () => ({ connects, cleans }),
-      restore () { Object.assign(psql, original) }
-    }
-  }
-
   it('writes the seconds for every learned row through one connection', async () => {
     const db = stubDb()
     try {
@@ -218,6 +219,88 @@ describe('storing a learned duration', () => {
     } finally {
       db.restore()
     }
+    expect(db.stats()).to.deep.equal({ connects: 0, cleans: 0 })
+  })
+})
+
+describe('the learning pass', () => {
+  // Stands in for S3 well enough for the learner's own logic: which rows it touches, what it does
+  // with an answer, and what it leaves alone when a file says nothing.
+  function fakeS3 (objects) {
+    const seen = []
+    return {
+      seen,
+      async send (command) {
+        const input = command.input ?? {}
+        const name = command.constructor?.name ?? ''
+        seen.push(name)
+        if (name === 'ListObjectsV2Command') {
+          const id = String(input.Prefix ?? '').replace(/\.$/, '')
+          return { Contents: objects[id] != null ? [{ Key: `${id}.mov` }] : [] }
+        }
+        const entry = objects[String(input.Key ?? '').split('.')[0]]
+        if (entry == null) throw Object.assign(new Error('NoSuchKey'), { name: 'NotFound' })
+        if (name === 'GetObjectCommand') {
+          const [, from, to] = /bytes=(\d+)-(\d+)/.exec(input.Range)
+          const bytes = entry.subarray(Number(from), Number(to) + 1)
+          return { Body: { transformToByteArray: async () => new Uint8Array(bytes) } }
+        }
+        return { ContentLength: entry.length }
+      }
+    }
+  }
+
+  const ANSWERING = Buffer.concat([box('ftyp', Buffer.alloc(24)), moov({ timescale: 1000, duration: 48000 }), box('mdat', Buffer.alloc(2048))])
+  const SILENT = Buffer.concat([box('ftyp', Buffer.alloc(24)), box('mdat', Buffer.alloc(2048))])
+
+  it('learns from the rows that answer and leaves the rest untouched', async () => {
+    const db = stubDb()
+    const client = fakeS3({ v1: ANSWERING, v2: SILENT })
+    const rows = [
+      { id: 'v1', video: true, duration: null },
+      { id: 'p1', video: false, duration: null },
+      { id: 'v2', video: true, duration: null }
+    ]
+    let result = null
+    try {
+      result = await learner.learnVideoDurations(rows, { bucket: 'wisaw-img-test', client })
+    } finally {
+      db.restore()
+    }
+    expect(result.checked).to.equal(2) // the photo is not a candidate at all
+    expect(result.learned.map((row) => row.id)).to.deep.equal(['v1'])
+    expect(result.failed).to.equal(0)
+    // Mutated in place, so the caller publishes this run's record with the value it just learned.
+    expect(rows[0].duration).to.equal(48)
+    expect(rows[2].duration).to.equal(null)
+    expect(db.calls.map((call) => call.values)).to.deep.equal([['v1', 48]])
+  })
+
+  it('bounds the work per run without losing what it did read', async () => {
+    const db = stubDb()
+    const client = fakeS3({ v1: ANSWERING, v2: ANSWERING })
+    const rows = [{ id: 'v1', video: true }, { id: 'v2', video: true }]
+    let limited = null
+    try {
+      limited = await learner.learnVideoDurations(rows, { bucket: 'wisaw-img-test', client, limit: 1 })
+    } finally {
+      db.restore()
+    }
+    expect(limited.checked).to.equal(1)
+    expect(limited.learned.map((row) => row.id)).to.deep.equal(['v1'])
+  })
+
+  it('does not ask storage for a video that already has a duration', async () => {
+    const db = stubDb()
+    const client = fakeS3({ v1: ANSWERING })
+    let result = null
+    try {
+      result = await learner.learnVideoDurations([{ id: 'v1', video: true, duration: 48 }], { bucket: 'wisaw-img-test', client })
+    } finally {
+      db.restore()
+    }
+    expect(result.checked).to.equal(0)
+    expect(client.seen).to.deep.equal([])
     expect(db.stats()).to.deep.equal({ connects: 0, cleans: 0 })
   })
 })
