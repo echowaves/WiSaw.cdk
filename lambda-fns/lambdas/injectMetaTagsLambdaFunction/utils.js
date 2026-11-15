@@ -24,9 +24,18 @@ const ROBOTS_INDEX = 'index, follow, max-image-preview:large, max-snippet:-1, ma
 // body invites indexing gets crawled by whichever signal a crawler trusts more.
 const ROBOTS_NOINDEX = 'noindex, follow'
 const TWITTER_CARD = 'summary_large_image'
-// The container players are told to expect. Same value the browser app's JSON-LD encodingFormat
-// carries, so a crawler that reads one surface and a player that reads the other agree.
-const VIDEO_OG_TYPE = 'video/mp4'
+// og:video:type names the container of THIS file, and storage keeps several: mediaNaming's
+// VIDEO_EXTENSIONS covers mov/webm/m4v/mp4, and its no-storage-info fallback even publishes
+// <id>.mov. The browser app used to derive this from the URL extension in its own (now deleted)
+// JSON-LD copy; the edge owns the fact outright now, so it reads it off the same key rather than
+// asserting mp4 for every file. Unknown extensions keep the documented mp4 default, which is
+// what videoObjectKey's fallback produces anyway.
+const VIDEO_OG_TYPES = { mov: 'video/quicktime', webm: 'video/webm', m4v: 'video/mp4', mp4: 'video/mp4' }
+
+function videoOgType (videoUrl = '') {
+  const ext = /\.([a-z0-9]+)$/i.exec(String(videoUrl).split(/[?#]/)[0])
+  return (ext && VIDEO_OG_TYPES[ext[1].toLowerCase()]) || 'video/mp4'
+}
 
 // One place decides what a media item's preview image is: the thumbnail, which is also what
 // the app publishes and what the sitemap lists as thumbnail_loc.
@@ -367,7 +376,6 @@ function buildSeoBody (options = {}) {
   // it, because the browser app publishes no structured data of its own on these routes any more.
   return SKELETON_STYLE +
     renderSkeleton({
-      route: entityLabel === 'video' ? 'videos' : 'photos',
       mediaHtml,
       boxStyle: mediaBoxStyle(width, height),
       title: escText(title),
@@ -398,7 +406,7 @@ function videoMetaTags (options = {}) {
     (seconds == null ? '' : '      <meta property="og:video:duration" content="' + seconds + '" data-rh="true">\n') +
     '      <meta property="og:video:url" content="' + safeVideoUrl + '" data-rh="true">\n' +
     '      <meta property="og:video:secure_url" content="' + safeVideoUrl + '" data-rh="true">\n' +
-    '      <meta property="og:video:type" content="' + VIDEO_OG_TYPE + '" data-rh="true">\n' +
+    '      <meta property="og:video:type" content="' + videoOgType(videoUrl) + '" data-rh="true">\n' +
     // The video's preview is the thumbnail - the same file og:image already names.
     '      <meta property="og:video:image" content="' + thumbUrl(imageIdUrl) + '" data-rh="true">\n' +
     dims
@@ -584,7 +592,7 @@ function injectRouteTags (html = '', options = {}) {
 module.exports = {
   SITE_NAME,
   LOCALE,
-  VIDEO_OG_TYPE,
+  videoOgType,
   ROBOTS_INDEX,
   ROBOTS_NOINDEX,
   TWITTER_CARD,

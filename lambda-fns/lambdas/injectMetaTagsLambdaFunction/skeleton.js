@@ -78,8 +78,8 @@ function slot (name) {
  * `mediaHtml` arrives escaped by utils.js - this module never receives raw record text.
  */
 function renderSkeleton (parts = {}) {
-  const { route = 'photos', mediaHtml = '', boxStyle = '', title = '', descriptionHtml = '', labelLinksHtml = '', navHtml = '' } = parts
-  return '<div class="wsk" data-wisaw-route="' + route + '">' +
+  const { mediaHtml = '', boxStyle = '', title = '', descriptionHtml = '', labelLinksHtml = '', navHtml = '' } = parts
+  return '<div class="wsk">' +
     slot('header') +
     '<div class="wsk-main">' +
     '<div class="wsk-box" style="' + boxStyle + '">' + mediaHtml + '</div>' +

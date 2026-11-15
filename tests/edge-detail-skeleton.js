@@ -4,7 +4,7 @@ const { describe, it } = require('mocha')
 const fs = require('fs')
 const path = require('path')
 
-const { injectMetaTags, buildSeoBody } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/utils')
+const { injectMetaTags, buildSeoBody, videoOgType } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/utils')
 const { SKELETON_STYLE, BELOW_MEDIA_RESERVE_PX, HEADER_DESKTOP_PX, HEADER_MOBILE_PX } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/skeleton')
 
 // The real served shell: the skeleton has to survive the same structural mount-point scan that
@@ -94,11 +94,6 @@ describe('edge detail skeleton - what the client needs to adopt it', () => {
     const wrapped = /<div class="wsk-box"[^>]*><(img|video)\b[^>]*data-wisaw-media/.test(body)
     expect(wrapped).to.equal(true)
     expect(SKELETON_STYLE).to.match(/\.wsk-box\{position:relative/)
-  })
-
-  it('names the route kind so an enhancement layer can tell photos from videos', () => {
-    expect(buildSeoBody(PHOTO_BODY_OPTIONS)).to.include('data-wisaw-route="photos"')
-    expect(buildSeoBody(VIDEO_BODY_OPTIONS)).to.include('data-wisaw-route="videos"')
   })
 
   it('gives the video a src, which adoption requires before it takes over the player', () => {
@@ -193,6 +188,31 @@ describe('video poster - never the full-resolution derivative', () => {
     expect(metaContent(html, 'og:video:width')).to.equal('1920')
     expect(metaContent(html, 'og:video:height')).to.equal('1080')
     expect(metaContent(html, 'og:video:duration')).to.equal('48')
+  })
+
+  it('names the container the file actually is, per extension', () => {
+    expect(videoOgType(`https://img.wisaw.com/${ROUTE_ID}.mp4`)).to.equal('video/mp4')
+    expect(videoOgType(`https://img.wisaw.com/${ROUTE_ID}.mov`)).to.equal('video/quicktime')
+    expect(videoOgType(`https://img.wisaw.com/${ROUTE_ID}.webm`)).to.equal('video/webm')
+    expect(videoOgType(`https://img.wisaw.com/${ROUTE_ID}.m4v`)).to.equal('video/mp4')
+    // videoObjectKey's documented fallback is <id>.mov; a keyless URL keeps the mp4 default.
+    expect(videoOgType(`https://img.wisaw.com/${ROUTE_ID}`)).to.equal('video/mp4')
+  })
+
+  it('publishes quicktime for a .mov object instead of claiming mp4', () => {
+    const movUrl = `https://img.wisaw.com/${ROUTE_ID}.mov`
+    const html = injectMetaTags(SERVED_SHELL, {
+      description: 'Harbour at dusk.',
+      entityLabel: 'video',
+      ogType: 'video.other',
+      pathSegment: 'videos',
+      imageIdText: ROUTE_ID,
+      imageIdUrl: ROUTE_ID,
+      videoUrl: movUrl,
+      bodyHtml: buildSeoBody({ ...VIDEO_BODY_OPTIONS, videoUrl: movUrl })
+    })
+    expect(metaContent(html, 'og:video')).to.equal(movUrl)
+    expect(metaContent(html, 'og:video:type')).to.equal('video/quicktime')
   })
 
   it('omits video dimensions rather than guessing them', () => {
@@ -315,5 +335,31 @@ describe('the skeleton through the real mount point', () => {
     expect(body).to.include(`<p>${PHOTO_BODY_OPTIONS.description}</p>`)
     expect(body).to.include('<a rel="tag" href="/search/pier">pier</a> <a rel="tag" href="/search/dusk">dusk</a>')
     expect(body).to.include('<nav><a href="/">WiSaw - free authentic stock photos and videos</a></nav>')
+  })
+})
+
+describe('the fixture against the real client shell', () => {
+  // tests/fixtures/served-index.html is a trimmed snapshot of WiSaw.client's index.html, kept in
+  // step by hand (brief §5). When the client repo is checked out beside this one, pin the
+  // boot-critical structure both files must share, so a fixture that drifted from the shell that
+  // actually ships fails here instead of blessing a broken injection contract.
+  const CLIENT_SHELL = path.join(__dirname, '..', '..', 'WiSaw.client', 'index.html')
+  const check = fs.existsSync(CLIENT_SHELL) ? it : it.skip
+
+  check('keeps one mount point, a module script and the reload guard in both files', () => {
+    const shell = fs.readFileSync(CLIENT_SHELL, 'utf8')
+    for (const [name, html] of [['fixture', SERVED_SHELL], ['client shell', shell]]) {
+      expect(countOf(html, /<div\b[^>]*\bid=["']root["']/gi), name).to.equal(1)
+      expect(/<script\b[^>]*type="module"/i.test(html), name).to.equal(true)
+      expect(html.includes('wisaw-reload-at'), `${name} reload guard`).to.equal(true)
+    }
+  })
+
+  check('carries no boot marker the real shell does not have', () => {
+    const shell = fs.readFileSync(CLIENT_SHELL, 'utf8')
+    const shellMarkers = new Set(shell.match(/data-wisaw-[a-z-]+/g) || [])
+    for (const marker of new Set(SERVED_SHELL.match(/data-wisaw-[a-z-]+/g) || [])) {
+      expect(shellMarkers.has(marker), marker).to.equal(true)
+    }
   })
 })
