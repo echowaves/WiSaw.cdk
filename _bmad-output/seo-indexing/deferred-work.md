@@ -55,3 +55,7 @@
 - source_plan: `_bmad-output/seo-indexing/tickets/bug-edge-head-tags-rewritten-by-spa-plan.md`
   summary: OPERATIONAL — deploy the client before the edge. Ticket 4 marks the template's `robots` / `og:site_name` with `data-rh` and strips + re-injects them at the edge; a bundle deployed *before* that change declares no `robots`, so it removes the newly marked tag on hydration and the page keeps only the `X-Robots-Tag` header. Upload `build/` first, then publish the Lambda@Edge version.
   evidence: Quick review finding 15 on the ticket 4 diff; window exists only because deploys are manual and independent in the two repos.
+
+- source_plan: `_bmad-output/seo-indexing/plan-edge-detail-skeleton.md`
+  summary: `og:video:type` is published as `video/mp4` for every video, but `og:video:url` names whatever object storage actually holds — `mediaNaming.VIDEO_EXTENSIONS` puts `mov` first and `videoObjectKey()` falls back to `<id>.mov`, so an iPhone upload is announced with the wrong MIME type. Decide whether the edge derives the type from the resolved key (`mov` → `video/quicktime`, `webm` → `video/webm`) or the contract stays one literal, and pin it in both repos.
+  evidence: Quick review finding on the edge-skeleton diff. Not patched because `_bmad-output/seo-indexing/backend-solicitation-edge-skeleton.md` §3 C2 pins `og:video:type=video/mp4` as the value the client contract expects, so changing it unilaterally would break an agreed cross-repo constant; the pre-existing `og:video` tag already named the same key.
