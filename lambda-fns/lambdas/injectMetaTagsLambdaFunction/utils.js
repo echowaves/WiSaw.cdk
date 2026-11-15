@@ -2,6 +2,7 @@
 /* global module, require */
 const { imageObjectKey, thumbnailObjectKey, imgUrl } = require('./mediaNaming')
 const { durationSeconds, iso8601Duration } = require('./seoRules')
+const { SKELETON_STYLE, MEDIA_ONERROR, mediaBoxStyle, renderSkeleton, breadcrumbGraph } = require('./skeleton')
 const escapeHtmlAttribute = (value = '') =>
   String(value)
     .replace(/&/g, '&amp;')
@@ -23,6 +24,9 @@ const ROBOTS_INDEX = 'index, follow, max-image-preview:large, max-snippet:-1, ma
 // body invites indexing gets crawled by whichever signal a crawler trusts more.
 const ROBOTS_NOINDEX = 'noindex, follow'
 const TWITTER_CARD = 'summary_large_image'
+// The container players are told to expect. Same value the browser app's JSON-LD encodingFormat
+// carries, so a crawler that reads one surface and a player that reads the other agree.
+const VIDEO_OG_TYPE = 'video/mp4'
 
 // One place decides what a media item's preview image is: the thumbnail, which is also what
 // the app publishes and what the sitemap lists as thumbnail_loc.
@@ -271,10 +275,28 @@ function renderRootBody (html = '', bodyHtml = '') {
   return injected
 }
 
-// Crawler-visible body markup for photo/video pages: heading with the real title, the
-// media itself with alt text, a description paragraph, a small link graph (home, image,
-// entity label searches), and schema.org structured data. This is what lets the page be
-// indexed and appear in Google Image/Video search without executing JavaScript.
+// The one media element the browser paints first, with the attributes the client's adoption check
+// reads (data-wisaw-media, data-wisaw-id, numeric width/height). A photo keeps the full-resolution
+// object: the edge cannot know the viewport, and the shell's preload/swap scripts already demote it
+// to the thumb below the breakpoint. A video wears the thumbnail as its poster instead - that
+// paint is its LCP candidate, and the full-size derivative it used to point at cost 20 s on a
+// throttled phone. The full-res object still exists for crawlers in JSON-LD contentUrl.
+function mediaElement (options = {}) {
+  const { entityLabel = '', imageUrl = '', previewUrl = '', videoUrl = '', altText = '', mediaId = '', width = '', height = '' } = options
+  // No dimensions means no honest box: the client declines to adopt a page whose media has no
+  // numeric size, and renders that route itself rather than guessing.
+  const dims = (width && height) ? ` width="${escapeHtmlAttribute(width)}" height="${escapeHtmlAttribute(height)}"` : ''
+  const adoption = ` data-wisaw-media data-wisaw-id="${escapeHtmlAttribute(mediaId)}" class="wsk-media" onerror="${MEDIA_ONERROR}"`
+  if (entityLabel === 'video') {
+    return `<video controls preload="none"${adoption} poster="${escapeHtmlAttribute(previewUrl)}"${dims} src="${escapeHtmlAttribute(videoUrl)}"></video>`
+  }
+  return `<img${adoption} src="${escapeHtmlAttribute(imageUrl)}" alt="${escapeHtmlAttribute(altText)}"${dims} loading="eager">`
+}
+
+// Crawler-visible body markup for photo/video pages: the full static skeleton the client adopts
+// (reserved header, media in its fixed box, heading, description, label links, below-fold reserve)
+// plus schema.org structured data. This is what lets the page be indexed and appear in Google
+// Image/Video search without executing JavaScript - and what lets a browser paint it once.
 function buildSeoBody (options = {}) {
   const {
     entityLabel = 'photo',
@@ -313,16 +335,6 @@ function buildSeoBody (options = {}) {
     .map((label) => `<a rel="tag" href="/search/${escAttr(encodeURIComponent(label))}">${escText(label)}</a>`)
     .join(' ')
 
-  let media
-  if (entityLabel === 'video') {
-    const poster = ` poster="${escAttr(imageUrl)}"`
-    const dims = (width && height) ? ` width="${escAttr(width)}" height="${escAttr(height)}"` : ''
-    media = `<video controls preload="none"${poster}${dims} src="${escAttr(videoUrl)}"></video>`
-  } else {
-    const dims = (width && height) ? ` width="${escAttr(width)}" height="${escAttr(height)}"` : ''
-    media = `<img src="${escAttr(imageUrl)}" alt="${escAttr(altText)}"${dims} loading="eager">`
-  }
-
   const jsonLd = entityLabel === 'video'
     ? {
         '@context': 'https://schema.org',
@@ -349,14 +361,47 @@ function buildSeoBody (options = {}) {
         url: pageUrl
       }
 
-  return (
-    `<h1>${escText(title)}</h1>` +
-    media +
-    `<p>${escText(description)}</p>` +
-    (labelLinks ? `<p>${labelLinks}</p>` : '') +
-    '<nav><a href="/">WiSaw - free authentic stock photos and videos</a></nav>' +
-    `<script type="application/ld+json">${safeJson(jsonLd)}</script>`
-  )
+  const mediaHtml = mediaElement({ entityLabel, imageUrl, previewUrl, videoUrl, altText, mediaId: imageIdText, width, height })
+
+  // Two graphs in two blocks: the media object keeps its exact shape and the BreadcrumbList joins
+  // it, because the browser app publishes no structured data of its own on these routes any more.
+  return SKELETON_STYLE +
+    renderSkeleton({
+      route: entityLabel === 'video' ? 'videos' : 'photos',
+      mediaHtml,
+      boxStyle: mediaBoxStyle(width, height),
+      title: escText(title),
+      descriptionHtml: `<p>${escText(description)}</p>`,
+      labelLinksHtml: labelLinks ? `<p>${labelLinks}</p>` : '',
+      navHtml: '<nav><a href="/">WiSaw - free authentic stock photos and videos</a></nav>'
+    }) +
+    `<script type="application/ld+json">${safeJson(jsonLd)}</script>` +
+    `<script type="application/ld+json">${safeJson(breadcrumbGraph({ title, pageUrl }))}</script>`
+}
+
+// The full Open Graph video block. The browser app published these through Helmet and stops doing
+// so once the adopted skeleton ships, so the served bytes have to carry them: a player given only
+// og:video has no dimensions to lay the player out with and no preview that is not the page image.
+function videoMetaTags (options = {}) {
+  const { videoUrl = '', videoDuration = null, imageIdUrl = '', width = '', height = '' } = options
+  if (!videoUrl) return ''
+  const safeVideoUrl = escapeHtmlAttribute(videoUrl)
+  // Dimensions come from the record or not at all - a guessed size is a wrong fact about the file.
+  const dims = (width && height)
+    ? '      <meta property="og:video:width" content="' + escapeHtmlAttribute(width) + '" data-rh="true">\n' +
+      '      <meta property="og:video:height" content="' + escapeHtmlAttribute(height) + '" data-rh="true">\n'
+    : ''
+  // Open Graph wants whole seconds here while the JSON-LD below wants ISO 8601; both come from the
+  // same stored number, and neither is written when nobody has measured this video.
+  const seconds = durationSeconds(videoDuration)
+  return '      <meta property="og:video" content="' + safeVideoUrl + '" data-rh="true">\n' +
+    (seconds == null ? '' : '      <meta property="og:video:duration" content="' + seconds + '" data-rh="true">\n') +
+    '      <meta property="og:video:url" content="' + safeVideoUrl + '" data-rh="true">\n' +
+    '      <meta property="og:video:secure_url" content="' + safeVideoUrl + '" data-rh="true">\n' +
+    '      <meta property="og:video:type" content="' + VIDEO_OG_TYPE + '" data-rh="true">\n' +
+    // The video's preview is the thumbnail - the same file og:image already names.
+    '      <meta property="og:video:image" content="' + thumbUrl(imageIdUrl) + '" data-rh="true">\n' +
+    dims
 }
 
 function injectMetaTags (html = '', options = {}) {
@@ -371,6 +416,8 @@ function injectMetaTags (html = '', options = {}) {
     pageTitle = '',
     videoUrl = '',
     videoDuration = null,
+    width = '',
+    height = '',
     imageTitle = '',
     imageCaption = '',
     bodyHtml = ''
@@ -409,7 +456,7 @@ function injectMetaTags (html = '', options = {}) {
     '<title>' + safePageTitle + '</title>'
   )
 
-  let metaTags = '</title>\n' +
+  const metaTags = '</title>\n' +
       renderDescriptionTags(metaDescription || description) +
       '      <meta name="robots" content="' + ROBOTS_INDEX + '" data-rh="true">\n' +
       // The preview image is the thumbnail, the same file the app publishes and the sitemap
@@ -425,18 +472,8 @@ function injectMetaTags (html = '', options = {}) {
       '      <meta property=\'og:type\' content=\'' + safeOgType + '\' data-rh="true"/>\n' +
       '      <meta name="twitter:title" content="' + safePageTitle + '" data-rh="true">\n' +
       '      <meta name="twitter:card" content="' + TWITTER_CARD + '" data-rh="true">\n' +
-      '      <meta name="twitter:image" content="' + thumbUrl(safeImageIdUrl) + '" data-rh="true">\n'
-
-  if (videoUrl) {
-    const safeVideoUrl = escapeHtmlAttribute(videoUrl)
-    metaTags += '      <meta property="og:video" content="' + safeVideoUrl + '" data-rh="true">\n'
-    // Open Graph wants whole seconds here while the JSON-LD below wants ISO 8601; both come from the
-    // same stored number, and neither is written when nobody has measured this video.
-    const seconds = durationSeconds(videoDuration)
-    if (seconds != null) {
-      metaTags += '      <meta property="og:video:duration" content="' + seconds + '" data-rh="true">\n'
-    }
-  }
+      '      <meta name="twitter:image" content="' + thumbUrl(safeImageIdUrl) + '" data-rh="true">\n' +
+      videoMetaTags({ videoUrl, videoDuration, imageIdUrl: safeImageIdUrl, width, height })
 
   const canonicalUrl = 'https://wisaw.com/' + safePathSegment + '/' + safeCanonicalId
 
@@ -547,6 +584,7 @@ function injectRouteTags (html = '', options = {}) {
 module.exports = {
   SITE_NAME,
   LOCALE,
+  VIDEO_OG_TYPE,
   ROBOTS_INDEX,
   ROBOTS_NOINDEX,
   TWITTER_CARD,
