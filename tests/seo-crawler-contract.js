@@ -235,10 +235,73 @@ describe('<id>.json sidecar - a place name is fine, a coordinate never is', () =
       .to.equal('Coney Island, Brooklyn, New York')
   })
 
-  it('the backfill query selects the address columns and never the geography column', () => {
-    expect(QUERY).to.match(/"locality"/)
-    expect(QUERY).to.match(/"region"/)
-    expect(QUERY).to.not.match(/p\."location"|ST_As|ST_Distance|latitude|longitude/i)
+  // A measured video is where the two writers used to disagree: the script's query listed its
+  // columns by hand and never learned about "duration", so a backfill pass rewrote every video
+  // record without one - and since an S3 PUT does not move "updatedAt", the scheduled refresh had
+  // no reason to come back and put it right. These cases make that impossible to repeat.
+  const measuredVideo = { ...row, video: true, duration: 47 }
+
+  it('publishes a measured duration identically whichever writer runs', () => {
+    expect(buildSeoSidecar(measuredVideo).duration).to.equal(47)
+    expect(buildSidecar(measuredVideo)).to.deep.equal(buildSeoSidecar(measuredVideo))
+    expect(JSON.stringify(buildSidecar(measuredVideo))).to.contain('"duration":47')
+  })
+
+  it('omits a duration nobody has measured instead of stating zero', () => {
+    for (const [name, build] of [['utility', buildSeoSidecar], ['script', buildSidecar]]) {
+      expect(build({ ...measuredVideo, duration: null }), name).to.not.have.property('duration')
+    }
+  })
+
+  it('the backfill query hands over every field the record is built from', () => {
+    // Derived, not listed by hand: a column list that forgets a field buildSeoRecord reads is
+    // exactly how duration went missing, and a hardcoded list here would go stale the same way.
+    const consumed = ['id', 'video', 'lastComment', 'createdAt', 'width', 'height', 'duration',
+      'labels', 'locality', 'district', 'region']
+    const selected = /\bp\.\*/.test(QUERY)
+      ? null
+      : [...QUERY.matchAll(/p\."(\w+)"|COALESCE\(r\."(\w+)"/g)].map((m) => m[1] ?? m[2])
+    if (selected !== null) {
+      for (const field of consumed) {
+        expect(selected, `query selects "${field}"`).to.include(field)
+      }
+    }
+    // Whatever the query provides must still yield the record a live writer publishes.
+    const provided = selected === null
+      ? measuredVideo
+      : Object.fromEntries(Object.entries(measuredVideo).filter(([key]) => selected.includes(key)))
+    expect(buildSidecar(provided)).to.deep.equal(buildSeoSidecar(measuredVideo))
+  })
+
+  it('the script delegates its write to the live writers rather than repeating it', () => {
+    // The PUT is where the key, content type and cache control come from. A second copy of it here
+    // would let the backfill publish an object the edge then reads differently from an upload's.
+    const src = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'publish-seo-sidecars.js'), 'utf8')
+    expect(src).to.match(/putSeoSidecar\(/)
+    expect(src).to.not.match(/new PutObjectCommand/)
+  })
+
+  it('every writer reads one row shape out of Photos', () => {
+    // The builder was always shared; what drifted was what a writer SELECTed. So pin the SELECT
+    // itself, read straight from each source file: an explicit column list creeping back into any
+    // writer fails here instead of publishing thinner records to 21k public objects.
+    const oneRowShape = 'select p.*, coalesce(r."labels", \'[]\'::jsonb) as "labels" from "photos" p'
+    const flat = (sql) => sql.replace(/\s+/g, ' ').toLowerCase()
+    const sources = {
+      backfill: QUERY,
+      upload: fs.readFileSync(path.join(__dirname, '..', 'lambda-fns', 'controllers', 'photos', '_updateSeoSidecar.ts'), 'utf8'),
+      scheduled: fs.readFileSync(path.join(__dirname, '..', 'lambda-fns', 'lambdas', 'generateSiteMap', 'index.ts'), 'utf8')
+    }
+    for (const [name, sql] of Object.entries(sources)) {
+      expect(flat(sql), `${name} selects the shared row shape`).to.contain(oneRowShape)
+    }
+  })
+
+  it('the backfill query never asks Postgres for coordinates', () => {
+    // The address columns are what make a place name. p.* fetches the geography column, which the
+    // builder ignores (see the geometry cases above) - but no writer may spell out a coordinate.
+    expect(QUERY).to.not.match(/ST_As|ST_Distance|ST_X|ST_Y|latitude|longitude/i)
+    expect(buildSidecar({ ...row, location: GEOMETRY_FORMS.pointText })).to.deep.equal(buildSeoSidecar(row))
   })
 
   it('the edge reader drops coordinates and keeps the place name', () => {

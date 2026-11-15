@@ -13,16 +13,24 @@
 //   node ./scripts/publish-seo-sidecars.js prod --batch-size=500 --limit=5000
 //
 // The published objects are public (img.wisaw.com/<id>.json, at the bucket root beside the
-// media itself). A place NAME belongs in one -
-// it is what makes a photo findable - but a COORDINATE never does, so the query selects the
-// address columns and not the "location" geography column, and buildSidecar rejects anything
-// that looks like a position anyway. It builds records through the shared rules module, which is
-// also what lambda-fns/utilities/seoSidecar.ts uses, so the two shapes cannot drift;
-// tests/seo-crawler-contract.js pins both writers anyway.
+// media itself). A place NAME belongs in one - it is what makes a photo findable - but a
+// COORDINATE never does: the record builder composes the place name from the address columns and
+// refuses anything that looks like a position.
+//
+// This writer reads the same row shape as every live writer and PUTs through their own function,
+// so neither the record's contents nor its object metadata can drift from what an upload or the
+// scheduled pass publishes. That is not decoration: this script used to list its columns by hand,
+// it never learned about the "duration" column ticket 8 added, and every video record it published
+// lost its duration - silently, because a PUT does not move "updatedAt", so the scheduled refresh
+// had no reason to come back and put it right. tests/seo-crawler-contract.js pins both writers.
+
+// ts-node's hook is load-bearing: the writer imported below is TypeScript, and plain
+// @babel/register cannot resolve it from a script node runs directly (same as populate-video-durations.js).
+require('ts-node/register/transpile-only')
 
 const fs = require('fs')
 const path = require('path')
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3')
+const { S3Client } = require('@aws-sdk/client-s3')
 const ServerlessClient = require('serverless-postgres')
 
 const rdsCa = fs.readFileSync(path.join(__dirname, '../lambda-fns/certs/global-bundle.pem'), 'utf8')
@@ -74,16 +82,13 @@ const CONCURRENT_LIMIT = parseInt((args.find((a) => a.startsWith('--concurrency=
 
 // Every text rule and the record shape itself come from the one module the edge loads and the
 // scheduled job uses (lambda-fns/lambdas/injectMetaTagsLambdaFunction/seoRules.js), so a backfilled
-// record cannot differ from a scheduled one. tests/seo-crawler-contract.js pins that both writers
-// publish the same keys and reject the same values.
-const seoRules = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/seoRules')
+// record cannot differ from a scheduled one. The PUT comes from the live writers' own helper, so the
+// key, content type and cache control are theirs too. tests/seo-crawler-contract.js pins all of it.
+const { buildSeoRecord } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/seoRules')
+const { putSeoSidecar, sidecarKey } = require('../lambda-fns/utilities/seoSidecar.ts')
 
-// This script's query hands labels over as a plain array, where the shared helper takes rows.
-function pickLabels (rawLabels, limit = seoRules.LABEL_LIMIT) {
-  return seoRules.pickLabels({ labels: rawLabels }, limit)
-}
-
-const buildSidecar = (row) => seoRules.buildSeoRecord(row)
+// Exported for the contract test, which builds a record from both writers and compares them.
+const buildSidecar = (row) => buildSeoRecord(row)
 
 function getDbConnection () {
   const cfg = getConfig()
@@ -99,19 +104,15 @@ function getDbConnection () {
   })
 }
 
-// The address columns are here for the place name; p."location" (the geography column, i.e.
-// the actual coordinates) deliberately is not - see buildSidecar.
+// One row shape for every writer of a sidecar: the full row plus aggregated labels, exactly what
+// PHOTO_SEO_QUERY (lambda-fns/controllers/photos/_updateSeoSidecar.ts) and the sitemap job read.
+// Listing columns by hand is how "duration" went missing here for months. p."location" - the
+// geography column - arrives with p.* and is never read by anyone: a record's place name is composed
+// from locality/district/region alone, and assertNoPreciseLocation screens what does get composed, so
+// a value that reads like a position stops that write instead of being published.
 const QUERY = `
   SELECT
-    p."id",
-    p."video",
-    p."lastComment",
-    p."createdAt",
-    p."width",
-    p."height",
-    p."locality",
-    p."district",
-    p."region",
+    p.*,
     COALESCE(r."labels", '[]'::jsonb) AS "labels"
   FROM "Photos" p
   LEFT JOIN LATERAL (
@@ -131,6 +132,26 @@ const QUERY = `
   ORDER BY p."createdAt" DESC
   ${LIMIT > 0 ? `LIMIT ${LIMIT}` : ''}
 `
+
+// One chunk's writes, exported so a test can drive the real PUT with a stubbed client and see which
+// bucket and which row the script actually hands over. A dry run prints what it would write; the
+// duration is named on its own because a long caption pushes it past the 200-character preview.
+async function publishChunk (client, bucket, rows, dryRun) {
+  const results = await Promise.allSettled(rows.map(async (row) => {
+    if (dryRun) {
+      const sidecar = buildSidecar(row)
+      console.log(sidecarKey(row.id), `duration=${sidecar.duration ?? 'none'}`, JSON.stringify(sidecar).slice(0, 200))
+      return
+    }
+    // The live writers' PUT: key, body and headers all come from one place.
+    await putSeoSidecar(client, bucket, row)
+  }))
+
+  let written = 0
+  let failed = 0
+  results.forEach((r) => (r.status === 'fulfilled' ? written++ : failed++))
+  return { written, failed }
+}
 
 async function main () {
   console.log('🔧 Publishing SEO sidecars')
@@ -152,22 +173,9 @@ async function main () {
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
     const batch = rows.slice(i, i + BATCH_SIZE)
     for (let j = 0; j < batch.length; j += CONCURRENT_LIMIT) {
-      const chunk = batch.slice(j, j + CONCURRENT_LIMIT)
-      const results = await Promise.allSettled(chunk.map(async (row) => {
-        const sidecar = buildSidecar(row)
-        if (DRY_RUN) {
-          console.log(`${row.id}.json`, JSON.stringify(sidecar).slice(0, 200))
-          return
-        }
-        await s3.send(new PutObjectCommand({
-          Bucket: BUCKET_NAME,
-          Key: `${String(row.id).toLowerCase()}.json`,
-          Body: JSON.stringify(sidecar),
-          ContentType: 'application/json',
-          CacheControl: 'max-age=60'
-        }))
-      }))
-      results.forEach((r) => (r.status === 'fulfilled' ? written++ : failed++))
+      const chunk = await publishChunk(s3, BUCKET_NAME, batch.slice(j, j + CONCURRENT_LIMIT), DRY_RUN)
+      written += chunk.written
+      failed += chunk.failed
     }
     console.log(`… ${Math.min(i + BATCH_SIZE, rows.length)}/${rows.length} (written=${written} failed=${failed})`)
   }
@@ -182,5 +190,6 @@ if (require.main === module) {
   })
 }
 
-// Exported for tests/seo-crawler-contract.js, which pins the published body shape.
-module.exports = { buildSidecar, pickLabels, QUERY }
+// Exported for tests: the contract test pins the published body and the query's columns, the
+// lifecycle test drives publishChunk with a stubbed client to see the PUT the script really makes.
+module.exports = { buildSidecar, QUERY, publishChunk }
