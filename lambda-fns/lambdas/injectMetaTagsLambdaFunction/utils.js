@@ -295,7 +295,16 @@ function mediaElement (options = {}) {
   // No dimensions means no honest box: the client declines to adopt a page whose media has no
   // numeric size, and renders that route itself rather than guessing.
   const dims = (width && height) ? ` width="${escapeHtmlAttribute(width)}" height="${escapeHtmlAttribute(height)}"` : ''
-  const adoption = ` data-wisaw-media data-wisaw-id="${escapeHtmlAttribute(mediaId)}" class="wsk-media" onerror="${MEDIA_ONERROR}"`
+  // The object URLs are published, not left to be rebuilt from the id: WiSaw.client seeds its first
+  // commit from these, so the naming rule stays written once per side and a rename in mediaNaming.js
+  // cannot leave a seeded paint pointing at an object that was never written. `data-wisaw-src` is the
+  // image this page may safely paint: the full-resolution derivative on a photo, the thumbnail on a
+  // video, where the rules below keep the multi-megabyte object off the page entirely; a video's own
+  // file is already its `src`. `data-wisaw-thumb` is the same file og:image names. Both are always
+  // present so the client has one contract instead of a per-kind one.
+  const publishedSrc = entityLabel === 'video' ? previewUrl : imageUrl
+  const publishedUrls = ` data-wisaw-src="${escapeHtmlAttribute(publishedSrc)}" data-wisaw-thumb="${escapeHtmlAttribute(previewUrl)}"`
+  const adoption = ` data-wisaw-media data-wisaw-id="${escapeHtmlAttribute(mediaId)}" class="wsk-media" onerror="${MEDIA_ONERROR}"${publishedUrls}`
   if (entityLabel === 'video') {
     return `<video controls preload="none"${adoption} poster="${escapeHtmlAttribute(previewUrl)}"${dims} src="${escapeHtmlAttribute(videoUrl)}"></video>`
   }

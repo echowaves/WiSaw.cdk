@@ -145,6 +145,51 @@ describe('edge detail skeleton - what the client needs to adopt it', () => {
   })
 })
 
+// WiSaw.client builds its first commit from these two attributes instead of rebuilding an object key
+// from the id. Publishing them keeps the naming rule written once per side: after a rename in
+// mediaNaming.js, a guessing client paints a URL for an object that was never written.
+describe('published media object URLs', () => {
+  it('publishes the full-resolution derivative and the thumbnail on a photo', () => {
+    const media = mediaTag(buildSeoBody(PHOTO_BODY_OPTIONS))
+    expect(attr(media, 'data-wisaw-src')).to.equal(`https://img.wisaw.com/${FULL_KEY}`)
+    expect(attr(media, 'data-wisaw-thumb')).to.equal(`https://img.wisaw.com/${THUMB_KEY}`)
+  })
+
+  it('publishes the thumbnail as a video\'s image URL, keeping the derivative off the page', () => {
+    // The seed wants a picture; the player wants the container, which stays in `src`. A video page must
+    // not name the multi-megabyte derivative at all - see 'leaves the full-resolution image out of a
+    // video page entirely' - so data-wisaw-src is the thumbnail here, not the photo's full object.
+    const media = mediaTag(buildSeoBody(VIDEO_BODY_OPTIONS))
+    expect(attr(media, 'data-wisaw-src')).to.equal(`https://img.wisaw.com/${THUMB_KEY}`)
+    expect(attr(media, 'data-wisaw-thumb')).to.equal(`https://img.wisaw.com/${THUMB_KEY}`)
+    expect(attr(media, 'src')).to.equal(`https://img.wisaw.com/${ROUTE_ID}.mp4`)
+  })
+
+  it('names the same file as og:image', () => {
+    // One thumbnail per page: the social preview and the client's seed must not be two objects.
+    const html = injectMetaTags(SERVED_SHELL, {
+      description: 'A pier at dusk, unaltered.',
+      entityLabel: 'photo',
+      ogType: 'website',
+      pathSegment: 'photos',
+      imageIdText: ROUTE_ID,
+      imageIdUrl: ROUTE_ID,
+      pageTitle: PHOTO_BODY_OPTIONS.pageTitle,
+      width: '2250',
+      height: '3000',
+      bodyHtml: buildSeoBody(PHOTO_BODY_OPTIONS)
+    })
+    expect(metaContent(html, 'og:image')).to.equal(attr(mediaTag(html), 'data-wisaw-thumb'))
+  })
+
+  it('publishes each URL attribute exactly once per page', () => {
+    // Duplicate attributes would make the client read whichever the parser kept first.
+    const body = buildSeoBody(PHOTO_BODY_OPTIONS)
+    expect(countOf(body, /data-wisaw-src="/g)).to.equal(1)
+    expect(countOf(body, /data-wisaw-thumb="/g)).to.equal(1)
+  })
+})
+
 describe('video poster - never the full-resolution derivative', () => {
   it('paints the thumbnail as the video poster', () => {
     const body = buildSeoBody(VIDEO_BODY_OPTIONS)
