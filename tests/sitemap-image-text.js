@@ -7,7 +7,7 @@ require('ts-node/register/transpile-only')
 const Module = require('module')
 const path = require('path')
 const { expect } = require('chai')
-const { describe, it, after, afterEach } = require('mocha')
+const { beforeEach, describe, it, after, afterEach } = require('mocha')
 
 // lambda-fns/psql.ts imports the RDS CA bundle as a module; Node cannot parse .pem, so seed the
 // require cache with a stub before anything pulls in psql.
@@ -108,6 +108,30 @@ describe('splitImageText - tags label, comment captions', () => {
   })
 })
 
+/**
+ * Registers a configured media bucket for the enclosing describe. The job resolves its bucket from
+ * the environment (utilities/seoSidecar.ts seoSidecarBucket) instead of a name baked into it, so a
+ * run that leaves these unset behaves like a misconfigured stack: no sidecars, no video listing.
+ */
+function withConfiguredMediaBucket (name = 'wisaw-img-test') {
+  const BUCKET_VARS = ['S3_IMAGES_BUCKET', 'WISAW_IMG_BUCKET', 'S3_BUCKET']
+  let saved = {}
+  beforeEach(() => {
+    saved = {}
+    for (const bucketVar of BUCKET_VARS) {
+      saved[bucketVar] = process.env[bucketVar]
+      delete process.env[bucketVar]
+    }
+    process.env.S3_BUCKET = name
+  })
+  afterEach(() => {
+    for (const bucketVar of BUCKET_VARS) {
+      if (saved[bucketVar] === undefined) delete process.env[bucketVar]
+      else process.env[bucketVar] = saved[bucketVar]
+    }
+  })
+}
+
 describe('generateSiteMap - two texts in the emitted XML', () => {
   const originals = { connect: psql.connect, query: psql.query, clean: psql.clean }
   const sendWas = S3Client.prototype.send
@@ -175,6 +199,7 @@ describe('generateSiteMap - two texts in the emitted XML', () => {
 describe('generateSiteMap - the video file a sitemap entry names', () => {
   const originals = { connect: psql.connect, query: psql.query, clean: psql.clean }
   const sendWas = S3Client.prototype.send
+  withConfiguredMediaBucket()
 
   afterEach(() => {
     psql.connect = originals.connect
@@ -248,5 +273,119 @@ describe('generateSiteMap - the video file a sitemap entry names', () => {
     const xml = await publishStored([mediaRow({ id, video: true, labels: ['Heron'] })], [], { failListing: true })
     expect(xml).to.include(`/videos/${id}`)
     expect(xml).to.include(`<video:content_loc>https://img.wisaw.com/${id}.mov</video:content_loc>`)
+  })
+})
+
+describe('generateSiteMap - the sidecars this job is the only writer of', () => {
+  const originals = { connect: psql.connect, query: psql.query, clean: psql.clean }
+  const sendWas = S3Client.prototype.send
+  // The bucket now comes from the shared resolver, so a run has to be configured like a real one.
+  const BUCKET_VARS = ['S3_IMAGES_BUCKET', 'WISAW_IMG_BUCKET', 'S3_BUCKET']
+  let envWas = {}
+
+  beforeEach(() => {
+    envWas = {}
+    for (const name of BUCKET_VARS) {
+      envWas[name] = process.env[name]
+      delete process.env[name]
+    }
+    process.env.S3_BUCKET = 'wisaw-img-test'
+  })
+
+  afterEach(() => {
+    psql.connect = originals.connect
+    psql.query = originals.query
+    psql.clean = originals.clean
+    S3Client.prototype.send = sendWas
+    for (const name of BUCKET_VARS) {
+      if (envWas[name] === undefined) delete process.env[name]
+      else process.env[name] = envWas[name]
+    }
+  })
+
+  /** Runs main() over fixed rows and returns every object it would have PUT. */
+  async function published (rows, event = {}) {
+    const puts = []
+    psql.connect = async () => {}
+    psql.clean = async () => {}
+    psql.query = async (sql) => ({ rows: /FROM "Photos"/i.test(sql) ? rows : [] })
+    S3Client.prototype.send = async function (cmd) {
+      const name = cmd?.constructor?.name ?? ''
+      if (name === 'ListObjectsV2Command' || String(cmd?.input?.MaxKeys) === '1000') {
+        return { Contents: [], IsTruncated: false }
+      }
+      puts.push(cmd)
+      return {}
+    }
+
+    expect(await main(event), 'main() aborted before publishing').to.equal(true)
+    // PUTs only: the run also GETs its own watermark object, which shares the .json suffix.
+    return puts
+      .filter((cmd) => cmd?.constructor?.name === 'PutObjectCommand' && String(cmd.input?.Key).endsWith('.json'))
+      .map((cmd) => cmd.input)
+  }
+
+  /** The job writes its own state object too; the assertions below are about media sidecars. */
+  function sidecarKeys (inputs) {
+    return inputs.filter((input) => input.Key !== 'seo/_last-run.json').map((input) => input.Key)
+  }
+
+  it('PUTs one <lower-id>.json per recently touched row into the configured bucket', async () => {
+    const lower = '4'.repeat(35) + 'A'
+    const inputs = await published([
+      mediaRow({ id: lower, updatedAt: new Date().toISOString(), lastComment: 'A heron at dawn' })
+    ])
+
+    // The key is lower-cased by the writer's own helper: an uppercase id would otherwise publish
+    // beside the object the edge asks for and leave the page with no text to render.
+    expect(sidecarKeys(inputs)).to.deep.equal([`${lower.toLowerCase()}.json`])
+    expect(inputs[0].Bucket).to.equal('wisaw-img-test')
+    expect(inputs[0].ContentType).to.equal('application/json')
+    expect(inputs[0].CacheControl).to.equal('max-age=60')
+    // What the edge actually reads, not just where it was put.
+    const body = JSON.parse(String(inputs[0].Body))
+    // Composed by the live writers' own rules, so the comment captions it and the capture date is
+    // appended - what matters here is that the edge gets the same text an upload would publish.
+    expect(body.seo.description).to.include('A heron at dawn')
+    expect(body.seo.kind).to.equal('photo')
+  })
+
+  it('leaves rows outside the touch window alone and advances the watermark once every write landed', async () => {
+    const fresh = '5'.repeat(36)
+    const stale = '6'.repeat(36)
+    const longAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
+    const inputs = await published([
+      mediaRow({ id: fresh, updatedAt: new Date().toISOString() }),
+      mediaRow({ id: stale, updatedAt: longAgo })
+    ])
+
+    expect(sidecarKeys(inputs)).to.deep.equal([`${fresh}.json`])
+    // The watermark is what makes the next run's window start here instead of guessing a lookback.
+    const watermark = inputs.find((input) => input.Key === 'seo/_last-run.json')
+    expect(watermark, 'watermark not written after an all-succeeded run').to.not.equal(undefined)
+  })
+
+  it('publishes a sidecar for every row when asked to backfill', async () => {
+    const longAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
+    const inputs = await published([mediaRow({ id: '7'.repeat(36), updatedAt: longAgo })], { backfill: true })
+    expect(sidecarKeys(inputs)).to.deep.equal([`${'7'.repeat(36)}.json`])
+  })
+
+  it('still publishes the sitemap when no media bucket is configured, and writes no sidecars', async () => {
+    delete process.env.S3_BUCKET
+    const puts = []
+    psql.connect = async () => {}
+    psql.clean = async () => {}
+    psql.query = async (sql) => ({ rows: /FROM "Photos"/i.test(sql) ? [mediaRow({ id: '8'.repeat(36), updatedAt: new Date().toISOString() })] : [] })
+    S3Client.prototype.send = async function (cmd) {
+      const name = cmd?.constructor?.name ?? ''
+      if (name === 'ListObjectsV2Command' || String(cmd?.input?.MaxKeys) === '1000') return { Contents: [], IsTruncated: false }
+      puts.push(cmd)
+      return {}
+    }
+
+    expect(await main({}), 'an unconfigured bucket must not cost the site its sitemap').to.equal(true)
+    expect(puts.some((cmd) => cmd?.input?.Key === 'sitemap.xml'), 'no sitemap.xml PUT').to.equal(true)
+    expect(puts.filter((cmd) => String(cmd?.input?.Key).endsWith('.json'))).to.deep.equal([])
   })
 })

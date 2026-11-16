@@ -1,8 +1,8 @@
 /* eslint-env node */
 /* global module, require */
-const { imageObjectKey, thumbnailObjectKey, imgUrl } = require('./mediaNaming')
+const { imageObjectKey, thumbnailObjectKey, imgUrl, VIDEO_MIME_TYPES } = require('./mediaNaming')
 const { durationSeconds, iso8601Duration } = require('./seoRules')
-const { SKELETON_STYLE, MEDIA_ONERROR, mediaBoxStyle, renderSkeleton, breadcrumbGraph } = require('./skeleton')
+const { SKELETON_STYLE, MEDIA_ONERROR, mediaBoxStyle, renderSkeleton, breadcrumbGraph, positiveInt } = require('./skeleton')
 const escapeHtmlAttribute = (value = '') =>
   String(value)
     .replace(/&/g, '&amp;')
@@ -24,17 +24,15 @@ const ROBOTS_INDEX = 'index, follow, max-image-preview:large, max-snippet:-1, ma
 // body invites indexing gets crawled by whichever signal a crawler trusts more.
 const ROBOTS_NOINDEX = 'noindex, follow'
 const TWITTER_CARD = 'summary_large_image'
-// og:video:type names the container of THIS file, and storage keeps several: mediaNaming's
-// VIDEO_EXTENSIONS covers mov/webm/m4v/mp4, and its no-storage-info fallback even publishes
-// <id>.mov. The browser app used to derive this from the URL extension in its own (now deleted)
-// JSON-LD copy; the edge owns the fact outright now, so it reads it off the same key rather than
-// asserting mp4 for every file. Unknown extensions keep the documented mp4 default, which is
-// what videoObjectKey's fallback produces anyway.
-const VIDEO_OG_TYPES = { mov: 'video/quicktime', webm: 'video/webm', m4v: 'video/mp4', mp4: 'video/mp4' }
-
+// og:video:type names the container of THIS file, and storage keeps several. The extension list
+// and its container names live in mediaNaming (which also owns the object-key rule), so a video
+// stored under an extension nobody added there is impossible: VIDEO_MIME_TYPES' keys are exactly
+// the extensions the injector is willing to name. Unknown extensions keep the documented mp4
+// default, which is what videoObjectKey's fallback produces anyway. The browser app used to derive
+// this from the URL extension in its own (now deleted) JSON-LD copy; the edge owns the fact.
 function videoOgType (videoUrl = '') {
   const ext = /\.([a-z0-9]+)$/i.exec(String(videoUrl).split(/[?#]/)[0])
-  return (ext && VIDEO_OG_TYPES[ext[1].toLowerCase()]) || 'video/mp4'
+  return (ext && VIDEO_MIME_TYPES[ext[1].toLowerCase()]) || 'video/mp4'
 }
 
 // One place decides what a media item's preview image is: the thumbnail, which is also what
@@ -65,6 +63,10 @@ function stripExistingMetaTags (html = '') {
     // does not match them (it requires the closing quote after "og:image"), so strip them here.
     .replace(/<meta\s[^>]*property=["']og:image:(title|caption)["'][^>]*\/?>\s*/gi, '')
     .replace(/<meta\s[^>]*name=["']twitter:(card|title|image|description)["'][^>]*\/?>\s*/gi, '')
+    // The whole og:video family is the injector's to own on a video page (og:video:type is read off
+    // the stored object key, so a stale entry is a wrong fact about the file). Both quote styles and
+    // self-closing tags, and the bare property must not be matched by its sub-properties.
+    .replace(/<meta\s(?=[^>]*\bproperty=["']og:video(?:["']|:(?:url|secure_url|type|width|height|duration|image)["']))[^>]*\/?>\s*/gi, '')
     // The shipped template carries one tag with both name="description" and
     // property="og:description". Attribute order must not matter: the old pattern
     // required name= before property= and would leave a reversed tag behind, which
@@ -116,10 +118,16 @@ const TAG_START_CHAR = /[a-zA-Z/?!]/
 const ROOT_ID_ATTR = /(?:^|\s)id\s*=\s*['"]?root['"]?(?=[\s/>])/i
 
 // Markup whose loss means the browser cannot boot the app; compared before/after injection.
+// Both mount containers count: #root is what this injector rewrites and #wisaw-app is where React
+// actually mounts (WiSaw.client src/index.js), so a cut that reached past #root's close and took
+// the sibling with it would leave a page that paints but never initialises - exactly the failure
+// the 2026-11-10 deploy caused, which nothing here could see while only scripts were counted.
 const BOOT_CRITICAL_PATTERNS = [
   /<script\b[^>]*\btype=["']module["']/gi,
   /<link\b[^>]*\brel=["']stylesheet["']/gi,
-  /<script\b/gi
+  /<script\b/gi,
+  /<div\b[^>]*\bid=["']?root["'>\s]/gi,
+  /<div\b[^>]*\bid=["']?wisaw-app["'>\s]/gi
 ]
 
 function countMatches (text, pattern) {
@@ -293,8 +301,12 @@ function renderRootBody (html = '', bodyHtml = '') {
 function mediaElement (options = {}) {
   const { entityLabel = '', imageUrl = '', previewUrl = '', videoUrl = '', altText = '', mediaId = '', width = '', height = '' } = options
   // No dimensions means no honest box: the client declines to adopt a page whose media has no
-  // numeric size, and renders that route itself rather than guessing.
-  const dims = (width && height) ? ` width="${escapeHtmlAttribute(width)}" height="${escapeHtmlAttribute(height)}"` : ''
+  // numeric size, and renders that route itself rather than guessing. A record whose extraction
+  // failed stores '0', which is truthy as text - publishing width="0" would be both a lie about
+  // the file and a page the client then refuses to adopt, so only positive whole pixels count.
+  const boxWidth = positiveInt(width)
+  const boxHeight = positiveInt(height)
+  const dims = (boxWidth && boxHeight) ? ` width="${boxWidth}" height="${boxHeight}"` : ''
   // The object URLs are published, not left to be rebuilt from the id: WiSaw.client seeds its first
   // commit from these, so the naming rule stays written once per side and a rename in mediaNaming.js
   // cannot leave a seeded paint pointing at an object that was never written. `data-wisaw-src` is the
@@ -306,7 +318,10 @@ function mediaElement (options = {}) {
   const publishedUrls = ` data-wisaw-src="${escapeHtmlAttribute(publishedSrc)}" data-wisaw-thumb="${escapeHtmlAttribute(previewUrl)}"`
   const adoption = ` data-wisaw-media data-wisaw-id="${escapeHtmlAttribute(mediaId)}" class="wsk-media" onerror="${MEDIA_ONERROR}"${publishedUrls}`
   if (entityLabel === 'video') {
-    return `<video controls preload="none"${adoption} poster="${escapeHtmlAttribute(previewUrl)}"${dims} src="${escapeHtmlAttribute(videoUrl)}"></video>`
+    // playsinline belongs on the first paint too, not only on the element React renders after
+    // adoption: without it iOS Safari takes a tapped video full-screen instead of playing it in
+    // the box the page was laid out around.
+    return `<video controls playsinline preload="none"${adoption} poster="${escapeHtmlAttribute(previewUrl)}"${dims} src="${escapeHtmlAttribute(videoUrl)}"></video>`
   }
   return `<img${adoption} src="${escapeHtmlAttribute(imageUrl)}" alt="${escapeHtmlAttribute(altText)}"${dims} loading="eager">`
 }
@@ -403,10 +418,14 @@ function videoMetaTags (options = {}) {
   const { videoUrl = '', videoDuration = null, imageIdUrl = '', width = '', height = '' } = options
   if (!videoUrl) return ''
   const safeVideoUrl = escapeHtmlAttribute(videoUrl)
-  // Dimensions come from the record or not at all - a guessed size is a wrong fact about the file.
-  const dims = (width && height)
-    ? '      <meta property="og:video:width" content="' + escapeHtmlAttribute(width) + '" data-rh="true">\n' +
-      '      <meta property="og:video:height" content="' + escapeHtmlAttribute(height) + '" data-rh="true">\n'
+  // Dimensions come from the record or not at all - a guessed size is a wrong fact about the file,
+  // and '0' from a failed extraction is a guess. Same rule as the painted media element, so the
+  // head and the body never disagree about whether this file has a known size.
+  const boxWidth = positiveInt(width)
+  const boxHeight = positiveInt(height)
+  const dims = (boxWidth && boxHeight)
+    ? '      <meta property="og:video:width" content="' + boxWidth + '" data-rh="true">\n' +
+      '      <meta property="og:video:height" content="' + boxHeight + '" data-rh="true">\n'
     : ''
   // Open Graph wants whole seconds here while the JSON-LD below wants ISO 8601; both come from the
   // same stored number, and neither is written when nobody has measured this video.
@@ -544,6 +563,24 @@ function htmlResponse (status, body, options = {}) {
   }
 }
 
+// A detail URL whose stored object is the other kind gets this instead of a page: one photo, one
+// URL, and a 301 moves a crawler (and its accumulated links) onto the true address rather than
+// leaving it on a document that names an object which was never written. The viewer-request
+// redirect lambda cannot do this job - deciding the kind needs storage, and only the origin
+// response trigger sees it. Cached for a day: the answer follows the media, which does not move.
+function redirectResponse (location, options = {}) {
+  const { cacheControl = 'max-age=86400' } = options
+  return {
+    status: '301',
+    statusDescription: 'Moved Permanently',
+    headers: {
+      'cache-control': [{ key: 'Cache-Control', value: cacheControl }],
+      location: [{ key: 'Location', value: location }]
+    },
+    body: ''
+  }
+}
+
 // Head rewrite for the non-media routes (/ , /about, /contact, /terms, /search).
 // Those pages used to be served straight from S3: no canonical at all on the homepage,
 // and every static route wearing the homepage title, which made them look like copies of
@@ -613,8 +650,10 @@ module.exports = {
   renderDescriptionTags,
   renderNotFoundDocument,
   renderRootBody,
+  dropsBootCriticalMarkup,
   buildSeoBody,
   injectMetaTags,
   injectRouteTags,
-  htmlResponse
+  htmlResponse,
+  redirectResponse
 }

@@ -7,31 +7,19 @@
 // at most once per photo per run and photos are immutable, so caching them at the edge is
 // safe; the TTL only matters when a caption is edited or a moderation job adds labels.
 const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3')
+const { PRECISE_KEYS, isPreciseLocation } = require('./seoRules')
+const { imgBucket } = require('./bucket')
 
 const SIDECAR_TTL_MS = 10 * 60 * 1000
 const MAX_ENTRIES = 500
 const cache = new Map()
 
-function bucketName () {
-  return process.env.WISAW_IMG_BUCKET || 'wisaw-img-prod'
-}
-
 // A sidecar may name the place - "Coney Island, New York" is what makes a photo rankable - but
 // it must never carry a position: no lat/lon pair, no POINT(), no WKB hex off the geography
-// column. The writers refuse to build such an object; the reader drops one too, because objects
-// written before that guard ran are still in S3 (and in this cache for up to SIDECAR_TTL_MS).
-const PRECISE_KEYS = ['lat', 'lon', 'lng', 'latitude', 'longitude', 'coords', 'coordinates', 'gps', 'geopoint', 'point']
-
-function isPreciseLocation (value) {
-  if (value == null) return false
-  if (typeof value === 'object') return true // { latitude, longitude } or a Point instance
-  const text = String(value).trim()
-  if (text === '') return false
-  if (/POINT\s*\(/i.test(text)) return true
-  if (/^0[01][0-9A-Fa-f]{16,}$/.test(text)) return true // WKB/EWKB hex from Postgres geography
-  return /^-?\d{1,3}\.\d+\s*[,\s]\s*-?\d{1,3}\.\d+$/.test(text)
-}
-
+// column. The writers refuse to build such an object (seoRules.js owns that guard, and this reader
+// imports the very same functions rather than restating them), and the reader drops one too,
+// because objects written before the guard ran are still in S3 - and in this cache for up to
+// SIDECAR_TTL_MS.
 function stripPreciseLocation (parsed) {
   if (parsed == null || typeof parsed !== 'object') return parsed
   for (const key of PRECISE_KEYS) {
@@ -66,18 +54,22 @@ async function fetchSidecar (imageId) {
   try {
     const client = new S3Client({ region: 'us-east-1' })
     const { Body } = await client.send(
-      new GetObjectCommand({ Bucket: bucketName(), Key: key })
+      new GetObjectCommand({ Bucket: imgBucket(), Key: key })
     )
     const parsed = stripPreciseLocation(JSON.parse(await Body.transformToString()))
     remember(key, parsed)
     return parsed
   } catch (err) {
-    // NoSuchKey / AccessDenied are normal for freshly uploaded media: render without
-    // enriched text rather than failing the request.
-    if (err && err.name !== 'NoSuchKey' && err.name !== 'NotFound') {
-      console.error('sidecar read failed:', err.message)
+    const name = (err && err.name) || ''
+    // Absent is a real answer worth caching: freshly uploaded media has no sidecar yet, and the
+    // corpus is large. Anything else is not - one throttled S3 answer or a slipped IAM permission
+    // used to blank this photo's title at that POP for ten minutes, with nothing in the response to
+    // show why. Uncached failures cost one retry on the next request instead.
+    if (name === 'NoSuchKey' || name === 'NotFound') {
+      remember(key, null)
+      return null
     }
-    remember(key, null)
+    console.error('sidecar read failed; not caching', key, name || 'error')
     return null
   }
 }

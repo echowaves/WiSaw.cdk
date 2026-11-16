@@ -15,7 +15,13 @@
 // TypeScript side imports it from this path rather than keeping its own copy — one module, both
 // builds, nothing generated or duplicated.
 
-const VIDEO_EXTENSIONS = ['mov', 'mp4', 'webm', 'm4v']
+// Extension → the container name `og:video:type` wants. This map *is* the list of playable
+// extensions: VIDEO_EXTENSIONS is read off its keys, so an extension can no longer be added for
+// picking a key and forgotten in the head (which used to publish video/mp4 for an unknown file).
+// Order is load-bearing twice over: `videoObjectKey`'s documented no-storage-info fallback names
+// the first key, and `pickVideoObjectKey` prefers keys in this order over S3's lexicographic one.
+const VIDEO_MIME_TYPES = { mov: 'video/quicktime', mp4: 'video/mp4', webm: 'video/webm', m4v: 'video/mp4' }
+const VIDEO_EXTENSIONS = Object.keys(VIDEO_MIME_TYPES)
 const VIDEO_EXT_RE = new RegExp('\\.(' + VIDEO_EXTENSIONS.join('|') + ')$', 'i')
 const IMAGE_EXTENSION = 'webp'
 const THUMB_SUFFIX = '-thumb'
@@ -80,6 +86,7 @@ function imgUrl (key = '') {
 
 module.exports = {
   VIDEO_EXTENSIONS,
+  VIDEO_MIME_TYPES,
   IMAGE_EXTENSION,
   THUMB_SUFFIX,
   IMG_HOST,

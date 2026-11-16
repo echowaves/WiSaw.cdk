@@ -40,7 +40,7 @@ if (require.cache[rdsCaPath] === undefined) {
 // removing.
 const { probeVideoDuration, videoKeyForId, STORE_DURATION_SQL } = require('../lambda-fns/controllers/photos/_learnVideoDurations.ts')
 const { PHOTO_SEO_QUERY } = require('../lambda-fns/controllers/photos/_updateSeoSidecar.ts')
-const { putSeoSidecars } = require('../lambda-fns/utilities/seoSidecar.ts')
+const { putSeoSidecars, seoSidecarBucket } = require('../lambda-fns/utilities/seoSidecar.ts')
 
 const args = process.argv.slice(2)
 const envArg = args.find((arg) => !arg.startsWith('--'))
@@ -56,7 +56,10 @@ if (env === 'prod' || env === 'production') {
 }
 const config = configModule.config()
 
-const BUCKET_NAME = config.S3_IMAGES_BUCKET || config.S3_BUCKET || `wisaw-img-${env}`
+// The same resolver the scheduled job, the comment path and the backfill use, fed this script's own
+// env object: a writer that invents its own bucket name is how one corpus ended up with sidecars and
+// another with none. It refuses to guess, so a misconfigured run stops before it PUTs anything.
+const BUCKET_NAME = seoSidecarBucket(config)
 const DRY_RUN = args.includes('--dry-run')
 const SKIP_SIDECARS = args.includes('--skip-sidecars')
 const LIMIT = parseInt(args.find((arg) => arg.startsWith('--limit='))?.split('=')[1]) || 500

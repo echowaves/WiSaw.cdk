@@ -8,13 +8,16 @@ const {
   injectMetaTags,
   injectRouteTags,
   htmlResponse,
+  stripExistingMetaTags,
+  dropsBootCriticalMarkup,
   renderNotFoundDocument
 } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/utils')
 const { parseMediaUri, needsCanonicalRedirect } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/mediaUri')
 const { buildSeoFields, monthYear } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/seoText')
 // Both writers of the <id>.json sidecar plus the edge reader's guard. These objects are public, so
 // a place NAME is fair content while a COORDINATE may never appear in one.
-const { buildSeoSidecar, assertNoPreciseLocation } = require('../lambda-fns/utilities/seoSidecar.ts')
+const { assertNoPreciseLocation, buildSeoSidecar, seoSidecarBucket } = require('../lambda-fns/utilities/seoSidecar.ts')
+const { SEO_ROW_SELECT } = require('../lambda-fns/utilities/seoPhotoRow.ts')
 const { buildSidecar, QUERY } = require('../scripts/publish-seo-sidecars.js')
 const { stripPreciseLocation } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/sidecar')
 
@@ -281,20 +284,37 @@ describe('<id>.json sidecar - a place name is fine, a coordinate never is', () =
     expect(src).to.not.match(/new PutObjectCommand/)
   })
 
-  it('every writer reads one row shape out of Photos', () => {
-    // The builder was always shared; what drifted was what a writer SELECTed. So pin the SELECT
-    // itself, read straight from each source file: an explicit column list creeping back into any
-    // writer fails here instead of publishing thinner records to 21k public objects.
+  it('every writer builds its rows from one shared projection', () => {
+    // The builder was always shared; what drifted was what a writer SELECTed - and copying the
+    // statement is how one copy never learned about the "duration" column. So pin the shape once,
+    // in the module that owns it, and pin that no caller restates it.
     const oneRowShape = 'select p.*, coalesce(r."labels", \'[]\'::jsonb) as "labels" from "photos" p'
     const flat = (sql) => sql.replace(/\s+/g, ' ').toLowerCase()
-    const sources = {
-      backfill: QUERY,
-      upload: fs.readFileSync(path.join(__dirname, '..', 'lambda-fns', 'controllers', 'photos', '_updateSeoSidecar.ts'), 'utf8'),
-      scheduled: fs.readFileSync(path.join(__dirname, '..', 'lambda-fns', 'lambdas', 'generateSiteMap', 'index.ts'), 'utf8')
+    const read = (...parts) => fs.readFileSync(path.join(__dirname, '..', ...parts), 'utf8')
+
+    expect(flat(SEO_ROW_SELECT), 'the shared projection').to.contain(oneRowShape)
+    // The label aggregation exists exactly once in the repository's SQL.
+    expect((SEO_ROW_SELECT.match(/LATERAL/gi) ?? []).length).to.equal(1)
+
+    const callers = {
+      backfill: read('scripts', 'publish-seo-sidecars.js'),
+      commentPath: read('lambda-fns', 'controllers', 'photos', '_updateSeoSidecar.ts'),
+      scheduled: read('lambda-fns', 'lambdas', 'generateSiteMap', 'index.ts')
     }
-    for (const [name, sql] of Object.entries(sources)) {
-      expect(flat(sql), `${name} selects the shared row shape`).to.contain(oneRowShape)
+    for (const [name, src] of Object.entries(callers)) {
+      expect(src, `${name} builds its query through seoRowQuery`).to.match(/seoRowQuery\(/)
+      expect(flat(src), `${name} restates no label aggregation`).to.not.contain('lateral')
     }
+  })
+
+  it('the backfill reuses the live writers\' duration learner', () => {
+    // Measuring a video is one algorithm (probe the stored container, persist what it says). A
+    // second copy here is how a backfill came to publish videos with no duration at all.
+    const src = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'publish-seo-sidecars.js'), 'utf8')
+    expect(src).to.match(/_learnVideoDurations\.ts/)
+    expect(src).to.match(/\.learnVideoDurations\b/)
+    expect(src).to.not.match(/probeVideoDuration\(/)
+    expect(src).to.not.match(/STORE_DURATION_SQL/)
   })
 
   it('the backfill query never asks Postgres for coordinates', () => {
@@ -377,7 +397,10 @@ describe('injectMetaTags against the served shell', () => {
     .replace('<body>', '<body>\n  <!-- legacy footer </div> retired 2026-11-09 -->\n' +
       '  <script>var shellHint = "<div id=\\"root\\">see docs</div>";</script>')
     .replace('<div id="root">', '<div id="root"><div class="app-shell">')
-    .replace('  </div>\n</body>', '    </div>\n  </div>\n</body>')
+    // Anchor on the end of #root's own content, not on `</div>\n</body>`: the shell now carries a
+    // sibling container after the mount point, so that anchor no longer exists and this mutation
+    // would silently stop applying.
+    .replace('</h2>\n  </div>', '</h2>\n    </div>\n  </div>')
 
   it('injects the same head bytes into a shell that carries decoy anchors', () => {
     // First prove the hostile mutations applied - a silent no-op here would test nothing.
@@ -385,6 +408,7 @@ describe('injectMetaTags against the served shell', () => {
     expect(HOSTILE_SHELL).to.contain('var shellHint = "<div id=\\"root\\">see docs</div>";')
     expect(HOSTILE_SHELL).to.contain('<!-- legacy footer </div> retired 2026-11-09 -->')
     expect(HOSTILE_SHELL).to.contain('<div id="root"><div class="app-shell">')
+    expect(HOSTILE_SHELL).to.contain('</h2>\n    </div>\n  </div>')
 
     const hostile = injectMetaTags(HOSTILE_SHELL, {
       description: 'Golden retriever puppy on the beach - free photo on WiSaw.',
@@ -462,4 +486,156 @@ describe('crawler directives and the not-found document', () => {
     expect(canonicalsOf(doc)).to.have.lengthOf(1)
     expect(doc).to.match(/<h1>This photo no longer exists<\/h1>/)
   })
+})
+
+// The video block moved from the browser app's Helmet output to the injected bytes, so the edge now
+// owns og:video and every sub-property of it. A shell that still carried an older deploy's copy -
+// or a page whose stored container changed - would otherwise reach a crawler with two values for
+// one property, which is how og:image used to end up duplicated.
+describe('the og:video family belongs to the injector', () => {
+  const STALE = [
+    '<meta property="og:video" content="https://img.wisaw.com/stale.mov" data-rh="true">',
+    '<meta property=\'og:video:url\' content=\'https://img.wisaw.com/stale.mov\'>',
+    '<meta property="og:video:secure_url" content="https://img.wisaw.com/stale.mov" />',
+    '<meta property="og:video:type" content="video/quicktime">',
+    '<meta property="og:video:width" content="1920" data-rh="true">',
+    '<meta property="og:video:height" content="1080" data-rh="true">',
+    '<meta property="og:video:duration" content="9" data-rh="true">',
+    '<meta property="og:video:image" content="https://img.wisaw.com/stale-thumb.webp">'
+  ].join('\n      ')
+
+  const seed = (html) => html.replace('</title>', `</title>\n      ${STALE}\n`)
+
+  it('strips every stale video tag in either quote style', () => {
+    // Baseline is the same cleaner over the unseeded shell: it owns other tags too, so comparing
+    // against SHELL itself would count those removals as collateral.
+    const baseline = stripExistingMetaTags(SHELL)
+    const stripped = stripExistingMetaTags(seed(SHELL))
+    expect(stripped).to.not.match(/property=["']og:video/)
+    expect(countOf(stripped, /<meta\b/gi), 'only the seeded tags went').to.equal(countOf(baseline, /<meta\b/gi))
+    expect(countOf(stripped, /property=["']og:image["']/gi)).to.equal(countOf(baseline, /property=["']og:image["']/gi))
+  })
+
+  it('publishes exactly one of each video property, with the injector\'s values', () => {
+    const html = injectMetaTags(seed(SHELL), {
+      description: 'Harbour at dusk - free video on WiSaw.',
+      metaDescription: 'Harbour at dusk - free video on WiSaw.',
+      entityLabel: 'video',
+      ogType: 'video.other',
+      pathSegment: 'videos',
+      imageIdText: UUID,
+      imageIdUrl: UUID,
+      pageTitle: 'Harbour at dusk — video · WiSaw',
+      videoUrl: `https://img.wisaw.com/${UUID}.mp4`,
+      videoDuration: 48,
+      width: '1920',
+      height: '1080'
+    })
+    for (const property of ['og:video', 'og:video:url', 'og:video:secure_url', 'og:video:type', 'og:video:width', 'og:video:height', 'og:video:duration', 'og:video:image']) {
+      expect(countOf(html, new RegExp(`<meta\\s[^>]*property=["']${property}["']`, 'gi')), property).to.equal(1)
+    }
+    expect(html).to.not.contain('stale.mov')
+    expect(canonicalsOf(html)).to.have.lengthOf(1)
+  })
+})
+
+// React mounts into #wisaw-app while the edge owns #root's contents; an injection pass that reached
+// past #root's close took the app's container with it, leaving a page that paints and never boots.
+describe('both mount containers survive injection', () => {
+  const CONTAINERS = ['root', 'wisaw-app']
+  const countContainer = (html, id) => countOf(html, new RegExp(`<div\\b[^>]*\\bid=["']?${id}["'>\\s]`, 'gi'))
+
+  it('runs against a shell that carries the containers the client boots from', () => {
+    // A fixture missing one of these would let every injection test below pass against a document
+    // the shipped app could not mount in at all.
+    for (const id of CONTAINERS) expect(countContainer(SHELL, id), `fixture #${id}`).to.equal(1)
+  })
+
+  it('keeps each container exactly once, outside the rewritten mount point', () => {
+    const html = injectMetaTags(SHELL, {
+      description: 'Golden retriever puppy on the beach - free photo on WiSaw.',
+      metaDescription: 'Golden retriever puppy on the beach - free photo on WiSaw.',
+      entityLabel: 'photo',
+      ogType: 'photo',
+      pathSegment: 'photos',
+      imageIdText: UUID,
+      imageIdUrl: UUID,
+      bodyHtml: '<h1>Golden retriever puppy</h1>'
+    })
+    for (const id of CONTAINERS) expect(countContainer(html, id), `#${id}`).to.equal(1)
+    // Sibling, not swallowed: the app container still opens after #root has closed.
+    const rootClose = html.indexOf('</div>', html.indexOf('<div id="root">'))
+    expect(html.indexOf('id="wisaw-app"')).to.be.above(rootClose)
+  })
+
+  it('counts a lost mount container as lost boot markup', () => {
+    // The failsafe used to compare only scripts and stylesheets, so this cut looked clean.
+    const swallowed = SHELL.replace('<div id="wisaw-app"></div>', '')
+    expect(dropsBootCriticalMarkup(SHELL, swallowed)).to.equal(true)
+    expect(dropsBootCriticalMarkup(SHELL, SHELL)).to.equal(false)
+  })
+})
+
+describe('one media bucket, named one way', () => {
+  const read = (...parts) => fs.readFileSync(path.join(__dirname, '..', ...parts), 'utf8')
+  const edgeBucket = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/bucket.js')
+
+  it('resolves the writers\' bucket by precedence and refuses to guess', () => {
+    expect(seoSidecarBucket({ S3_BUCKET: 'a' })).to.equal('a')
+    expect(seoSidecarBucket({ S3_BUCKET: 'a', WISAW_IMG_BUCKET: 'b' })).to.equal('b')
+    expect(seoSidecarBucket({ S3_BUCKET: 'a', WISAW_IMG_BUCKET: 'b', S3_IMAGES_BUCKET: 'c' })).to.equal('c')
+    // Whitespace-only counts as unset, and nothing configured must not fall through to prod.
+    expect(() => seoSidecarBucket({ S3_BUCKET: '  ' })).to.throw(/S3_IMAGES_BUCKET/)
+    expect(() => seoSidecarBucket({})).to.throw(/no media bucket configured/)
+  })
+
+  it('the edge asks for the same variable, in exactly one file', () => {
+    // The injector folder is deployed as a raw zip and cannot import the resolver above, so it
+    // carries its own copy; that copy has to read what the writers write.
+    expect(edgeBucket.ENV_VAR).to.equal('WISAW_IMG_BUCKET')
+    expect(edgeBucket.imgBucket()).to.not.equal(undefined)
+    const folder = path.join(__dirname, '..', 'lambda-fns', 'lambdas', 'injectMetaTagsLambdaFunction')
+    const readers = fs.readdirSync(folder)
+      .filter((file) => file.endsWith('.js'))
+      // bucket.gen.js is written by cdk synth into the same folder; it is a value, not a rule.
+      .filter((file) => !file.endsWith('.gen.js'))
+      .filter((file) => /WISAW_IMG_BUCKET|wisaw-img-prod/.test(fs.readFileSync(path.join(folder, file), 'utf8')))
+    expect(readers, `bucket name leaked into ${readers.join(', ')}`).to.deep.equal(['bucket.js'])
+  })
+
+  it('the stack writes the bucket into the injector asset, and declares no env var', () => {
+    // Lambda@Edge rejects environment variables (LambdaEdgeEnvironmentVariablesNotAllowed), so the
+    // only channel into those two functions is the code asset itself. If someone puts an
+    // `environment:` block back, synth fails - that is the loud version of this pin, but the test
+    // catches it before a deploy does.
+    const src = read('lib', 'resources', 'lambdas.ts')
+    expect(src).to.match(/writeEdgeBucketConfig\(\s*path\.join\([^)]*injectMetaTagsLambdaFunction'\),\s*config\.S3_BUCKET\s*\)/)
+    for (const handler of ['photo.handler', 'video.handler']) {
+      const start = src.indexOf(`handler: '${handler}'`)
+      expect(start, `${handler} is not defined in lib/resources/lambdas.ts`).to.be.above(-1)
+      const block = src.slice(start, src.indexOf('}', src.indexOf('logGroup', start)))
+      expect(block, `${handler} must not declare environment variables`).to.not.match(/environment:/)
+    }
+  })
+})
+
+describe('every script that writes a sidecar resolves its bucket the same way', () => {
+  // Derived from what the scripts actually do rather than from a list of names, so the next writer
+  // that appears is covered by this pin on the day it is written.
+  const scriptsDir = path.join(__dirname, '..', 'scripts')
+  const writers = fs.readdirSync(scriptsDir)
+    .filter((file) => file.endsWith('.js'))
+    .filter((file) => /putSeoSidecar\(/.test(fs.readFileSync(path.join(scriptsDir, file), 'utf8')))
+
+  it('finds the sidecar-writing scripts to check', () => {
+    expect(writers.length).to.be.greaterThan(0)
+  })
+
+  for (const file of writers) {
+    it(`${file} asks the shared resolver`, () => {
+      const src = fs.readFileSync(path.join(scriptsDir, file), 'utf8')
+      expect(src, `${file} must import seoSidecarBucket`).to.match(/seoSidecarBucket\(/)
+      expect(src, `${file} must not derive a bucket name from the environment argument`).to.not.match(/wisaw-img-\$/)
+    })
+  }
 })

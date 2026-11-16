@@ -9,6 +9,7 @@ import * as iam from 'aws-cdk-lib/aws-iam'
 import { Construct } from 'constructs'
 import * as path from 'path'
 import { deployEnv } from '../utilities/config'
+import { writeEdgeBucketConfig } from '../utilities/edgeMediaBucket'
 
 export function createLambdas (scope: Construct, config: any, api?: any): any {
   const sharpLayerArn =
@@ -297,6 +298,17 @@ export function createLambdas (scope: Construct, config: any, api?: any): any {
       removalPolicy: cdk.RemovalPolicy.DESTROY
     })
 
+    // Both injector edge functions are built from this one folder, so the bucket constant is
+    // written once for both. It has to be a file rather than an environment variable: Lambda@Edge
+    // rejects env vars outright (LambdaEdgeEnvironmentVariablesNotAllowed), and the documented
+    // removeInEdge escape hatch only removes the variable at the edge - which is exactly where the
+    // injector needs it. Without any value at all the reader falls back to a hardcoded production
+    // name, so a dev or staging distribution would read prod sidecars while looking healthy.
+    writeEdgeBucketConfig(
+      path.join(__dirname, '../../lambda-fns/lambdas/injectMetaTagsLambdaFunction'),
+      config.S3_BUCKET
+    )
+
     injectMetaTagsLambdaFunctionPhoto =
       // new lambda.Function( // trying to define it as an Lambda@Edge function
       new cloudfront.experimental.EdgeFunction(
@@ -316,9 +328,8 @@ export function createLambdas (scope: Construct, config: any, api?: any): any {
           timeout: cdk.Duration.seconds(5),
           // insightsVersion,
           logGroup: injectMetaTagsLambdaFunctionPhotoLogGroup
-          // environment: {
-          //   ...config,
-          // },
+          // No env block here on purpose - see writeEdgeBucketConfig above: Lambda@Edge refuses
+          // environment variables, so the bucket reaches this function through its code asset.
         }
       )
 
@@ -346,9 +357,7 @@ export function createLambdas (scope: Construct, config: any, api?: any): any {
           timeout: cdk.Duration.seconds(5),
           // insightsVersion,
           logGroup: injectMetaTagsLambdaFunctionVideoLogGroup
-          // environment: {
-          //   ...config,
-          // },
+          // No env block here either - same reason as the photo injector.
         }
       )
 

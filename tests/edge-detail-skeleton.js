@@ -5,7 +5,8 @@ const fs = require('fs')
 const path = require('path')
 
 const { injectMetaTags, buildSeoBody, videoOgType } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/utils')
-const { SKELETON_STYLE, BELOW_MEDIA_RESERVE_PX, HEADER_DESKTOP_PX, HEADER_MOBILE_PX } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/skeleton')
+const { SKELETON_STYLE, BELOW_MEDIA_RESERVE_PX, HEADER_DESKTOP_PX, HEADER_MOBILE_PX, DETAIL_UNKNOWN_DIMENSION_CAP_PX } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/skeleton')
+const { VIDEO_MIME_TYPES, VIDEO_EXTENSIONS } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/mediaNaming')
 
 // The real served shell: the skeleton has to survive the same structural mount-point scan that
 // once cut a photo page short, and the client simulates the same injection pass on its side.
@@ -124,8 +125,33 @@ describe('edge detail skeleton - what the client needs to adopt it', () => {
     expect(buildSeoBody(PHOTO_BODY_OPTIONS)).to.include('--wsk-cap:525px')
     expect(buildSeoBody(VIDEO_BODY_OPTIONS)).to.include('aspect-ratio:1920/1080;--wsk-cap:700px')
     const unknown = buildSeoBody({ entityLabel: 'photo', pathSegment: 'photos', imageIdText: ROUTE_ID })
-    expect(unknown).to.include('aspect-ratio:1/1;--wsk-cap:700px')
+    // With no size to lay out from, the box reserves what the app itself would render
+    // (WiSaw.client PhotosComponent: dimensions 300x300). Reserving the 700 px desktop cap painted
+    // a bigger box than the page ever became.
+    expect(unknown).to.include('aspect-ratio:1/1;--wsk-cap:' + DETAIL_UNKNOWN_DIMENSION_CAP_PX + 'px')
+    expect(DETAIL_UNKNOWN_DIMENSION_CAP_PX).to.equal(300)
     expect(mediaTag(unknown)).to.not.match(/\swidth="/)
+  })
+
+  it('publishes a size only when the record really has one', () => {
+    // A failed extraction stores '0'; text '0' is truthy, so this used to reach the page as
+    // width="0" - a wrong fact about the file, and one the client refuses to adopt from anyway.
+    for (const dims of [{ width: '0', height: '0' }, { width: 'abc', height: '400' }, { width: '-8', height: '400' }, { width: '', height: '' }]) {
+      const body = buildSeoBody(Object.assign({}, PHOTO_BODY_OPTIONS, dims))
+      const media = mediaTag(body)
+      expect(media, JSON.stringify(dims)).to.not.match(/\s(width|height)="/)
+      expect(body, JSON.stringify(dims)).to.not.match(/og:(video|image):width/)
+    }
+    // A real size survives in both the body and the head, whether it arrives as text or a number.
+    const sized = buildSeoBody(Object.assign({}, VIDEO_BODY_OPTIONS, { width: '1920', height: 1080 }))
+    expect(mediaTag(sized)).to.include('width="1920" height="1080"')
+  })
+
+  it('plays the cold video inline, the way React renders it after adoption', () => {
+    // iOS Safari takes a video without playsinline full-screen on first tap. The client sets it on
+    // the element it adopts; the paint that arrives before any script must not need that fix.
+    const media = mediaTag(buildSeoBody(VIDEO_BODY_OPTIONS))
+    expect(media).to.match(/\splaysinline(\s|=)/)
   })
 
   it('keeps the scoped style small and free of markup-looking text', () => {
@@ -236,10 +262,16 @@ describe('video poster - never the full-resolution derivative', () => {
   })
 
   it('names the container the file actually is, per extension', () => {
-    expect(videoOgType(`https://img.wisaw.com/${ROUTE_ID}.mp4`)).to.equal('video/mp4')
-    expect(videoOgType(`https://img.wisaw.com/${ROUTE_ID}.mov`)).to.equal('video/quicktime')
-    expect(videoOgType(`https://img.wisaw.com/${ROUTE_ID}.webm`)).to.equal('video/webm')
-    expect(videoOgType(`https://img.wisaw.com/${ROUTE_ID}.m4v`)).to.equal('video/mp4')
+    // Derived from the one map that owns both facts: an extension added to the naming rule without
+    // a container name, or a container name for an extension the injector would never publish,
+    // fails here instead of shipping as video/mp4 for everything.
+    expect(Object.keys(VIDEO_MIME_TYPES)).to.deep.equal(VIDEO_EXTENSIONS)
+    const EXPECTED = { mov: 'video/quicktime', mp4: 'video/mp4', webm: 'video/webm', m4v: 'video/mp4' }
+    for (const ext of VIDEO_EXTENSIONS) {
+      expect(EXPECTED, `no expectation for .${ext}`).to.have.property(ext)
+      expect(videoOgType(`https://img.wisaw.com/${ROUTE_ID}.${ext}`), ext).to.equal(EXPECTED[ext])
+      expect(VIDEO_MIME_TYPES[ext], ext).to.equal(EXPECTED[ext])
+    }
     // videoObjectKey's documented fallback is <id>.mov; a keyless URL keeps the mp4 default.
     expect(videoOgType(`https://img.wisaw.com/${ROUTE_ID}`)).to.equal('video/mp4')
   })
@@ -388,23 +420,35 @@ describe('the fixture against the real client shell', () => {
   // step by hand (brief §5). When the client repo is checked out beside this one, pin the
   // boot-critical structure both files must share, so a fixture that drifted from the shell that
   // actually ships fails here instead of blessing a broken injection contract.
-  const CLIENT_SHELL = path.join(__dirname, '..', '..', 'WiSaw.client', 'index.html')
-  const check = fs.existsSync(CLIENT_SHELL) ? it : it.skip
+  const CLIENT_SHELL = process.env.WISAW_CLIENT_PATH || path.join(__dirname, '..', '..', 'WiSaw.client', 'index.html')
+  const present = fs.existsSync(CLIENT_SHELL)
 
-  check('keeps one mount point, a module script and the reload guard in both files', () => {
-    const shell = fs.readFileSync(CLIENT_SHELL, 'utf8')
-    for (const [name, html] of [['fixture', SERVED_SHELL], ['client shell', shell]]) {
-      expect(countOf(html, /<div\b[^>]*\bid=["']root["']/gi), name).to.equal(1)
-      expect(/<script\b[^>]*type="module"/i.test(html), name).to.equal(true)
-      expect(html.includes('wisaw-reload-at'), `${name} reload guard`).to.equal(true)
-    }
-  })
+  if (!present) {
+    // A skipped cross-repo pin is a contract nobody is checking, and "green" is the worst possible
+    // result for that. One loud failure instead: name what did not run and how to make it run.
+    it('the client-side pins below were NOT run', () => {
+      throw new Error(`needs WiSaw.client/index.html to compare against; looked in ${CLIENT_SHELL}. ` +
+        'Check the two repos out beside each other or set WISAW_CLIENT_PATH.')
+    })
+  } else {
+    it('keeps one of each mount container, a module script and the reload guard in both files', () => {
+      const shell = fs.readFileSync(CLIENT_SHELL, 'utf8')
+      for (const [name, html] of [['fixture', SERVED_SHELL], ['client shell', shell]]) {
+        // #root is what the injector rewrites; #wisaw-app is where React mounts. A fixture without
+        // the second one blesses an injection contract against a document the app cannot boot in.
+        expect(countOf(html, /<div\b[^>]*\bid=["']root["']/gi), `${name} #root`).to.equal(1)
+        expect(countOf(html, /<div\b[^>]*\bid=["']wisaw-app["']/gi), `${name} #wisaw-app`).to.equal(1)
+        expect(/<script\b[^>]*type="module"/i.test(html), name).to.equal(true)
+        expect(html.includes('wisaw-reload-at'), `${name} reload guard`).to.equal(true)
+      }
+    })
 
-  check('carries no boot marker the real shell does not have', () => {
-    const shell = fs.readFileSync(CLIENT_SHELL, 'utf8')
-    const shellMarkers = new Set(shell.match(/data-wisaw-[a-z-]+/g) || [])
-    for (const marker of new Set(SERVED_SHELL.match(/data-wisaw-[a-z-]+/g) || [])) {
-      expect(shellMarkers.has(marker), marker).to.equal(true)
-    }
-  })
+    it('carries no boot marker the real shell does not have', () => {
+      const shell = fs.readFileSync(CLIENT_SHELL, 'utf8')
+      const shellMarkers = new Set(shell.match(/data-wisaw-[a-z-]+/g) || [])
+      for (const marker of new Set(SERVED_SHELL.match(/data-wisaw-[a-z-]+/g) || [])) {
+        expect(shellMarkers.has(marker), marker).to.equal(true)
+      }
+    })
+  }
 })
