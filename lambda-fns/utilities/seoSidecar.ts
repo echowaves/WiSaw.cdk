@@ -22,6 +22,25 @@ export {
   truncateWords
 } from '../lambdas/injectMetaTagsLambdaFunction/seoRules.js'
 
+// Which bucket holds the sidecars. A sidecar sits at the root of the media bucket next to the
+// media it describes, so "which bucket" is one fact - and four call sites used to spell it four
+// ways (S3_BUCKET on the comment path, S3_IMAGES_BUCKET on the scheduled job, a name derived from
+// the environment in the backfill, a hardcoded production name at the edge). Precedence runs from
+// the most specific override down to the variable the stack actually passes: `lib/resources/lambdas.ts`
+// spreads `.env.<env>`, which defines S3_BUCKET.
+//
+// It deliberately has no default. A writer that guesses a bucket publishes sidecars into a corpus
+// nobody reads, and the damage surfaces as pages quietly losing their text - the failure class this
+// repo has now been bitten by twice. Callers that are best-effort by design catch and log; the
+// operator backfill should fail loudly before it PUTs anything.
+export function seoSidecarBucket (env: Record<string, string | undefined> = process.env): string {
+  for (const name of ['S3_IMAGES_BUCKET', 'WISAW_IMG_BUCKET', 'S3_BUCKET']) {
+    const value = String(env[name] ?? '').trim()
+    if (value !== '') return value
+  }
+  throw new Error('no media bucket configured: set S3_IMAGES_BUCKET, WISAW_IMG_BUCKET or S3_BUCKET')
+}
+
 // One sidecar per photo/video, read by Lambda@Edge, which cannot join the VPC to reach
 // Postgres. The shape is a contract with the edge injector (see
 // lambda-fns/lambdas/injectMetaTagsLambdaFunction/sidecar.js and seoText.js); tests/seo-crawler-contract.js

@@ -6,7 +6,8 @@ import { traceLog } from '../../utilities/trace'
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3"; // ES Modules import
 import { ListObjectsV2Command } from "@aws-sdk/client-s3"
 
-import { locationText, putSeoSidecars, readSeoWatermark, seoWindowStart, splitImageText, writeSeoWatermark } from '../../utilities/seoSidecar'
+import { locationText, putSeoSidecars, readSeoWatermark, seoSidecarBucket, seoWindowStart, splitImageText, writeSeoWatermark } from '../../utilities/seoSidecar'
+import { seoRowQuery } from '../../utilities/seoPhotoRow'
 import { learnVideoDurations } from '../../controllers/photos/_learnVideoDurations'
 
 // The naming rule lives with the edge injector because that bundle is deployed as a raw folder
@@ -111,30 +112,14 @@ export async function main (event: any = {}, context: any /*, cb: any*/) {
 
   // retrieve photos
   try {
+    // The sidecar row shape lives in utilities/seoPhotoRow.ts so this job, the comment path and
+    // the operator backfill cannot disagree about which columns a record may be built from.
     photos = (
-      await psql.query(`  
-        SELECT
-          p.*,
-          COALESCE(r."labels", '[]'::jsonb) AS "labels"
-        FROM "Photos" p
-        LEFT JOIN LATERAL (
-          SELECT jsonb_agg(l ->> 'Name') AS "labels"
-          FROM "Recognitions" rec,
-               -- Older Rekognition payloads store Labels as a scalar; unwinding one of those
-               -- aborts the whole statement (22023) and took the photo feed with it.
-               jsonb_array_elements(
-                 CASE WHEN jsonb_typeof(rec."metaData" -> 'Labels') = 'array'
-                      THEN rec."metaData" -> 'Labels'
-                      ELSE '[]'::jsonb END
-               ) l
-          WHERE rec."photoId" = p."id"
-            AND coalesce(l ->> 'Name', '') <> ''
-        ) r ON true
-        WHERE
-            p.active = true      
-        ORDER BY p."updatedAt" DESC
-        LIMIT 30000
-      `)
+      await psql.query(seoRowQuery({
+        where: 'p."active" = true',
+        orderBy: 'p."updatedAt" DESC',
+        limit: 30000
+      }))
     ).rows
   } catch (err) {
     console.error("Unable to retrieve Photos feed", { err })
@@ -156,11 +141,13 @@ export async function main (event: any = {}, context: any /*, cb: any*/) {
   }
 
   // One listing for the whole run: a permission error or a throttled answer must not cost the
-  // site its sitemap, so an unavailable lookup falls back to the naming rule and says so.
-  const imgBucketName = process.env.S3_IMAGES_BUCKET || 'wisaw-img-prod'
+  // site its sitemap, so an unavailable lookup falls back to the naming rule and says so. The
+  // bucket comes from the shared resolver rather than this job's own guess at a name; if nothing
+  // is configured it throws into the catch below, and the duration-learning and sidecar steps
+  // report the same message when their turn comes — the sitemap itself still gets published.
   let storedVideoKeys = new Map<string, string[]>()
   try {
-    storedVideoKeys = await listStoredVideoKeys(new S3Client({ region: 'us-east-1' }), imgBucketName)
+    storedVideoKeys = await listStoredVideoKeys(new S3Client({ region: 'us-east-1' }), seoSidecarBucket())
     console.log('stored video keys:', storedVideoKeys.size)
   } catch (err) {
     console.error('video key listing unavailable, falling back to the naming rule', { err })
@@ -181,7 +168,7 @@ export async function main (event: any = {}, context: any /*, cb: any*/) {
   let learnedVideos: any[] = []
   try {
     const learned = await learnVideoDurations(photos ?? [], {
-      bucket: imgBucketName,
+      bucket: seoSidecarBucket(),
       client: new S3Client({ region: 'us-east-1' }),
       limit: DURATION_LEARN_LIMIT,
       concurrency: DURATION_LEARN_CONCURRENCY
@@ -285,7 +272,7 @@ export async function main (event: any = {}, context: any /*, cb: any*/) {
     // of time leaves the oldest photos behind and the set converges from the valuable end;
     // PUTs are idempotent, so re-invoking is always safe.
     const backfill = event?.backfill === true
-    await publishSidecars(new S3Client({ region: 'us-east-1' }), imgBucketName, photos ?? [], backfill, learnedVideos)
+    await publishSidecars(new S3Client({ region: 'us-east-1' }), seoSidecarBucket(), photos ?? [], backfill, learnedVideos)
   } catch (err) {
     console.error("Unable to publish SEO sidecars", { err })
   }

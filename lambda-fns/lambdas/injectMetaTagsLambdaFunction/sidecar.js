@@ -8,14 +8,11 @@
 // safe; the TTL only matters when a caption is edited or a moderation job adds labels.
 const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3')
 const { PRECISE_KEYS, isPreciseLocation } = require('./seoRules')
+const { imgBucket } = require('./bucket')
 
 const SIDECAR_TTL_MS = 10 * 60 * 1000
 const MAX_ENTRIES = 500
 const cache = new Map()
-
-function bucketName () {
-  return process.env.WISAW_IMG_BUCKET || 'wisaw-img-prod'
-}
 
 // A sidecar may name the place - "Coney Island, New York" is what makes a photo rankable - but
 // it must never carry a position: no lat/lon pair, no POINT(), no WKB hex off the geography
@@ -57,7 +54,7 @@ async function fetchSidecar (imageId) {
   try {
     const client = new S3Client({ region: 'us-east-1' })
     const { Body } = await client.send(
-      new GetObjectCommand({ Bucket: bucketName(), Key: key })
+      new GetObjectCommand({ Bucket: imgBucket(), Key: key })
     )
     const parsed = stripPreciseLocation(JSON.parse(await Body.transformToString()))
     remember(key, parsed)

@@ -16,7 +16,8 @@ const { parseMediaUri, needsCanonicalRedirect } = require('../lambda-fns/lambdas
 const { buildSeoFields, monthYear } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/seoText')
 // Both writers of the <id>.json sidecar plus the edge reader's guard. These objects are public, so
 // a place NAME is fair content while a COORDINATE may never appear in one.
-const { buildSeoSidecar, assertNoPreciseLocation } = require('../lambda-fns/utilities/seoSidecar.ts')
+const { assertNoPreciseLocation, buildSeoSidecar, seoSidecarBucket } = require('../lambda-fns/utilities/seoSidecar.ts')
+const { SEO_ROW_SELECT } = require('../lambda-fns/utilities/seoPhotoRow.ts')
 const { buildSidecar, QUERY } = require('../scripts/publish-seo-sidecars.js')
 const { stripPreciseLocation } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/sidecar')
 
@@ -283,20 +284,37 @@ describe('<id>.json sidecar - a place name is fine, a coordinate never is', () =
     expect(src).to.not.match(/new PutObjectCommand/)
   })
 
-  it('every writer reads one row shape out of Photos', () => {
-    // The builder was always shared; what drifted was what a writer SELECTed. So pin the SELECT
-    // itself, read straight from each source file: an explicit column list creeping back into any
-    // writer fails here instead of publishing thinner records to 21k public objects.
+  it('every writer builds its rows from one shared projection', () => {
+    // The builder was always shared; what drifted was what a writer SELECTed - and copying the
+    // statement is how one copy never learned about the "duration" column. So pin the shape once,
+    // in the module that owns it, and pin that no caller restates it.
     const oneRowShape = 'select p.*, coalesce(r."labels", \'[]\'::jsonb) as "labels" from "photos" p'
     const flat = (sql) => sql.replace(/\s+/g, ' ').toLowerCase()
-    const sources = {
-      backfill: QUERY,
-      upload: fs.readFileSync(path.join(__dirname, '..', 'lambda-fns', 'controllers', 'photos', '_updateSeoSidecar.ts'), 'utf8'),
-      scheduled: fs.readFileSync(path.join(__dirname, '..', 'lambda-fns', 'lambdas', 'generateSiteMap', 'index.ts'), 'utf8')
+    const read = (...parts) => fs.readFileSync(path.join(__dirname, '..', ...parts), 'utf8')
+
+    expect(flat(SEO_ROW_SELECT), 'the shared projection').to.contain(oneRowShape)
+    // The label aggregation exists exactly once in the repository's SQL.
+    expect((SEO_ROW_SELECT.match(/LATERAL/gi) ?? []).length).to.equal(1)
+
+    const callers = {
+      backfill: read('scripts', 'publish-seo-sidecars.js'),
+      commentPath: read('lambda-fns', 'controllers', 'photos', '_updateSeoSidecar.ts'),
+      scheduled: read('lambda-fns', 'lambdas', 'generateSiteMap', 'index.ts')
     }
-    for (const [name, sql] of Object.entries(sources)) {
-      expect(flat(sql), `${name} selects the shared row shape`).to.contain(oneRowShape)
+    for (const [name, src] of Object.entries(callers)) {
+      expect(src, `${name} builds its query through seoRowQuery`).to.match(/seoRowQuery\(/)
+      expect(flat(src), `${name} restates no label aggregation`).to.not.contain('lateral')
     }
+  })
+
+  it('the backfill reuses the live writers\' duration learner', () => {
+    // Measuring a video is one algorithm (probe the stored container, persist what it says). A
+    // second copy here is how a backfill came to publish videos with no duration at all.
+    const src = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'publish-seo-sidecars.js'), 'utf8')
+    expect(src).to.match(/_learnVideoDurations\.ts/)
+    expect(src).to.match(/\.learnVideoDurations\b/)
+    expect(src).to.not.match(/probeVideoDuration\(/)
+    expect(src).to.not.match(/STORE_DURATION_SQL/)
   })
 
   it('the backfill query never asks Postgres for coordinates', () => {
@@ -556,4 +574,66 @@ describe('both mount containers survive injection', () => {
     expect(dropsBootCriticalMarkup(SHELL, swallowed)).to.equal(true)
     expect(dropsBootCriticalMarkup(SHELL, SHELL)).to.equal(false)
   })
+})
+
+describe('one media bucket, named one way', () => {
+  const read = (...parts) => fs.readFileSync(path.join(__dirname, '..', ...parts), 'utf8')
+  const edgeBucket = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/bucket.js')
+
+  it('resolves the writers\' bucket by precedence and refuses to guess', () => {
+    expect(seoSidecarBucket({ S3_BUCKET: 'a' })).to.equal('a')
+    expect(seoSidecarBucket({ S3_BUCKET: 'a', WISAW_IMG_BUCKET: 'b' })).to.equal('b')
+    expect(seoSidecarBucket({ S3_BUCKET: 'a', WISAW_IMG_BUCKET: 'b', S3_IMAGES_BUCKET: 'c' })).to.equal('c')
+    // Whitespace-only counts as unset, and nothing configured must not fall through to prod.
+    expect(() => seoSidecarBucket({ S3_BUCKET: '  ' })).to.throw(/S3_IMAGES_BUCKET/)
+    expect(() => seoSidecarBucket({})).to.throw(/no media bucket configured/)
+  })
+
+  it('the edge asks for the same variable, in exactly one file', () => {
+    // The injector folder is deployed as a raw zip and cannot import the resolver above, so it
+    // carries its own copy; that copy has to read what the writers write.
+    expect(edgeBucket.ENV_VAR).to.equal('WISAW_IMG_BUCKET')
+    expect(edgeBucket.imgBucket()).to.not.equal(undefined)
+    const folder = path.join(__dirname, '..', 'lambda-fns', 'lambdas', 'injectMetaTagsLambdaFunction')
+    const readers = fs.readdirSync(folder)
+      .filter((file) => file.endsWith('.js'))
+      .filter((file) => /WISAW_IMG_BUCKET|wisaw-img-prod/.test(fs.readFileSync(path.join(folder, file), 'utf8')))
+    expect(readers, `bucket name leaked into ${readers.join(', ')}`).to.deep.equal(['bucket.js'])
+  })
+
+  it('the stack hands the variable to both injector edge functions', () => {
+    // Without it the injector falls back to a hardcoded production bucket, so a dev or staging
+    // distribution reads prod sidecars - pages look fine and describe the wrong photo.
+    const src = read('lib', 'resources', 'lambdas.ts')
+    for (const handler of ['photo.handler', 'video.handler']) {
+      const start = src.indexOf(`handler: '${handler}'`)
+      expect(start, `${handler} is not defined in lib/resources/lambdas.ts`).to.be.above(-1)
+      const block = src.slice(start, src.indexOf('}', src.indexOf('logGroup', start)))
+      expect(block, `${handler} gets WISAW_IMG_BUCKET`).to.match(/environment:\s*\{[^}]*WISAW_IMG_BUCKET: config\.S3_BUCKET/s)
+    }
+    // Spreading .env.<env> into an edge function would replicate database credentials to every
+    // CloudFront region; the wiring must stay one named variable.
+    expect(src).to.not.match(/environment:\s*\{\s*\.\.\.config[^}]*\}\s*\n\s*\)\s*\n?\s*\)?\s*\n?\s*(const|inject)/)
+  })
+})
+
+describe('every script that writes a sidecar resolves its bucket the same way', () => {
+  // Derived from what the scripts actually do rather than from a list of names, so the next writer
+  // that appears is covered by this pin on the day it is written.
+  const scriptsDir = path.join(__dirname, '..', 'scripts')
+  const writers = fs.readdirSync(scriptsDir)
+    .filter((file) => file.endsWith('.js'))
+    .filter((file) => /putSeoSidecar\(/.test(fs.readFileSync(path.join(scriptsDir, file), 'utf8')))
+
+  it('finds the sidecar-writing scripts to check', () => {
+    expect(writers.length).to.be.greaterThan(0)
+  })
+
+  for (const file of writers) {
+    it(`${file} asks the shared resolver`, () => {
+      const src = fs.readFileSync(path.join(scriptsDir, file), 'utf8')
+      expect(src, `${file} must import seoSidecarBucket`).to.match(/seoSidecarBucket\(/)
+      expect(src, `${file} must not derive a bucket name from the environment argument`).to.not.match(/wisaw-img-\$/)
+    })
+  }
 })

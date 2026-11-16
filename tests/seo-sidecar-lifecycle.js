@@ -6,6 +6,7 @@ require('ts-node/register/transpile-only')
 const Module = require('module')
 const path = require('path')
 const { expect } = require('chai')
+const fs = require('fs')
 const { describe, it, after, afterEach } = require('mocha')
 
 // lambda-fns/psql.ts imports the RDS CA bundle as a module; Node cannot parse .pem, so seed
@@ -32,7 +33,7 @@ const { CloudFrontClient } = require('@aws-sdk/client-cloudfront')
 const { deleteSeoSidecar, putSeoSidecar, sidecarKey } = require('../lambda-fns/utilities/seoSidecar.ts')
 const { main: processDeletedImage } = require('../lambda-fns/lambdas/processDeletedImage/index.ts')
 const { classifyKey, extractPhotoId } = require('../scripts/cleanup-s3.js')
-const { publishChunk } = require('../scripts/publish-seo-sidecars.js')
+const { publishChunk, shouldLearnDurations, writeLabel } = require('../scripts/publish-seo-sidecars.js')
 
 const LIVE = '35e99e0c-03a1-4f30-80d3-405bc1f3df35'
 const GONE = '8f2a1111-2222-4333-8444-555566667777'
@@ -151,6 +152,30 @@ describe('publish-seo-sidecars - the operator backfill writes like everyone else
     const res = await publishChunk(s3, 'wisaw-img-prod', [{ id: LIVE, locality: '40.6833, -73.9740' }], false)
     expect(res).to.deep.equal({ written: 0, failed: 1 })
     expect(s3.sent).to.have.length(0)
+  })
+
+  it('a dry run counts objects it would write, never calls them written', () => {
+    // The count is what an operator decides the next step on; "written=21000" from a run that PUT
+    // nothing once sent someone to check S3 for objects that were never there.
+    expect(writeLabel(true)).to.equal('wouldWrite')
+    expect(writeLabel(false)).to.equal('written')
+  })
+
+  it('learns durations only on a real run, and only when the operator has not opted out', () => {
+    // Measuring a video costs several S3 calls each, so the pass must be skippable; a dry run must
+    // never do it at all, because persisting a duration is a write to Postgres.
+    expect(shouldLearnDurations([], false)).to.equal(true)
+    expect(shouldLearnDurations([], true)).to.equal(false)
+    expect(shouldLearnDurations(['--skip-duration-learning'], false)).to.equal(false)
+  })
+
+  it('resolves its bucket through the shared resolver rather than deriving a name', () => {
+    // `wisaw-img-<env>` used to be invented here, so a backfill could publish beside one corpus
+    // while the scheduled job and the edge read another.
+    const src = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'publish-seo-sidecars.js'), 'utf8')
+    expect(src).to.match(/seoSidecarBucket\(\)/)
+    expect(src).to.not.match(/wisaw-img-\$/)
+    expect(src).to.not.match(/process\.env\.S3_IMAGES_BUCKET/)
   })
 
   it('dry run states the duration it would publish and PUTs nothing', async () => {
@@ -363,5 +388,20 @@ describe('cleanup-s3 classifyKey - prefix-aware reconciliation', () => {
     expect(classifyKey(`seo/${GONE}.json`, active)).to.equal('delete') // legacy gone photo, prune
     expect(classifyKey('seo/_last-run.json', active)).to.equal('report') // was: delete
     expect(classifyKey(`${GONE}.webp`, active)).to.equal('delete') // existing rule unchanged
+  })
+})
+
+// The dimension backfill writes to Postgres only, and the scheduled publisher decides what to
+// republish by when a row was last touched. A sizes-only UPDATE that leaves the timestamp alone
+// therefore publishes numbers no page ever sees - nothing comes back to correct it, because a PUT
+// does not move "updatedAt" either. Pinned at the source: the script needs real credentials and a
+// real bucket to run, which a unit test has neither of.
+describe('populate-photo-dimensions - backfilled sizes reach the pages', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'populate-photo-dimensions.js'), 'utf8')
+
+  it('moves updatedAt with the dimensions it writes', () => {
+    const update = src.match(/UPDATE "Photos"[\s\S]{0,400}?WHERE "id" = \$3/)
+    expect(update, 'no dimension UPDATE found').to.not.equal(null)
+    expect(update[0]).to.contain('"updatedAt" = NOW()')
   })
 })

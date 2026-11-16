@@ -7,6 +7,7 @@ const { S3Client } = require('@aws-sdk/client-s3')
 const { probeMedia } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/media')
 const { fetchSidecar, isPreciseLocation: readerGuard } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/sidecar')
 const { PRECISE_KEYS, isPreciseLocation: writerGuard } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/seoRules')
+const { imgBucket, resetFallbackWarning } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/bucket')
 const photoHandler = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/photo').handler
 const videoHandler = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/video').handler
 
@@ -14,7 +15,8 @@ const videoHandler = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction
 // module-level), so each case starts from a cold cache without needing a test-only reset hook.
 const PHOTO_ID = '29461ee8-34dd-4c2b-848f-c16d766713e8'
 const VIDEO_ID = '7c1f9a02-5b3d-4f61-9c8e-2ad0b7e4f155'
-const IMG_BUCKET = process.env.WISAW_IMG_BUCKET || 'wisaw-img-prod'
+// Asked, not restated: the handlers read media and sidecars from whatever this answers.
+const IMG_BUCKET = imgBucket()
 
 // Captured before any stub runs: every restore puts this back, so a case can never leave a fake
 // installed for the next one (which is how a listing from an earlier test once answered a later
@@ -276,5 +278,46 @@ describe('the coordinate guard is one rule, not two', () => {
     const parsed = await fetchSidecar('a0000001-0000-0000-0000-000000000001')
     expect(parsed.caption).to.equal('Coney Island')
     expect(parsed.location).to.equal(undefined)
+  })
+})
+
+describe('the bucket a page is rendered from', () => {
+  const was = process.env.WISAW_IMG_BUCKET
+  afterEach(() => {
+    if (was === undefined) delete process.env.WISAW_IMG_BUCKET
+    else process.env.WISAW_IMG_BUCKET = was
+  })
+
+  it('follows the variable the writers write to', () => {
+    process.env.WISAW_IMG_BUCKET = 'wisaw-img-staging'
+    expect(imgBucket()).to.equal('wisaw-img-staging')
+  })
+
+  it('names production when nothing is configured, so an unconfigured edge is visible rather than silent', () => {
+    delete process.env.WISAW_IMG_BUCKET
+    resetFallbackWarning()
+    const warns = []
+    const warnWas = console.warn
+    console.warn = (...args) => warns.push(args.join(' '))
+    try {
+      expect(imgBucket()).to.equal('wisaw-img-prod')
+    } finally {
+      console.warn = warnWas
+    }
+    // One line per container, not one per viewer request: the fallback is a deploy fault, and it
+    // has to stay readable in a log stream that sees thousands of requests a minute.
+    expect(warns.join('\n')).to.contain('WISAW_IMG_BUCKET')
+  })
+
+  it('treats a whitespace value as unset', () => {
+    process.env.WISAW_IMG_BUCKET = '   '
+    resetFallbackWarning()
+    const warnWas = console.warn
+    console.warn = () => {}
+    try {
+      expect(imgBucket()).to.equal('wisaw-img-prod')
+    } finally {
+      console.warn = warnWas
+    }
   })
 })

@@ -315,10 +315,16 @@ export function createLambdas (scope: Construct, config: any, api?: any): any {
           memorySize: 128,
           timeout: cdk.Duration.seconds(5),
           // insightsVersion,
-          logGroup: injectMetaTagsLambdaFunctionPhotoLogGroup
-          // environment: {
-          //   ...config,
-          // },
+          logGroup: injectMetaTagsLambdaFunctionPhotoLogGroup,
+          // Only the media bucket name. The injector reads each page's <id>.json sidecar out of
+          // that bucket, and without this it resolved it by falling through to a hardcoded
+          // production name - so a dev or staging edge read the prod corpus (or nothing). Deliberately
+          // NOT `...config`: an edge function version is replicated to every CloudFront region, so
+          // everything in .env.<env> would be copied around the world. The media bucket name is not
+          // secret (it is in every object URL); database credentials are.
+          environment: {
+            WISAW_IMG_BUCKET: config.S3_BUCKET
+          }
         }
       )
 
@@ -345,10 +351,11 @@ export function createLambdas (scope: Construct, config: any, api?: any): any {
           memorySize: 128,
           timeout: cdk.Duration.seconds(5),
           // insightsVersion,
-          logGroup: injectMetaTagsLambdaFunctionVideoLogGroup
-          // environment: {
-          //   ...config,
-          // },
+          logGroup: injectMetaTagsLambdaFunctionVideoLogGroup,
+          // See the photo injector above: one variable, no spread of .env.<env>.
+          environment: {
+            WISAW_IMG_BUCKET: config.S3_BUCKET
+          }
         }
       )
 

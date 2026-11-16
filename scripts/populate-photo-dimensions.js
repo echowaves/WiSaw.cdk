@@ -158,9 +158,14 @@ async function updatePhotoDimensions(photoId, width, height) {
       await db.connect()
     }
 
+    // "updatedAt" moves with the sizes on purpose. The scheduled publisher only republishes
+    // sidecars for rows touched since its last run, so a backfill that left the timestamp alone
+    // would write dimensions that never reach any page: the object beside the media would keep
+    // publishing no width/height, and nothing would ever come back to correct it, because a PUT
+    // does not move "updatedAt" either.
     await db.query(`
       UPDATE "Photos" 
-      SET "width" = $1, "height" = $2
+      SET "width" = $1, "height" = $2, "updatedAt" = NOW()
       WHERE "id" = $3
     `, [width, height, photoId])
 

@@ -6,8 +6,8 @@ const { fetchShell } = require('./template')
 const { fetchSidecar } = require('./sidecar')
 const { buildSeoFields } = require('./seoText')
 const { probeMedia } = require('./media')
+const { imgBucket } = require('./bucket')
 
-const IMG_BUCKET = process.env.WISAW_IMG_BUCKET || 'wisaw-img-prod'
 const FALLBACK_DESCRIPTION = 'Free unaltered photo on WiSaw - authentic photos and videos taken with phone cameras.'
 
 exports.handler = async (event, context, callback) => {
@@ -25,7 +25,7 @@ exports.handler = async (event, context, callback) => {
 
   const [sidecar, media] = await Promise.all([
     fetchSidecar(imageIdRaw),
-    probeMedia(IMG_BUCKET, imageIdRaw)
+    probeMedia(imgBucket(), imageIdRaw)
   ])
 
   // Dead ids used to answer 200 with the SPA shell (soft 404). A real 404 + noindex tells
