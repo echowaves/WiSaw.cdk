@@ -105,6 +105,27 @@ Caught by the new scheduled-writer test, not by reading: removing the job's own 
 | 3 | `cleanup-s3.js`, `populate-photo-dimensions.js` and `populate-recognitions.js` still derive `S3_BUCKET \|\| wisaw-img-<env>`. | Deliberately deferred, recorded in `seo-indexing/deferred-work.md`: those scripts never write a sidecar, and `cleanup-s3.js` **deletes** objects - changing which bucket it targets on an environment where `S3_IMAGES_BUCKET` is set to something else is a bigger decision than this goal's boundary allows. |
 | 4 | The edge folder keeps a second copy of the bucket rule (`bucket.js`). | Rejected as duplication: the folder is deployed with `Code.fromAsset` and cannot import outside itself (same constraint as `mediaNaming.js`). Pinned instead - one file in that folder may name the variable, and both sides must use the same name. |
 | 5 | A misconfigured stack now logs the resolver's message three times per scheduled run (listing, duration learning, sidecars). | Kept: three loud failures beat one swallowed failure, and the alternative is branching `main()` further. |
+| 6 | **Real defect, found by the deploy:** the edge environment wiring in T2 fails synth with `LambdaEdgeEnvironmentVariablesNotAllowed`, blocking every deploy from this branch. | Fixed as described above (generated constant), with `tests/edge-bucket-config.js` pinning both halves and a rewritten pin that forbids an env block on either injector function, so the shape cannot come back quietly. |
+
+## Renegotiated during build: the edge cannot be given an environment
+
+The decision above said "wire `WISAW_IMG_BUCKET` into both edge functions". Implemented that way, and
+the real deploy rejected it:
+
+> LambdaEdgeEnvironmentVariablesNotAllowed — The function prod-WiSawCdkStack/prod_injectPhotoMetaTagsLambdaFunction_photo/Fn contains environment variables [WISAW_IMG_BUCKET] and is not compatible with Lambda@Edge.
+
+That is why every edge function in `lib/resources/lambdas.ts` has had its `environment` block commented
+out since long before this work: Lambda@Edge allows none, and the suggested `removeInEdge` escape hatch
+only *deletes* the variable at the edge - which is exactly where the injector needs it. Manual checks
+step 2 anticipated this outcome, so the wiring switched to the recorded fallback (option 2 of that
+decision): `lib/utilities/edgeMediaBucket.ts` writes `bucket.gen.js` into the injector's own asset
+folder during synth, from `config.S3_BUCKET`, and the folder's reader prefers a real
+`WISAW_IMG_BUCKET` (dev/test only), then the generated constant, then production - logged.
+
+Verified locally against the installed aws-cdk-lib rather than assumed: a probe distribution with an
+origin-request `EdgeFunction` that declares one environment variable fails synth with exactly the error
+above; the same construct with no variables synthesizes. The check is `Object.keys(environment).length
+!== 0` in `aws-lambda/lib/function.js`, so any env var on either injector function reproduces it.
 
 ## Design Notes
 
@@ -115,7 +136,7 @@ Caught by the new scheduled-writer test, not by reading: removing the job's own 
 
 ## Manual checks (operator, after deploy)
 
-1. `cdk deploy` for one non-production stack, then `curl -sSI "https://img.wisaw.com/<id>.json"` and confirm the edge and the writers agree on the bucket; check the injector's CloudWatch logs contain no `no WISAW_IMG_BUCKET configured` line.
-2. If the deploy rejects `environment` on a Lambda@Edge version, that is the platform limit this wiring was chosen against: revert to generating the constant into the code asset (option 2 of the decision) rather than removing the variable from the readers.
+1. `cdk deploy` for one non-production stack — synth now writes `lambda-fns/lambdas/injectMetaTagsLambdaFunction/bucket.gen.js` (gitignored) with that stack's `S3_BUCKET`; confirm the deployed function's code contains it, then `curl -sSI "https://img.wisaw.com/<id>.json"` and check the injector's CloudWatch logs for no fallback line (`no WISAW_IMG_BUCKET and no generated bucket constant`).
+2. A stale `bucket.gen.js` from a previous synth is rewritten on every synth and only changes the asset hash when the value changes, so nothing to clean up - but never commit it.
 3. `node ./scripts/publish-seo-sidecars.js test --limit=5` and confirm `⏱ durations:` reports learned counts with no `storing learned durations failed` line (triage finding 1).
 4. `npm run populate-dimensions -- prod` on a small slice, then confirm the next scheduled run republishes those pages' sidecars (the `updatedAt` bump is what makes that happen).

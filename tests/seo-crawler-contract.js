@@ -597,23 +597,25 @@ describe('one media bucket, named one way', () => {
     const folder = path.join(__dirname, '..', 'lambda-fns', 'lambdas', 'injectMetaTagsLambdaFunction')
     const readers = fs.readdirSync(folder)
       .filter((file) => file.endsWith('.js'))
+      // bucket.gen.js is written by cdk synth into the same folder; it is a value, not a rule.
+      .filter((file) => !file.endsWith('.gen.js'))
       .filter((file) => /WISAW_IMG_BUCKET|wisaw-img-prod/.test(fs.readFileSync(path.join(folder, file), 'utf8')))
     expect(readers, `bucket name leaked into ${readers.join(', ')}`).to.deep.equal(['bucket.js'])
   })
 
-  it('the stack hands the variable to both injector edge functions', () => {
-    // Without it the injector falls back to a hardcoded production bucket, so a dev or staging
-    // distribution reads prod sidecars - pages look fine and describe the wrong photo.
+  it('the stack writes the bucket into the injector asset, and declares no env var', () => {
+    // Lambda@Edge rejects environment variables (LambdaEdgeEnvironmentVariablesNotAllowed), so the
+    // only channel into those two functions is the code asset itself. If someone puts an
+    // `environment:` block back, synth fails - that is the loud version of this pin, but the test
+    // catches it before a deploy does.
     const src = read('lib', 'resources', 'lambdas.ts')
+    expect(src).to.match(/writeEdgeBucketConfig\(\s*path\.join\([^)]*injectMetaTagsLambdaFunction'\),\s*config\.S3_BUCKET\s*\)/)
     for (const handler of ['photo.handler', 'video.handler']) {
       const start = src.indexOf(`handler: '${handler}'`)
       expect(start, `${handler} is not defined in lib/resources/lambdas.ts`).to.be.above(-1)
       const block = src.slice(start, src.indexOf('}', src.indexOf('logGroup', start)))
-      expect(block, `${handler} gets WISAW_IMG_BUCKET`).to.match(/environment:\s*\{[^}]*WISAW_IMG_BUCKET: config\.S3_BUCKET/s)
+      expect(block, `${handler} must not declare environment variables`).to.not.match(/environment:/)
     }
-    // Spreading .env.<env> into an edge function would replicate database credentials to every
-    // CloudFront region; the wiring must stay one named variable.
-    expect(src).to.not.match(/environment:\s*\{\s*\.\.\.config[^}]*\}\s*\n\s*\)\s*\n?\s*\)?\s*\n?\s*(const|inject)/)
   })
 })
 

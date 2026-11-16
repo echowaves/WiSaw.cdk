@@ -41,3 +41,6 @@ cdk-exports.json
 # BMad skill render snapshots and python caches
 _bmad/render/
 __pycache__/
+
+# Written by `cdk synth` for the injector edge functions (lib/utilities/edgeMediaBucket.ts)
+lambda-fns/lambdas/injectMetaTagsLambdaFunction/bucket.gen.js
