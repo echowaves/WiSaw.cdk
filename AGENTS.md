@@ -35,5 +35,6 @@ AWS CDK infrastructure for WiSaw: AppSync GraphQL over Postgres/Sequelize, Lambd
 
 - Lambda@Edge functions (injectMetaTags, redirect) are only created when `DEPLOY_ENV=prod` (`lib/resources/lambdas.ts`) — changes to them never deploy from the test stack; verify with `tests/inject-meta-tags.js`.
 - HTML rewrites in the edge injector must match deployed template bytes exactly — a silent canonical mismatch once deindexed ~22k pages. Keep byte-exact regression cases in `tests/inject-meta-tags.js` and `tests/seo-crawler-contract.js`.
+- Lambda@Edge functions accept **no** environment variables: synth fails with `LambdaEdgeEnvironmentVariablesNotAllowed`, and the suggested `removeInEdge` only deletes the variable at the edge — where it is needed. That is why the `environment` blocks in `lib/resources/lambdas.ts` are commented out for every edge function. A value that must reach an edge function goes into its code asset instead (`lib/utilities/edgeMediaBucket.ts` writes `bucket.gen.js`, gitignored); pinned by `tests/edge-bucket-config.js`.
 
 <!-- /bmad:context -->
