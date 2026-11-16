@@ -8,6 +8,8 @@ const {
   injectMetaTags,
   injectRouteTags,
   htmlResponse,
+  stripExistingMetaTags,
+  dropsBootCriticalMarkup,
   renderNotFoundDocument
 } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/utils')
 const { parseMediaUri, needsCanonicalRedirect } = require('../lambda-fns/lambdas/injectMetaTagsLambdaFunction/mediaUri')
@@ -377,7 +379,10 @@ describe('injectMetaTags against the served shell', () => {
     .replace('<body>', '<body>\n  <!-- legacy footer </div> retired 2026-11-09 -->\n' +
       '  <script>var shellHint = "<div id=\\"root\\">see docs</div>";</script>')
     .replace('<div id="root">', '<div id="root"><div class="app-shell">')
-    .replace('  </div>\n</body>', '    </div>\n  </div>\n</body>')
+    // Anchor on the end of #root's own content, not on `</div>\n</body>`: the shell now carries a
+    // sibling container after the mount point, so that anchor no longer exists and this mutation
+    // would silently stop applying.
+    .replace('</h2>\n  </div>', '</h2>\n    </div>\n  </div>')
 
   it('injects the same head bytes into a shell that carries decoy anchors', () => {
     // First prove the hostile mutations applied - a silent no-op here would test nothing.
@@ -385,6 +390,7 @@ describe('injectMetaTags against the served shell', () => {
     expect(HOSTILE_SHELL).to.contain('var shellHint = "<div id=\\"root\\">see docs</div>";')
     expect(HOSTILE_SHELL).to.contain('<!-- legacy footer </div> retired 2026-11-09 -->')
     expect(HOSTILE_SHELL).to.contain('<div id="root"><div class="app-shell">')
+    expect(HOSTILE_SHELL).to.contain('</h2>\n    </div>\n  </div>')
 
     const hostile = injectMetaTags(HOSTILE_SHELL, {
       description: 'Golden retriever puppy on the beach - free photo on WiSaw.',
@@ -461,5 +467,93 @@ describe('crawler directives and the not-found document', () => {
     expect(doc).to.match(/name="robots" content="noindex, follow"/)
     expect(canonicalsOf(doc)).to.have.lengthOf(1)
     expect(doc).to.match(/<h1>This photo no longer exists<\/h1>/)
+  })
+})
+
+// The video block moved from the browser app's Helmet output to the injected bytes, so the edge now
+// owns og:video and every sub-property of it. A shell that still carried an older deploy's copy -
+// or a page whose stored container changed - would otherwise reach a crawler with two values for
+// one property, which is how og:image used to end up duplicated.
+describe('the og:video family belongs to the injector', () => {
+  const STALE = [
+    '<meta property="og:video" content="https://img.wisaw.com/stale.mov" data-rh="true">',
+    '<meta property=\'og:video:url\' content=\'https://img.wisaw.com/stale.mov\'>',
+    '<meta property="og:video:secure_url" content="https://img.wisaw.com/stale.mov" />',
+    '<meta property="og:video:type" content="video/quicktime">',
+    '<meta property="og:video:width" content="1920" data-rh="true">',
+    '<meta property="og:video:height" content="1080" data-rh="true">',
+    '<meta property="og:video:duration" content="9" data-rh="true">',
+    '<meta property="og:video:image" content="https://img.wisaw.com/stale-thumb.webp">'
+  ].join('\n      ')
+
+  const seed = (html) => html.replace('</title>', `</title>\n      ${STALE}\n`)
+
+  it('strips every stale video tag in either quote style', () => {
+    // Baseline is the same cleaner over the unseeded shell: it owns other tags too, so comparing
+    // against SHELL itself would count those removals as collateral.
+    const baseline = stripExistingMetaTags(SHELL)
+    const stripped = stripExistingMetaTags(seed(SHELL))
+    expect(stripped).to.not.match(/property=["']og:video/)
+    expect(countOf(stripped, /<meta\b/gi), 'only the seeded tags went').to.equal(countOf(baseline, /<meta\b/gi))
+    expect(countOf(stripped, /property=["']og:image["']/gi)).to.equal(countOf(baseline, /property=["']og:image["']/gi))
+  })
+
+  it('publishes exactly one of each video property, with the injector\'s values', () => {
+    const html = injectMetaTags(seed(SHELL), {
+      description: 'Harbour at dusk - free video on WiSaw.',
+      metaDescription: 'Harbour at dusk - free video on WiSaw.',
+      entityLabel: 'video',
+      ogType: 'video.other',
+      pathSegment: 'videos',
+      imageIdText: UUID,
+      imageIdUrl: UUID,
+      pageTitle: 'Harbour at dusk — video · WiSaw',
+      videoUrl: `https://img.wisaw.com/${UUID}.mp4`,
+      videoDuration: 48,
+      width: '1920',
+      height: '1080'
+    })
+    for (const property of ['og:video', 'og:video:url', 'og:video:secure_url', 'og:video:type', 'og:video:width', 'og:video:height', 'og:video:duration', 'og:video:image']) {
+      expect(countOf(html, new RegExp(`<meta\\s[^>]*property=["']${property}["']`, 'gi')), property).to.equal(1)
+    }
+    expect(html).to.not.contain('stale.mov')
+    expect(canonicalsOf(html)).to.have.lengthOf(1)
+  })
+})
+
+// React mounts into #wisaw-app while the edge owns #root's contents; an injection pass that reached
+// past #root's close took the app's container with it, leaving a page that paints and never boots.
+describe('both mount containers survive injection', () => {
+  const CONTAINERS = ['root', 'wisaw-app']
+  const countContainer = (html, id) => countOf(html, new RegExp(`<div\\b[^>]*\\bid=["']?${id}["'>\\s]`, 'gi'))
+
+  it('runs against a shell that carries the containers the client boots from', () => {
+    // A fixture missing one of these would let every injection test below pass against a document
+    // the shipped app could not mount in at all.
+    for (const id of CONTAINERS) expect(countContainer(SHELL, id), `fixture #${id}`).to.equal(1)
+  })
+
+  it('keeps each container exactly once, outside the rewritten mount point', () => {
+    const html = injectMetaTags(SHELL, {
+      description: 'Golden retriever puppy on the beach - free photo on WiSaw.',
+      metaDescription: 'Golden retriever puppy on the beach - free photo on WiSaw.',
+      entityLabel: 'photo',
+      ogType: 'photo',
+      pathSegment: 'photos',
+      imageIdText: UUID,
+      imageIdUrl: UUID,
+      bodyHtml: '<h1>Golden retriever puppy</h1>'
+    })
+    for (const id of CONTAINERS) expect(countContainer(html, id), `#${id}`).to.equal(1)
+    // Sibling, not swallowed: the app container still opens after #root has closed.
+    const rootClose = html.indexOf('</div>', html.indexOf('<div id="root">'))
+    expect(html.indexOf('id="wisaw-app"')).to.be.above(rootClose)
+  })
+
+  it('counts a lost mount container as lost boot markup', () => {
+    // The failsafe used to compare only scripts and stylesheets, so this cut looked clean.
+    const swallowed = SHELL.replace('<div id="wisaw-app"></div>', '')
+    expect(dropsBootCriticalMarkup(SHELL, swallowed)).to.equal(true)
+    expect(dropsBootCriticalMarkup(SHELL, SHELL)).to.equal(false)
   })
 })

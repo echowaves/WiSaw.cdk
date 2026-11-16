@@ -21,6 +21,11 @@
 // the viewport, so the two widths live in CSS and only the orientation-dependent cap is inline.
 
 const DETAIL_MAX_SIDE = 700
+// What the app itself falls back to when a record has no dimensions to lay out from
+// (WiSaw.client src/containers/PhotosComponent.js: `dimensions: { width: 300, height: 300 }`).
+// Reserving the full 700 px cap for such a page painted a box bigger than the one React then
+// rendered, so the pre-hydration paint jumped when the client declined to adopt it.
+const DETAIL_UNKNOWN_DIMENSION_CAP_PX = 300
 const DETAIL_MOBILE_BREAKPOINT = 700
 const HEADER_DESKTOP_PX = 72
 const HEADER_MOBILE_PX = 64
@@ -50,19 +55,26 @@ const SKELETON_STYLE = '<style>' +
 // a failed fetch must not shift the page. Script-local, never throws, no dependency on the bundle.
 const MEDIA_ONERROR = "this.parentNode&amp;&amp;(this.parentNode.className+=' wsk-box--broken')"
 
+// A size is a size only if it is a positive whole number of pixels. Records come out of Postgres
+// as text, and an extraction that failed stored '0' or '' - both of which used to reach the page
+// as width="0", a fact about the file that is not true and that the client refuses to lay out
+// from anyway (its adoption guard wants numeric width/height).
 function positiveInt (value) {
-  const parsed = parseInt(value, 10)
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null
+  const text = String(value == null ? '' : value).trim()
+  if (!/^\d+$/.test(text)) return null
+  const parsed = Number(text)
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null
 }
 
 /**
- * Inline geometry for the media box. When the record has no usable dimensions the box falls back
- * to a neutral square at the full desktop cap instead of an auto height, which is what shifts.
+ * Inline geometry for the media box. When the record has no usable dimensions the box keeps a
+ * square aspect ratio at the app's own unknown-size cap instead of an auto height, which is what
+ * shifts.
  */
 function mediaBoxStyle (width, height) {
   const w = positiveInt(width)
   const h = positiveInt(height)
-  if (w === null || h === null) return 'aspect-ratio:1/1;--wsk-cap:' + DETAIL_MAX_SIDE + 'px'
+  if (w === null || h === null) return 'aspect-ratio:1/1;--wsk-cap:' + DETAIL_UNKNOWN_DIMENSION_CAP_PX + 'px'
   // The client caps the long side at 700 px, so a portrait media element is displayed narrower.
   const cap = w > h ? DETAIL_MAX_SIDE : Math.round(DETAIL_MAX_SIDE * w / h)
   return 'aspect-ratio:' + w + '/' + h + ';--wsk-cap:' + cap + 'px'
@@ -107,12 +119,14 @@ function breadcrumbGraph (parts = {}) {
 
 module.exports = {
   DETAIL_MAX_SIDE,
+  DETAIL_UNKNOWN_DIMENSION_CAP_PX,
   DETAIL_MOBILE_BREAKPOINT,
   BELOW_MEDIA_RESERVE_PX,
   HEADER_DESKTOP_PX,
   HEADER_MOBILE_PX,
   SKELETON_STYLE,
   MEDIA_ONERROR,
+  positiveInt,
   mediaBoxStyle,
   renderSkeleton,
   breadcrumbGraph

@@ -1,6 +1,6 @@
 /* eslint-env node */
 /* global require, exports, process */
-const { sanitizeImageId, injectMetaTags, buildSeoBody, htmlResponse, renderNotFoundDocument } = require('./utils')
+const { sanitizeImageId, injectMetaTags, buildSeoBody, htmlResponse, redirectResponse, renderNotFoundDocument } = require('./utils')
 const { parseMediaUri } = require('./mediaUri')
 const { fetchShell } = require('./template')
 const { fetchSidecar } = require('./sidecar')
@@ -33,6 +33,15 @@ exports.handler = async (event, context, callback) => {
   // reports "gone" on a definitive empty listing, never on a permission error.
   if (!media.exists) {
     return callback(null, htmlResponse(404, renderNotFoundDocument('photo'), { noindex: true, cacheControl: 'max-age=86400' }))
+  }
+
+  // Mirror of the same guard in video.js: kind is what storage holds. A /photos/<id> URL for an id
+  // that only holds a playable object published og:image naming <id>.webp, which nobody wrote -
+  // and the page could not show its own subject. Send it to the address that can. Proof of the
+  // other kind is required (not merely the absence of this one), so a thumb-only listing or an
+  // inconclusive S3 answer keeps answering here instead of bouncing between two routes.
+  if (media.hasVideo && !media.hasImage) {
+    return callback(null, redirectResponse(`https://wisaw.com/videos/${encodeURIComponent(imageIdRaw)}`))
   }
 
   const seo = buildSeoFields({

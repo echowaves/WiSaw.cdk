@@ -2,6 +2,7 @@
 // and the bundled TypeScript lambdas. Kept next to the implementation so the two cannot drift:
 // the runtime always resolves mediaNaming.js, this file only describes it.
 
+export declare const VIDEO_MIME_TYPES: Readonly<Record<string, string>>
 export declare const VIDEO_EXTENSIONS: readonly string[]
 export declare const IMAGE_EXTENSION: string
 export declare const THUMB_SUFFIX: string

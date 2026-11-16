@@ -1,6 +1,6 @@
 /* eslint-env node */
 /* global require, exports, process */
-const { sanitizeImageId, injectMetaTags, buildSeoBody, htmlResponse, renderNotFoundDocument } = require('./utils')
+const { sanitizeImageId, injectMetaTags, buildSeoBody, htmlResponse, redirectResponse, renderNotFoundDocument } = require('./utils')
 const { parseMediaUri } = require('./mediaUri')
 const { fetchShell } = require('./template')
 const { fetchSidecar } = require('./sidecar')
@@ -31,6 +31,17 @@ exports.handler = async (event, context, callback) => {
   // object stored as .mp4 instead of .mov is never mistaken for a deleted page.
   if (!media.exists) {
     return callback(null, htmlResponse(404, renderNotFoundDocument('video'), { noindex: true, cacheControl: 'max-age=86400' }))
+  }
+
+  // Kind comes from storage, not from the URL. A /videos/<id> link for an id that only holds a
+  // photo - typed by hand, or minted by a client that guessed - used to publish og:video plus a
+  // VideoObject naming <id>.mov, an object nobody ever wrote: every player and every rich result
+  // pointed at a 403. The page is real, it just lives under the other address, so move crawlers
+  // there rather than describing a file that does not exist. Only when storage proves the other
+  // kind: an inconclusive probe or a thumb-only listing knows nothing about kind, and redirecting
+  // on that is how a loop starts.
+  if (media.hasImage && !media.hasVideo) {
+    return callback(null, redirectResponse(`https://wisaw.com/photos/${encodeURIComponent(imageIdRaw)}`))
   }
 
   const seo = buildSeoFields({
