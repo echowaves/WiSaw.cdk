@@ -29,9 +29,10 @@ after(() => {
 
 const { S3Client } = require('@aws-sdk/client-s3')
 const { CloudFrontClient } = require('@aws-sdk/client-cloudfront')
-const { deleteSeoSidecar, sidecarKey } = require('../lambda-fns/utilities/seoSidecar.ts')
+const { deleteSeoSidecar, putSeoSidecar, sidecarKey } = require('../lambda-fns/utilities/seoSidecar.ts')
 const { main: processDeletedImage } = require('../lambda-fns/lambdas/processDeletedImage/index.ts')
 const { classifyKey, extractPhotoId } = require('../scripts/cleanup-s3.js')
+const { publishChunk } = require('../scripts/publish-seo-sidecars.js')
 
 const LIVE = '35e99e0c-03a1-4f30-80d3-405bc1f3df35'
 const GONE = '8f2a1111-2222-4333-8444-555566667777'
@@ -93,6 +94,79 @@ describe('deleteSeoSidecar - key contract', () => {
     } catch (err) {
       expect(err.message).to.equal('S3 boom')
     }
+  })
+})
+
+// The write half of the same contract: every writer - upload trigger, scheduled publisher, comment
+// path and the operator backfill - PUTs through this one function, so a record cannot arrive with
+// different key or headers depending on who published it. Nothing exercised it before.
+describe('putSeoSidecar - one object shape for every writer', () => {
+  it('PUTs <id>.json at the bucket root with the finished record as its body', async () => {
+    const s3 = fakeS3()
+    await putSeoSidecar(s3, 'wisaw-img-prod', { id: UPPER, video: true, duration: 47, labels: ['Beach'] })
+
+    expect(s3.sent).to.have.length(1)
+    const cmd = s3.sent[0]
+    expect(cmd.constructor.name).to.equal('PutObjectCommand')
+    expect(cmd.input.Bucket).to.equal('wisaw-img-prod')
+    expect(cmd.input.Key).to.equal(`${LIVE}.json`)
+    expect(cmd.input.ContentType).to.equal('application/json')
+    expect(cmd.input.CacheControl).to.equal('max-age=60')
+    expect(JSON.parse(cmd.input.Body).duration).to.equal(47)
+  })
+
+  it('propagates an S3 failure so callers can count it and keep going', async () => {
+    const s3 = { async send () { throw new Error('S3 boom') } }
+    try {
+      await putSeoSidecar(s3, 'wisaw-img-prod', { id: LIVE })
+      expect.fail('putSeoSidecar should reject when S3 rejects')
+    } catch (err) {
+      expect(err.message).to.equal('S3 boom')
+    }
+  })
+})
+
+// The backfill is the writer that drifted, so pin its own write path rather than trusting a grep of
+// its source: it must hand the shared helper the bucket it was given and the whole row, count a
+// rejected PUT instead of losing the row, and refuse a place name that reads like a position.
+describe('publish-seo-sidecars - the operator backfill writes like everyone else', () => {
+  it('PUTs each row through putSeoSidecar into the bucket it was given', async () => {
+    const s3 = fakeS3()
+    const res = await publishChunk(s3, 'wisaw-img-test', [{ id: UPPER, video: true, duration: 47, labels: ['Beach'] }], false)
+
+    expect(res).to.deep.equal({ written: 1, failed: 0 })
+    expect(s3.sent[0].input.Bucket).to.equal('wisaw-img-test')
+    expect(s3.sent[0].input.Key).to.equal(`${LIVE}.json`)
+    expect(JSON.parse(s3.sent[0].input.Body).duration).to.equal(47)
+  })
+
+  it('counts a rejected write as failed instead of losing the row', async () => {
+    const s3 = { async send () { throw new Error('S3 boom') } }
+    expect(await publishChunk(s3, 'wisaw-img-prod', [{ id: LIVE }, { id: GONE }], false))
+      .to.deep.equal({ written: 0, failed: 2 })
+  })
+
+  it('refuses to publish a place name that reads like a coordinate', async () => {
+    const s3 = fakeS3()
+    const res = await publishChunk(s3, 'wisaw-img-prod', [{ id: LIVE, locality: '40.6833, -73.9740' }], false)
+    expect(res).to.deep.equal({ written: 0, failed: 1 })
+    expect(s3.sent).to.have.length(0)
+  })
+
+  it('dry run states the duration it would publish and PUTs nothing', async () => {
+    const s3 = fakeS3()
+    const lines = []
+    const logWas = console.log
+    console.log = (...args) => lines.push(args.join(' '))
+    try {
+      // A caption at the record's limit pushes "duration" past the preview cut, which is exactly why
+      // the dry run names it separately.
+      await publishChunk(s3, 'wisaw-img-prod', [{ id: LIVE, video: true, duration: 47, lastComment: 'x'.repeat(200) }], true)
+    } finally {
+      console.log = logWas
+    }
+    expect(s3.sent).to.have.length(0)
+    expect(lines.join('\n')).to.contain(`${LIVE}.json duration=47`)
   })
 })
 

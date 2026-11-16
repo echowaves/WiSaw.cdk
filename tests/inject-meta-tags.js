@@ -302,8 +302,10 @@ describe('buildSeoBody + renderRootBody - crawler-visible content', () => {
       const result = renderRootBody(SERVED_SHELL, SEO_BODY)
       expect(result).to.include('src="https://img.wisaw.com/abc-123.webp"')
       expect(result).to.not.include('Unaltered Photos and Videos, Taken with Phone Cameras.')
-      // One script added by the crawler body (its JSON-LD block); none of the shell's lost.
-      expect(countOf(result, /<script\b/gi)).to.equal(countOf(SERVED_SHELL, /<script\b/gi) + 1)
+      // Two scripts added by the crawler body (its media graph and its BreadcrumbList graph);
+      // none of the shell's lost. The count went from +1 to +2 when detail pages gained the
+      // breadcrumb graph - the browser app publishes no structured data of its own there any more.
+      expect(countOf(result, /<script\b/gi)).to.equal(countOf(SERVED_SHELL, /<script\b/gi) + 2)
       const moduleScript = /<script\b[^>]*type="module"[^>]*><\/script>/i.exec(SERVED_SHELL)
       expect(moduleScript).to.not.equal(null)
       expect(result).to.include(moduleScript[0])
