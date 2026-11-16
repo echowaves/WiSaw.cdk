@@ -32,12 +32,18 @@ function photoListing (id = PHOTO_ID) {
   ]
 }
 
-function videoListing (id = VIDEO_ID) {
-  return [
+// A video upload reaches the thumb pipeline as its still poster (see the note above
+// _learnVideoDuration in processUploadedImage), so a real video id usually holds a full
+// <id>.webp beside the container. The listing without that poster is the shape this goal acts on:
+// an id whose only playable object has no image to show at all.
+function videoListing (id = VIDEO_ID, { withPoster = false } = {}) {
+  const keys = [
     { Key: `${id}.mp4`, LastModified: dateOf(1) },
     { Key: `${id}-thumb.webp`, LastModified: dateOf(2) },
     { Key: `${id}.json`, LastModified: dateOf(3) }
   ]
+  if (withPoster) keys.splice(1, 0, { Key: `${id}.webp`, LastModified: dateOf(1) })
+  return keys
 }
 
 /**
@@ -198,6 +204,16 @@ describe('the detail injector publishes the kind storage proves', () => {
     const response = await runHandler(photoHandler, `/photos/${PHOTO_ID}`)
     expect(response.status).to.equal('404')
     expect(headerValue(response, 'x-robots-tag')).to.contain('noindex')
+  })
+
+  it('keeps answering /photos/<id> for a video that has a still poster stored', async () => {
+    // The redirect needs proof that nothing can be shown here. A video uploaded with its poster has
+    // a full <id>.webp, so the photo URL really can render - and bouncing it would send crawlers
+    // from one working page to another instead of fixing a broken one.
+    use(stubS3({ listing: videoListing(VIDEO_ID, { withPoster: true }) }))
+    const response = await runHandler(photoHandler, `/photos/${VIDEO_ID}`)
+    expect(response.status).to.equal('200')
+    expect(headerValue(response, 'location')).to.equal(undefined)
   })
 
   it('serves a video page whose object really is the stored extension', async () => {
