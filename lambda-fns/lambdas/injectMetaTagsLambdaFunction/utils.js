@@ -2,14 +2,10 @@
 /* global module, require */
 const { imageObjectKey, thumbnailObjectKey, imgUrl, VIDEO_MIME_TYPES } = require('./mediaNaming')
 const { durationSeconds, iso8601Duration } = require('./seoRules')
-const { SKELETON_STYLE, MEDIA_ONERROR, mediaBoxStyle, renderSkeleton, breadcrumbGraph, positiveInt } = require('./skeleton')
-const escapeHtmlAttribute = (value = '') =>
-  String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;')
+// The detail frame — markup, geometry and the escaper that writes its attributes — is authored in
+// skeleton.js so the browser app can render the identical template from a published copy of that
+// one file. This module keeps importing both helpers from there rather than holding a second pair.
+const { detailFrameHtml, altTextFor, breadcrumbGraph, positiveInt, escapeHtmlAttribute } = require('./skeleton')
 
 // Head values the browser app renders too. They are named here because a crawler that runs
 // JavaScript and one that doesn't must not disagree about them; scripts/publish-static-seo.js
@@ -292,40 +288,6 @@ function renderRootBody (html = '', bodyHtml = '') {
   return injected
 }
 
-// The one media element the browser paints first, with the attributes the client's adoption check
-// reads (data-wisaw-media, data-wisaw-id, numeric width/height). A photo keeps the full-resolution
-// object: the edge cannot know the viewport, and the shell's preload/swap scripts already demote it
-// to the thumb below the breakpoint. A video wears the thumbnail as its poster instead - that
-// paint is its LCP candidate, and the full-size derivative it used to point at cost 20 s on a
-// throttled phone. The full-res object still exists for crawlers in JSON-LD contentUrl.
-function mediaElement (options = {}) {
-  const { entityLabel = '', imageUrl = '', previewUrl = '', videoUrl = '', altText = '', mediaId = '', width = '', height = '' } = options
-  // No dimensions means no honest box: the client declines to adopt a page whose media has no
-  // numeric size, and renders that route itself rather than guessing. A record whose extraction
-  // failed stores '0', which is truthy as text - publishing width="0" would be both a lie about
-  // the file and a page the client then refuses to adopt, so only positive whole pixels count.
-  const boxWidth = positiveInt(width)
-  const boxHeight = positiveInt(height)
-  const dims = (boxWidth && boxHeight) ? ` width="${boxWidth}" height="${boxHeight}"` : ''
-  // The object URLs are published, not left to be rebuilt from the id: WiSaw.client seeds its first
-  // commit from these, so the naming rule stays written once per side and a rename in mediaNaming.js
-  // cannot leave a seeded paint pointing at an object that was never written. `data-wisaw-src` is the
-  // image this page may safely paint: the full-resolution derivative on a photo, the thumbnail on a
-  // video, where the rules below keep the multi-megabyte object off the page entirely; a video's own
-  // file is already its `src`. `data-wisaw-thumb` is the same file og:image names. Both are always
-  // present so the client has one contract instead of a per-kind one.
-  const publishedSrc = entityLabel === 'video' ? previewUrl : imageUrl
-  const publishedUrls = ` data-wisaw-src="${escapeHtmlAttribute(publishedSrc)}" data-wisaw-thumb="${escapeHtmlAttribute(previewUrl)}"`
-  const adoption = ` data-wisaw-media data-wisaw-id="${escapeHtmlAttribute(mediaId)}" class="wsk-media" onerror="${MEDIA_ONERROR}"${publishedUrls}`
-  if (entityLabel === 'video') {
-    // playsinline belongs on the first paint too, not only on the element React renders after
-    // adoption: without it iOS Safari takes a tapped video full-screen instead of playing it in
-    // the box the page was laid out around.
-    return `<video controls playsinline preload="none"${adoption} poster="${escapeHtmlAttribute(previewUrl)}"${dims} src="${escapeHtmlAttribute(videoUrl)}"></video>`
-  }
-  return `<img${adoption} src="${escapeHtmlAttribute(imageUrl)}" alt="${escapeHtmlAttribute(altText)}"${dims} loading="eager">`
-}
-
 // Crawler-visible body markup for photo/video pages: the full static skeleton the client adopts
 // (reserved header, media in its fixed box, heading, description, label links, below-fold reserve)
 // plus schema.org structured data. This is what lets the page be indexed and appear in Google
@@ -346,11 +308,6 @@ function buildSeoBody (options = {}) {
     height = ''
   } = options
 
-  const escText = (value) => String(value == null ? '' : value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-  const escAttr = escapeHtmlAttribute
   // Escaping < and > keeps user content (captions, labels) from closing the surrounding
   // <script> element: JSON strings stay valid because these are escapes inside them.
   const safeJson = (value) => JSON.stringify(value).replace(/</g, '\\u003c').replace(/>/g, '\\u003e')
@@ -361,12 +318,9 @@ function buildSeoBody (options = {}) {
   // The preview image everywhere else is the thumbnail; structured data must not name a
   // different file as this page's picture. contentUrl keeps the full derivative.
   const previewUrl = thumbUrl(encodeURIComponent(imageIdText))
-  const altText = caption || labels.join(', ') || description || title
-
-  const labelLinks = labels
-    .slice(0, 8)
-    .map((label) => `<a rel="tag" href="/search/${escAttr(encodeURIComponent(label))}">${escText(label)}</a>`)
-    .join(' ')
+  // What the picture is described as, and the tag links under it, are decided by the frame module so
+  // a navigated page cannot describe the same photo differently.
+  const altText = altTextFor({ caption, labels, description, title })
 
   const jsonLd = entityLabel === 'video'
     ? {
@@ -394,19 +348,12 @@ function buildSeoBody (options = {}) {
         url: pageUrl
       }
 
-  const mediaHtml = mediaElement({ entityLabel, imageUrl, previewUrl, videoUrl, altText, mediaId: imageIdText, width, height })
-
-  // Two graphs in two blocks: the media object keeps its exact shape and the BreadcrumbList joins
-  // it, because the browser app publishes no structured data of its own on these routes any more.
-  return SKELETON_STYLE +
-    renderSkeleton({
-      mediaHtml,
-      boxStyle: mediaBoxStyle(width, height),
-      title: escText(title),
-      descriptionHtml: `<p>${escText(description)}</p>`,
-      labelLinksHtml: labelLinks ? `<p>${labelLinks}</p>` : '',
-      navHtml: '<nav><a href="/">WiSaw - free authentic stock photos and videos</a></nav>'
-    }) +
+  // The visible page is authored in skeleton.js — the module WiSaw.client renders for every detail
+  // view the edge did not paint — so this function adds only what belongs to a served document: the
+  // media object's URLs and the structured data. Two graphs in two blocks: the media object keeps its
+  // exact shape and the BreadcrumbList joins it, because the browser app publishes no structured data
+  // of its own on these routes any more.
+  return detailFrameHtml({ entityLabel, imageUrl, previewUrl, videoUrl, altText, mediaId: imageIdText, width, height, title, description, labels }) +
     `<script type="application/ld+json">${safeJson(jsonLd)}</script>` +
     `<script type="application/ld+json">${safeJson(breadcrumbGraph({ title, pageUrl }))}</script>`
 }
