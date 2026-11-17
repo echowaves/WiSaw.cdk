@@ -178,6 +178,21 @@ describe('the detail template is authored once and published to both sides', () 
       })
       expect(buildSeoBody(options)).to.contain(frame)
     })
+
+    it('leaves neither handler its own fallback sentence', () => {
+      const read = (name) => fs.readFileSync(
+        path.join(__dirname, '..', 'lambda-fns', 'lambdas', 'injectMetaTagsLambdaFunction', name), 'utf8')
+      for (const [handler, kind] of [['photo.js', 'photo'], ['video.js', 'video']]) {
+        const source = read(handler)
+        // A handler that wrote its own sentence here would be a second copy of copy the app cannot
+        // read — which is how a navigated page ended up with no description at all.
+        expect(source, handler).to.not.contain('Free unaltered ')
+        expect(source, handler).to.contain(`FALLBACK_DESCRIPTIONS.${kind}`)
+      }
+      for (const kind of ['photo', 'video']) {
+        expect(skeleton.FALLBACK_DESCRIPTIONS[kind], kind).to.match(/^Free unaltered /)
+      }
+    })
   })
 
   describe('the bytes a crawler is served do not move', () => {

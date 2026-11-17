@@ -10,7 +10,9 @@ const { probeMedia, readDuration } = require('./media')
 const { imgBucket } = require('./bucket')
 const { videoObjectKey, imgUrl } = require('./mediaNaming')
 
-const FALLBACK_DESCRIPTION = 'Free unaltered video on WiSaw - authentic photos and videos taken with phone cameras.'
+// Authored in skeleton.js, the module WiSaw.client renders for every detail view the edge did not
+// paint: a navigated page must not be the one place that lacks this sentence.
+const { FALLBACK_DESCRIPTIONS } = require('./skeleton')
 
 exports.handler = async (event, context, callback) => {
   const { request } = event.Records[0].cf
@@ -56,7 +58,7 @@ exports.handler = async (event, context, callback) => {
   // it reads metadata rather than parsing bytes - on a crawler request that stays one cheap HEAD.
   const duration = seo.duration ?? durationSeconds(await readDuration(imgBucket(), media.key))
 
-  const description = seo.metaDescription || FALLBACK_DESCRIPTION
+  const description = seo.metaDescription || FALLBACK_DESCRIPTIONS.video
   // Point players and crawlers at the object that actually exists rather than assuming a
   // .mov key: og:video and VideoObject.contentUrl used to 403 for every video not stored
   // under <id>.mov, which makes the rich result invalid.

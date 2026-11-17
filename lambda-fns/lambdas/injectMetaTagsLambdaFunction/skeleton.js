@@ -32,10 +32,10 @@
 // cap is inline.
 
 const DETAIL_MAX_SIDE = 700
-// What the app itself falls back to when a record has no dimensions to lay out from
-// (WiSaw.client src/containers/PhotosComponent.js: `dimensions: { width: 300, height: 300 }`).
-// Reserving the full 700 px cap for such a page painted a box bigger than the one React then
-// rendered, so the pre-hydration paint jumped when the client declined to adopt it.
+// What a page falls back to when its record carries no width/height to lay out from — both the edge
+// body and the app's own paint (mediaBoxStyle with unknown dimensions). Reserving the full 700 px
+// cap for such a page painted a box bigger than the one then rendered, so the pre-hydration paint
+// jumped when the client declined to adopt it.
 const DETAIL_UNKNOWN_DIMENSION_CAP_PX = 300
 const DETAIL_MOBILE_BREAKPOINT = 700
 const HEADER_DESKTOP_PX = 72
@@ -177,6 +177,14 @@ function escapeHtmlText (value) {
 const FRAME_LABEL_LIMIT = 8
 
 /** The description paragraph. Always one paragraph, even when empty, so both hosts lay out alike. */
+// What a page says under the heading before any wording has been published for it. Both edge
+// handlers read these from here, and so does the app — this module is published into WiSaw.client —
+// because a page painted there used to have no sentence at all where the served page had one.
+const FALLBACK_DESCRIPTIONS = {
+  photo: 'Free unaltered photo on WiSaw - authentic photos and videos taken with phone cameras.',
+  video: 'Free unaltered video on WiSaw - authentic photos and videos taken with phone cameras.'
+}
+
 function descriptionMarkup (description) {
   return '<p>' + escapeHtmlText(description) + '</p>'
 }
@@ -262,6 +270,7 @@ module.exports = {
   MEDIA_RADIUS_PX,
   SKELETON_STYLE,
   MEDIA_ONERROR,
+  FALLBACK_DESCRIPTIONS,
   escapeHtmlAttribute,
   positiveInt,
   mediaBoxStyle,
