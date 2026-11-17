@@ -73,13 +73,15 @@ describe('static-route copy is authored once and published to both sides', () =>
     })
   })
 
-  describe('search results keep their exclusion and stop collapsing (criterion 3)', () => {
+  describe('search results are indexable and stop collapsing (criterion 3)', () => {
     it('serves the term its own canonical, title and description', () => {
       const head = staticRoute.headFor('/search/new%20york')
       expect(head.title).to.equal('WiSaw: searching for new york')
-      expect(head.description).to.equal('WiSaw: searching for new york')
+      // Indexed pages need a snippet that adds something to the heading, so these are not one string.
+      expect(head.description).to.not.equal(head.title)
+      expect(head.description).to.contain('new york')
       expect(head.canonical).to.equal('https://wisaw.com/search/new%20york')
-      expect(head.noindex).to.equal(true)
+      expect(head.noindex).to.equal(false)
     })
 
     it('survives a term that is not valid percent-encoding', () => {
@@ -94,14 +96,18 @@ describe('static-route copy is authored once and published to both sides', () =>
       expect(head.title).to.equal(staticRoute.ROUTES['/search'].title)
     })
 
-    it('says noindex in the body and in the header for every search URL', () => {
+    it('says index in the body and in the header for every search URL', () => {
+      // The two signals must agree: a header that excludes while the body invites indexing is
+      // crawled by whichever one a crawler trusts more.
       for (const uri of ['/search', '/search/dog']) {
-        const html = utils.injectRouteTags(SERVED_SHELL, staticRoute.headFor(uri))
-        expect(html).to.contain(`name="robots" content="${utils.ROBOTS_NOINDEX}" data-rh="true"`)
-        const response = utils.htmlResponse(200, html, { noindex: true })
+        const head = staticRoute.headFor(uri)
+        expect(head.noindex).to.equal(false)
+        const html = utils.injectRouteTags(SERVED_SHELL, head)
+        expect(html).to.contain(`name="robots" content="${utils.ROBOTS_INDEX}" data-rh="true"`)
+        const response = utils.htmlResponse(200, html, { noindex: head.noindex })
         const headers = JSON.stringify(response.headers || [])
         expect(headers).to.contain('X-Robots-Tag')
-        expect(headers).to.contain('noindex')
+        expect(headers).to.contain('index, follow')
       }
     })
 
