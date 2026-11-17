@@ -5,9 +5,10 @@ const { fetchShell } = require('./template')
 
 // Head tags for the routes that are not photo/video pages. They were served raw from S3,
 // so the homepage had no canonical at all and /about, /contact and /terms all wore the
-// homepage <title> - four URLs that look like copies of one document. Search results are
-// marked noindex because every search term is a machine-made page with no content of its
-// own, which is the classic doorway pattern.
+// homepage <title> - four URLs that look like copies of one document. Nothing here is
+// excluded from the index: a search term gets its own canonical and its own description, and
+// prerendered media bodies link to their label pages, so those URLs are worth indexing
+// rather than shutting out up front. Genuine 404 documents stay noindex (utils.js).
 // The brand picture, used where a route has no per-page representative image. It is the same
 // file the app publishes on these pages, so the crawler's copy and the browser's agree.
 const BRAND_IMAGE = 'https://wisaw.com/android-chrome-512x512.png'
@@ -49,12 +50,14 @@ const ROUTES = {
     description: 'Search several thousand unaltered photos and videos taken with phone cameras by what appears in them.',
     canonical: 'https://wisaw.com/search',
     image: BRAND_IMAGE,
-    noindex: true,
+    noindex: false,
     // A search-results URL is machine-made, so its copy is a template with the term inserted.
     // `{term}` is the only placeholder; both sides substitute it the same way, which is what keeps
-    // the first byte and the hydrated head identical for one term.
+    // the first byte and the hydrated head identical for one term. The description deliberately
+    // says something different from the title: now that these pages are indexed, a snippet that
+    // repeats the heading adds nothing.
     titleTerm: 'WiSaw: searching for {term}',
-    descriptionTerm: 'WiSaw: searching for {term}',
+    descriptionTerm: 'Browse {term} photos and videos on WiSaw: free, unaltered shots taken with phone cameras, searchable by what appears in them.',
     canonicalTerm: 'https://wisaw.com/search/{term}'
   }
 }
