@@ -222,6 +222,31 @@ export function createCloudFront (scope: Construct, buckets: any, lambdas: any):
   })
 
   // Create the CloudFront distribution with S3 as an origin for images
+  // The per-media SEO record (`<id>.json`, published by seoSidecar) is public and the browser app
+  // reads it: it is where a navigated detail page gets the same heading and description the edge
+  // served for that id, instead of the app re-deriving wording the writer already wrote once. The
+  // objects are already readable over HTTPS; only the CORS headers were missing (deferred item G4).
+  // A short TTL rather than the ten days images get: a new comment changes a page's title, and this
+  // copy must not sit in a browser for longer than the edge's own ten-minute read.
+  const sidecarCachePolicy = new cloudfront.CachePolicy(scope, 'SidecarCachePolicy', {
+    defaultTtl: cdk.Duration.hours(1),
+    minTtl: cdk.Duration.minutes(5),
+    maxTtl: cdk.Duration.days(1),
+    enableAcceptEncodingGzip: true
+  })
+  const sidecarCorsPolicy = new cloudfront.ResponseHeadersPolicy(scope, 'SidecarCorsPolicy', {
+    corsBehavior: {
+      // www.wisaw.com is not served; localhost is the dev server (vite.config.js: port 3000), and
+      // without it a local checkout cannot read its own wording and silently renders no heading.
+      accessControlAllowOrigins: ['https://wisaw.com', 'http://localhost:3000', 'http://127.0.0.1:3000'],
+      accessControlAllowMethods: ['GET', 'HEAD'],
+      accessControlAllowHeaders: ['*'],
+      accessControlAllowCredentials: false,
+      accessControlMaxAge: cdk.Duration.days(1),
+      originOverride: true
+    }
+  })
+
   const imgDistribution = new cloudfront.Distribution(scope, 'wisaw-img-distro', {
     priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
     defaultBehavior: {
@@ -240,7 +265,13 @@ export function createCloudFront (scope: Construct, buckets: any, lambdas: any):
 
     },
     additionalBehaviors: {
-
+      '*.json': {
+        origin: cloudfront_origins.S3BucketOrigin.withOriginAccessControl(imgBucket),
+        compress: true,
+        cachePolicy: sidecarCachePolicy,
+        responseHeadersPolicy: sidecarCorsPolicy,
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
+      }
     },
     certificate: imgCert,
     domainNames: ['img.wisaw.com'],

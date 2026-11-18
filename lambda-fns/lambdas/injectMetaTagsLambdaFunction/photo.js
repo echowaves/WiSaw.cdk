@@ -8,7 +8,9 @@ const { buildSeoFields } = require('./seoText')
 const { probeMedia } = require('./media')
 const { imgBucket } = require('./bucket')
 
-const FALLBACK_DESCRIPTION = 'Free unaltered photo on WiSaw - authentic photos and videos taken with phone cameras.'
+// Authored in skeleton.js, the module WiSaw.client renders for every detail view the edge did not
+// paint: a navigated page must not be the one place that lacks this sentence.
+const { FALLBACK_DESCRIPTIONS } = require('./skeleton')
 
 exports.handler = async (event, context, callback) => {
   const { request } = event.Records[0].cf
@@ -51,7 +53,7 @@ exports.handler = async (event, context, callback) => {
     lastModified: media.lastModified
   })
 
-  const description = seo.metaDescription || FALLBACK_DESCRIPTION
+  const description = seo.metaDescription || FALLBACK_DESCRIPTIONS.photo
   const index = await fetchShell()
 
   const seoBody = buildSeoBody({
