@@ -21,9 +21,10 @@
 //
 // Adoption is strict, so these attributes are a wire contract shared with the client repo and
 // pinned by tests on both sides: [data-wisaw-media] carries data-wisaw-id equal to the route id
-// (lower case) plus numeric width/height; both slot divs must exist; and the media node's parent
-// must be a positioned box, never the mount point itself — the interactive overlays portal into
-// that box, so it needs position: relative.
+// (lower case) plus numeric width/height; the `header` and `below` slot divs must exist (the
+// optional `footer` slot sits outside the column and is never required, so a frame served by an
+// older edge stays adoptable); and the media node's parent must be a positioned box, never the
+// mount point itself — the interactive overlays portal into that box, so it needs position: relative.
 //
 // Geometry is authored here and read by the app (WiSaw.client src/utils/detailLayout.js re-exports
 // these numbers rather than keeping its own): 700 px long side above the 700 px breakpoint,
@@ -54,6 +55,9 @@ const SKELETON_STYLE = '<style>' +
   '.wsk-main{max-width:1100px;margin:0 auto;padding:20px 20px 28px}' +
   '.wsk-slot-header{min-height:' + HEADER_DESKTOP_PX + 'px}' +
   '.wsk-slot-below{min-height:' + BELOW_MEDIA_RESERVE_PX + 'px}' +
+  // The footer band sits outside the column, so it repeats the content box `.wsk-main` gives its
+  // children (1100 px less 20 px padding a side) rather than inheriting it.
+  '.wsk-slot-footer{max-width:1100px;margin:0 auto;padding:0 20px}' +
   '.wsk-box{position:relative;margin:16px auto;width:calc(100vw - 40px);max-width:100%;' +
   'overflow:hidden;border-radius:' + MEDIA_RADIUS_PX + 'px;background:var(--bg-raised,#f4f4f5)}' +
   '.wsk-media{display:block;width:100%;height:100%;object-fit:contain;' +
@@ -138,7 +142,10 @@ function mediaElement (options = {}) {
   return `<img${adoption} src="${escapeHtmlAttribute(imageUrl)}" alt="${escapeHtmlAttribute(altText)}"${dims} loading="eager">`
 }
 
-/** The enhancement slots React portals into: header band above, comments/footer below. */
+/** The enhancement slots React portals into: header band above the column, comments and
+ *  recognitions at its foot, site footer outside it — a `<footer>` under `<main>` is not a
+ *  contentinfo landmark. Only header + below are required for adoption; a frame served without the
+ *  footer slot stays adoptable, so nothing here may treat it as mandatory. */
 function slot (name) {
   return '<div class="wsk-slot-' + name + '" data-wisaw-slot="' + name + '"></div>'
 }
@@ -146,19 +153,25 @@ function slot (name) {
 /**
  * Wraps the already-escaped media element in its fixed box and lays out the page around it.
  * `mediaHtml` arrives escaped by utils.js — this module never receives raw record text.
+ *
+ * The column is a `<main>` so the page the edge paints has exactly one main landmark (axe
+ * `landmark-one-main`); the app's own routes already do the same. The rename is layout-neutral:
+ * `SKELETON_STYLE` selects `.wsk-main` by class with descendant selectors only, so nothing keys on
+ * the tag name, and the mount-point scanner counts `</div>`, which `<main>` neither adds nor drops.
  */
 function renderSkeleton (parts = {}) {
   const { mediaHtml = '', boxStyle = '', title = '', descriptionHtml = '', labelLinksHtml = '', navHtml = '' } = parts
   return '<div class="wsk">' +
     slot('header') +
-    '<div class="wsk-main">' +
+    '<main class="wsk-main">' +
     '<div class="wsk-box" style="' + boxStyle + '">' + mediaHtml + '</div>' +
     '<h1>' + title + '</h1>' +
     descriptionHtml +
     labelLinksHtml +
     navHtml +
     slot('below') +
-    '</div>' +
+    '</main>' +
+    slot('footer') +
     '</div>'
 }
 

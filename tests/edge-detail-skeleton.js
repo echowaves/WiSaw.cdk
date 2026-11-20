@@ -171,6 +171,56 @@ describe('edge detail skeleton - what the client needs to adopt it', () => {
   })
 })
 
+// Accessibility solicitation round 3 (WiSaw.client brief §10, C6 + C6b), pinned so a later template
+// edit cannot quietly undo it: the edge-painted page carries exactly one main landmark — every other
+// route in the app does, and React adopts these nodes instead of re-rendering them, so nothing on
+// the client side can add it afterwards — and the slot the site Footer portals into is not inside it,
+// because a `<footer>` under `<main>` is generic rather than contentinfo.
+describe('landmarks on the served detail page', () => {
+  /** The column's own markup: from its `<main` open tag to just before it closes. */
+  function columnOf (body) {
+    const open = body.indexOf('<main')
+    const close = body.indexOf('</main>')
+    expect(open).to.be.greaterThan(-1)
+    expect(close).to.be.greaterThan(open)
+    return body.slice(open, close)
+  }
+
+  function slotNames (html) {
+    return (html.match(/data-wisaw-slot="([a-z]+)"/g) || [])
+      .map((found) => found.replace(/^data-wisaw-slot="/, '').replace(/"$/, ''))
+  }
+
+  for (const [kind, options] of [['photo', PHOTO_BODY_OPTIONS], ['video', VIDEO_BODY_OPTIONS]]) {
+    it(`paints exactly one <main> on a ${kind} page, and no div column`, () => {
+      const body = buildSeoBody(options)
+      expect(countOf(body, /<main\b/gi)).to.equal(1)
+      expect(countOf(body, /<\/main>/gi)).to.equal(1)
+      // The rename kept the class; a second copy of the column under either tag would mean two.
+      expect(body).to.not.include('<div class="wsk-main"')
+    })
+
+    it(`keeps only the below slot inside a ${kind} page's main`, () => {
+      const body = buildSeoBody(options)
+      // Header sits above the column, footer below it: `below` is the one enhancement React portals
+      // into the landmark (comments and recognitions), and it keeps its 220 px reserve there.
+      expect(slotNames(columnOf(body))).to.deep.equal(['below'])
+      const outside = body.slice(body.indexOf('</main>'))
+      expect(countOf(outside, /data-wisaw-slot="footer"/g)).to.equal(1)
+      // The footer slot is additive: the adoption pair the client requires is still header + below,
+      // so a frame served by an older edge — which has no footer slot — stays adoptable.
+      expect(slotNames(body)).to.deep.equal(['header', 'below', 'footer'])
+    })
+  }
+
+  it('styles the footer band by class, like every other rule in the block', () => {
+    // The band is outside `.wsk-main`, so it repeats that column's content box rather than inheriting
+    // it; if the rule goes missing the footer stops being inset.
+    expect(SKELETON_STYLE).to.include('.wsk-slot-footer{max-width:1100px;margin:0 auto;padding:0 20px}')
+    expect(SKELETON_STYLE.length).to.be.below(2048)
+  })
+})
+
 // WiSaw.client builds its first commit from these two attributes instead of rebuilding an object key
 // from the id. Publishing them keeps the naming rule written once per side: after a rename in
 // mediaNaming.js, a guessing client paints a URL for an object that was never written.
